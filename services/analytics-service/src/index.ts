@@ -94,6 +94,10 @@ app.get('/api/analytics/teacher/:teacherId/overview', verifyToken, async (req: R
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Analytics Service running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Analytics Service running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

@@ -39,6 +39,10 @@ app.get('/health', (_req: Request, res: Response) => {
 // Routes
 app.use('/api/auth', authRoutes);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Auth Service running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Auth Service running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

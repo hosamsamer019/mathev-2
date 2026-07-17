@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "buildCommand": "cd apps/frontend && npm install && npm run build",
+  "outputDirectory": "apps/frontend/dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/auth/:match*", "destination": "/api/auth" },
+    { "source": "/api/users/:match*", "destination": "/api/users" },
+    { "source": "/api/ai/:match*", "destination": "/api/ai" },
+    { "source": "/api/courses/:match*", "destination": "/api/courses" },
+    { "source": "/api/homework/:match*", "destination": "/api/courses" },
+    { "source": "/api/exams/:match*", "destination": "/api/courses" },
+    { "source": "/api/analytics/:match*", "destination": "/api/analytics" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

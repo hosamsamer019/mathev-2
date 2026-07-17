@@ -122,6 +122,10 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'OK', service: 'AI Service', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 AI Service running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 AI Service running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

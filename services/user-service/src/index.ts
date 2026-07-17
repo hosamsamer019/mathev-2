@@ -20,6 +20,10 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.use('/api/users', userRoutes);
 
-app.listen(PORT, () => {
-  console.log(`🚀 User Service running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 User Service running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

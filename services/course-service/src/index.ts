@@ -25,7 +25,10 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'OK', service: 'Course Service', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Course Service running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Course Service running on http://localhost:${PORT}`);
+  });
+}
 
+export default app;
