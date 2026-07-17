@@ -53,7 +53,7 @@ export const getCourseDetails = async (req: Request, res: Response) => {
 
 export const createCourse = async (req: Request, res: Response) => {
   try {
-    const data = courseCreateSchema.parse(req.body);
+    const data = courseCreateSchema.parse(req.body) as any;
     const course = await CourseService.createCourse(data);
     res.status(201).json(course);
   } catch (error: any) {
@@ -66,7 +66,7 @@ export const createCourse = async (req: Request, res: Response) => {
 
 export const createModule = async (req: Request, res: Response) => {
   try {
-    const data = moduleCreateSchema.parse(req.body);
+    const data = moduleCreateSchema.parse(req.body) as any;
     const module = await CourseService.addModule(data);
     res.status(201).json(module);
   } catch (error: any) {
@@ -79,7 +79,7 @@ export const createModule = async (req: Request, res: Response) => {
 
 export const createLesson = async (req: Request, res: Response) => {
   try {
-    const data = lessonCreateSchema.parse(req.body);
+    const data = lessonCreateSchema.parse(req.body) as any;
     const lesson = await CourseService.addLesson(data);
     res.status(201).json(lesson);
   } catch (error: any) {

@@ -58,7 +58,7 @@ export const getHomeworkDetails = async (req: Request, res: Response) => {
 
 export const createHomework = async (req: Request, res: Response) => {
   try {
-    const data = homeworkCreateSchema.parse(req.body);
+    const data = homeworkCreateSchema.parse(req.body) as any;
     const homework = await HomeworkService.createHomework(data);
     res.status(201).json(homework);
   } catch (error: any) {
@@ -71,7 +71,7 @@ export const createHomework = async (req: Request, res: Response) => {
 
 export const addQuestion = async (req: Request, res: Response) => {
   try {
-    const data = questionCreateSchema.parse(req.body);
+    const data = questionCreateSchema.parse(req.body) as any;
     const question = await HomeworkService.addQuestion(data);
     res.status(201).json(question);
   } catch (error: any) {
@@ -90,7 +90,7 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: 'User unauthorized' });
     }
 
-    const { answers } = submitHomeworkSchema.parse(req.body);
+    const { answers } = submitHomeworkSchema.parse(req.body) as any;
     const submission = await HomeworkService.submitHomework(userId, homeworkId, answers);
     
     res.status(201).json(submission);

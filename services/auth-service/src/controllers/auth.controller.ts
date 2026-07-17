@@ -19,7 +19,7 @@ const loginSchema = z.object({
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const validatedData = registerSchema.parse(req.body);
+    const validatedData = registerSchema.parse(req.body) as any;
     
     const existingUser = await db.user.findUnique({
       where: { email: validatedData.email }
@@ -49,7 +49,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const validatedData = loginSchema.parse(req.body);
+    const validatedData = loginSchema.parse(req.body) as any;
     
     const user = await db.user.findFirst({
       where: { 

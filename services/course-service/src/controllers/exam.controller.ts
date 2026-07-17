@@ -58,7 +58,7 @@ export const syncDraft = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { answers } = submitExamSchema.parse(req.body);
+    const { answers } = submitExamSchema.parse(req.body) as any;
     await ExamService.syncDraft(userId, examId, answers);
     res.json({ success: true });
   } catch (error: any) {
@@ -86,7 +86,7 @@ export const submitAttempt = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { answers } = submitExamSchema.parse(req.body);
+    const { answers } = submitExamSchema.parse(req.body) as any;
     const result = await ExamService.submitAttempt(userId, examId, answers);
     res.json(result);
   } catch (error: any) {
