@@ -11,12 +11,14 @@
     "dev:course": "npm run dev --prefix services/course-service",
     "dev:analytics": "npm run dev --prefix services/analytics-service",
     "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:ai\" \"npm run dev:course\" \"npm run dev:analytics\"",
-    "install:all": "npm install && npm install --prefix apps/frontend && npm install --prefix services/auth-service && npm install --prefix services/user-service && npm install --prefix services/ai-service && npm install --prefix services/course-service && npm install --prefix services/analytics-service && npm run generate --prefix packages/database"
+    "install:all": "npm install && npm install --prefix apps/frontend && npm install --prefix services/auth-service && npm install --prefix services/user-service && npm install --prefix services/ai-service && npm install --prefix services/course-service && npm install --prefix services/analytics-service && npm run generate --prefix packages/database",
+    "postinstall": "prisma generate --schema=packages/database/prisma/schema.prisma"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
     "prettier": "^3.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "prisma": "^5.9.1"
   },
   "workspaces": [
     "apps/*",
