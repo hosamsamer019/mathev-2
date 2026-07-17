@@ -1,0 +1,27 @@
+[build]
+  base = "apps/frontend"
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PNPM_FLAGS = "--no-frozen-lockfile"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production.environment]
+  VITE_AUTH_API_URL = ""
+  VITE_USER_API_URL = ""
+  VITE_AI_API_URL = ""
+  VITE_COURSE_API_URL = ""
+  VITE_ANALYTICS_API_URL = ""
+
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"

@@ -1,0 +1,105 @@
+import { useState } from 'react';
+import { User, Mail, Phone, MapPin, Edit, Save, Camera, Award, Star, BookOpen, Users } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+
+export default function TeacherProfilePage() {
+  const { isDark } = useTheme();
+  const [editing, setEditing] = useState(false);
+
+  const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
+  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
+  const inputClass = `w-full px-4 py-2.5 rounded-xl border text-sm ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-emerald-500`;
+
+  const achievements = [
+    { icon: Users, label: '١٢٠ طالب نشط', color: 'text-blue-600 bg-blue-100' },
+    { icon: Star, label: '٤.٩ تقييم متوسط', color: 'text-yellow-600 bg-yellow-100' },
+    { icon: BookOpen, label: '٤ دورات منشورة', color: 'text-green-600 bg-green-100' },
+    { icon: Award, label: 'أفضل معلم ٢٠٢٦', color: 'text-purple-600 bg-purple-100' },
+  ];
+
+  return (
+    <div className={`p-6 lg:p-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} min-h-full`}>
+      <div className="max-w-3xl mx-auto">
+        {/* Profile Header */}
+        <div className={`${cardBg} border rounded-3xl p-8 mb-6 relative overflow-hidden`}>
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10" />
+          <div className="relative flex flex-col md:flex-row items-center gap-6">
+            <div className="relative flex-shrink-0">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+                م
+              </div>
+              <button className="absolute -bottom-2 -left-2 w-8 h-8 bg-white dark:bg-gray-700 rounded-lg shadow border border-gray-200 dark:border-gray-600 flex items-center justify-center text-emerald-600">
+                <Camera className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 text-center md:text-right">
+              <h1 className={`text-2xl font-bold ${textPrimary}`}>أ. محمد إبراهيم</h1>
+              <p className={textSecondary}>معلم رياضيات متخصص • منصة معلم الرياضيات</p>
+              <div className="flex flex-wrap gap-2 justify-center md:justify-start mt-3">
+                <span className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">⭐ خطة مؤسسية</span>
+                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">✅ حساب موثق</span>
+                <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full">🏆 معلم متميز</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setEditing(!editing)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                editing ? 'bg-emerald-600 text-white' : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {editing ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+              {editing ? 'حفظ' : 'تعديل'}
+            </button>
+          </div>
+        </div>
+
+        {/* Achievements */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {achievements.map((ach, idx) => (
+            <div key={idx} className={`${cardBg} border rounded-xl p-4 text-center`}>
+              <div className={`w-10 h-10 rounded-xl ${ach.color} flex items-center justify-center mx-auto mb-2`}>
+                <ach.icon className="w-5 h-5" />
+              </div>
+              <p className={`text-sm font-medium ${textPrimary}`}>{ach.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Info Form */}
+        <div className={`${cardBg} border rounded-2xl p-6`}>
+          <h2 className={`font-bold ${textPrimary} mb-6`}>المعلومات الشخصية</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { label: 'الاسم الكامل', value: 'محمد إبراهيم حسن', icon: User },
+              { label: 'البريد الإلكتروني', value: 'teacher@edu.com', icon: Mail },
+              { label: 'رقم الهاتف', value: '٠١٢٢٣٤٥٦٧٨٩', icon: Phone },
+              { label: 'المدينة', value: 'القاهرة، مصر', icon: MapPin },
+            ].map((field, idx) => (
+              <div key={idx}>
+                <label className={`text-sm font-medium ${textSecondary} block mb-2`}>{field.label}</label>
+                <div className="relative">
+                  <field.icon className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
+                  <input
+                    defaultValue={field.value}
+                    readOnly={!editing}
+                    className={`${inputClass} pr-10 ${!editing ? 'cursor-default' : ''}`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <label className={`text-sm font-medium ${textSecondary} block mb-2`}>نبذة شخصية</label>
+            <textarea
+              readOnly={!editing}
+              defaultValue="معلم رياضيات بخبرة ١٥ عاماً، متخصص في تعليم الرياضيات للمرحلة الثانوية. أسعى دائماً لتبسيط المفاهيم الصعبة وجعل الرياضيات ممتعة وسهلة الفهم."
+              rows={3}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

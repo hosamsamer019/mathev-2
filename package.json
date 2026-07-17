@@ -1,0 +1,22 @@
+{
+  "name": "math-platform-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Enterprise Math Teacher Smart Platform Monorepo",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix apps/frontend",
+    "dev:auth": "npm run dev --prefix services/auth-service",
+    "dev:user": "npm run dev --prefix services/user-service",
+    "dev:ai": "npm run dev --prefix services/ai-service",
+    "dev:course": "npm run dev --prefix services/course-service",
+    "dev:analytics": "npm run dev --prefix services/analytics-service",
+    "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:ai\" \"npm run dev:course\" \"npm run dev:analytics\"",
+    "install:all": "npm install && npm install --prefix apps/frontend && npm install --prefix services/auth-service && npm install --prefix services/user-service && npm install --prefix services/ai-service && npm install --prefix services/course-service && npm install --prefix services/analytics-service && npm run generate --prefix packages/database"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "pnpm@8.15.4"
+}

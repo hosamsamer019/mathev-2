@@ -1,0 +1,59 @@
+services:
+  - type: web
+    name: auth-service
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter auth-service build
+    startCommand: cd services/auth-service && npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+
+  - type: web
+    name: user-service
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter user-service build
+    startCommand: cd services/user-service && npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+
+  - type: web
+    name: ai-service
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter ai-service build
+    startCommand: cd services/ai-service && npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: web
+    name: course-service
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter course-service build
+    startCommand: cd services/course-service && npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+
+  - type: web
+    name: analytics-service
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter analytics-service build
+    startCommand: cd services/analytics-service && npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false

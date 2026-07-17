@@ -1,0 +1,140 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { BookOpen, Video, FileText, Lock, CheckCircle } from 'lucide-react';
+import { courseApi } from '../../services/api';
+
+const DEFAULT_COURSES = [
+  {
+    id: 'c1',
+    title: 'الجبر - الصف الأول الثانوي',
+    progress: 65,
+    lessons: 24,
+    completed: 16,
+    thumbnail: 'https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=400&h=250&fit=crop',
+    locked: false,
+  },
+  {
+    id: 'c2',
+    title: 'الهندسة - الصف الأول الثانوي',
+    progress: 40,
+    lessons: 18,
+    completed: 7,
+    thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=250&fit=crop',
+    locked: false,
+  },
+  {
+    id: 'c3',
+    title: 'حساب المثلثات',
+    progress: 0,
+    lessons: 15,
+    completed: 0,
+    thumbnail: 'https://images.unsplash.com/photo-1596495577886-d920f1fb7238?w=400&h=250&fit=crop',
+    locked: true,
+  },
+];
+
+export default function CoursesPage() {
+  const navigate = useNavigate();
+  const [courses, setCourses] = useState<any[]>(DEFAULT_COURSES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    courseApi.get('/')
+      .then((res) => {
+        if (res.data && res.data.length > 0) {
+          const mapped = res.data.map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            progress: 0,
+            lessons: c.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
+            completed: 0,
+            thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=400&h=250&fit=crop',
+            locked: false
+          }));
+          setCourses(mapped);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load courses from API:', err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">دوراتي</h1>
+        <p className="text-gray-600">تصفح الدورات المتاحة وتابع تقدمك</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {courses.map((course) => (
+          <div
+            key={course.id}
+            className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
+            onClick={() => !course.locked && navigate(`/student/online/courses/${course.id}`)}
+          >
+            <div className="relative h-48">
+              <img
+                src={course.thumbnail}
+                alt={course.title}
+                className="w-full h-full object-cover"
+              />
+              {course.locked && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Lock className="w-12 h-12 mx-auto mb-2" />
+                    <p className="font-medium">مقفل</p>
+                  </div>
+                </div>
+              )}
+              {!course.locked && course.progress > 0 && (
+                <div className="absolute top-3 left-3 bg-white px-3 py-1 rounded-full text-sm font-medium">
+                  {course.progress}%
+                </div>
+              )}
+            </div>
+
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">{course.title}</h3>
+
+              <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                <div className="flex items-center gap-1">
+                  <Video className="w-4 h-4" />
+                  <span>{course.lessons} درس</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span>{course.completed} مكتمل</span>
+                </div>
+              </div>
+
+              {!course.locked && course.progress > 0 && (
+                <div className="mb-4">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-indigo-600 h-2 rounded-full"
+                      style={{ width: `${course.progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              <button
+                className={`w-full py-2 rounded-lg font-medium ${
+                  course.locked
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
+                disabled={course.locked}
+              >
+                {course.locked ? 'مقفل' : 'متابعة التعلم'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

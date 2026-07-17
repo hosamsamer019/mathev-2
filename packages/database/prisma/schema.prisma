@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student_online
+  student_center
+  teacher
+  admin
+  parent
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  users     User[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(student_online)
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  tenantId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  progress  UserLessonProgress[]
+  homeworkSubmissions StudentHomeworkSubmission[]
+  examAttempts ExamAttempt[]
+  chatSessions ChatSession[]
+  children ParentChildRelation[] @relation("ParentRelation")
+  parents  ParentChildRelation[] @relation("ChildRelation")
+  subscriptions Subscription[]
+  payments Payment[]
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  price       Float    @default(0.0)
+  isPremium   Boolean  @default(false)
+  tenantId    String?
+  createdAt   DateTime @default(now())
+  modules     Module[]
+  homeworks   Homework[]
+  exams       Exam[]
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  title     String
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+  createdAt DateTime @default(now())
+}
+
+model Lesson {
+  id          String               @id @default(cuid())
+  title       String
+  videoUrl    String?
+  fileUrl     String?
+  duration    Int                  @default(0) // in minutes
+  moduleId    String
+  module      Module               @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress    UserLessonProgress[]
+  createdAt   DateTime             @default(now())
+}
+
+model UserLessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, lessonId])
+}
+
+model Homework {
+  id          String   @id @default(cuid())
+  title       String
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  deadline    DateTime
+  status      String   @default("active") // "active" or "draft"
+  questions   HomeworkQuestion[]
+  submissions StudentHomeworkSubmission[]
+  createdAt   DateTime @default(now())
+}
+
+model HomeworkQuestion {
+  id              String   @id @default(cuid())
+  homeworkId      String
+  homework        Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  questionText    String
+  options         String[]
+  correctOption   Int      // Index of the correct option
+  answers         StudentHomeworkAnswer[]
+  createdAt       DateTime @default(now())
+}
+
+model StudentHomeworkSubmission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  homeworkId  String
+  homework    Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  score       Float?
+  status      String   @default("pending") // "pending" or "completed"
+  answers     StudentHomeworkAnswer[]
+  submittedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, homeworkId])
+}
+
+model StudentHomeworkAnswer {
+  id             String   @id @default(cuid())
+  submissionId   String
+  submission     StudentHomeworkSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       HomeworkQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption Int
+  createdAt      DateTime @default(now())
+
+  @@unique([submissionId, questionId])
+}
+
+model Exam {
+  id            String   @id @default(cuid())
+  title         String
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  duration      Int      // in minutes
+  status        String   @default("active") // active, draft
+  requireCamera Boolean  @default(true)
+  maxTabSwitches Int     @default(5)
+  questions     ExamQuestion[]
+  attempts      ExamAttempt[]
+  createdAt     DateTime @default(now())
+}
+
+model ExamQuestion {
+  id            String   @id @default(cuid())
+  examId        String
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionText  String
+  options       String[]
+  correctOption Int
+  draftAnswers  ExamDraftAnswer[]
+  createdAt     DateTime @default(now())
+}
+
+model ExamAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examId      String
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  score       Float?
+  status      String   @default("in-progress") // in-progress, completed, auto-submitted, disqualified
+  startedAt   DateTime @default(now())
+  submittedAt DateTime?
+  violations  ExamViolationLog[]
+  drafts      ExamDraftAnswer[]
+  
+  @@unique([userId, examId])
+}
+
+model ExamViolationLog {
+  id          String   @id @default(cuid())
+  attemptId   String
+  attempt     ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  type        String   // "TAB_SWITCH", "CAMERA_OFF"
+  timestamp   DateTime @default(now())
+}
+
+model ExamDraftAnswer {
+  id             String   @id @default(cuid())
+  attemptId      String
+  attempt        ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption Int
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([attemptId, questionId])
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String   // "user", "assistant", "system"
+  content   String
+  tokens    Int?
+  createdAt DateTime @default(now())
+}
+
+model ParentChildRelation {
+  id        String   @id @default(cuid())
+  parentId  String
+  parent    User     @relation("ParentRelation", fields: [parentId], references: [id], onDelete: Cascade)
+  childId   String
+  child     User     @relation("ChildRelation", fields: [childId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, childId])
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  status    String   @default("active") // active, canceled, past_due
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String   // e.g., 'stripe', 'paypal'
+  transactionId String   @unique
+  amount        Float
+  currency      String   @default("EGP")
+  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED, REFUNDED
+  createdAt     DateTime @default(now())
+}
