@@ -126,6 +126,10 @@ export default function TeacherCoursesPage() {
 
   const handleAddQuiz = () => {
     if(newQuiz.timestampSec && newQuiz.question && newQuiz.options && newQuiz.correctAnswer) {
+      if (!newQuiz.options.includes('-')) {
+        alert('يجب أن تحتوي الخيارات على علامة "-" للفصل بينها. مثال: الإجابة الأولى - الإجابة الثانية');
+        return;
+      }
       setQuizzes([...quizzes, newQuiz]);
       setNewQuiz({ timestampSec: '', question: '', options: '', correctAnswer: '' });
     } else {
@@ -142,8 +146,12 @@ export default function TeacherCoursesPage() {
       
       const analyticsObj: Record<string, any[]> = {};
       for (const lesson of courseDetails.lessons || []) {
-        const analyticsRes = await courseApi.get(`/lessons/${lesson.id}/analytics`);
-        analyticsObj[lesson.id] = analyticsRes.data;
+        try {
+          const analyticsRes = await courseApi.get(`/lessons/${lesson.id}/analytics`);
+          analyticsObj[lesson.id] = Array.isArray(analyticsRes.data) ? analyticsRes.data : [];
+        } catch (err) {
+          analyticsObj[lesson.id] = [];
+        }
       }
       setLessonAnalytics(analyticsObj);
     } catch(err) {
@@ -448,10 +456,10 @@ export default function TeacherCoursesPage() {
                   <div key={lessonId} className={`p-4 rounded-xl border ${cardBg}`}>
                     <h3 className={`font-bold ${textPrimary} mb-4 flex items-center gap-2`}>
                       <Youtube className="text-red-500 w-5 h-5" /> 
-                      الفيديو: {analytics.length > 0 ? analytics[0].lesson?.title : lessonId}
+                      الفيديو: {Array.isArray(analytics) && analytics.length > 0 ? analytics[0].lesson?.title : lessonId}
                     </h3>
                     
-                    {analytics.length === 0 ? (
+                    {!Array.isArray(analytics) || analytics.length === 0 ? (
                       <p className={`text-sm ${textSecondary}`}>لم يقم أي طالب بمشاهدة هذا الفيديو بعد.</p>
                     ) : (
                       <div className="overflow-x-auto">
@@ -466,8 +474,8 @@ export default function TeacherCoursesPage() {
                           </thead>
                           <tbody>
                             {analytics.map(stat => (
-                              <tr key={stat.id} className={`border-b last:border-0 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-                                <td className={`py-3 px-4 ${textPrimary}`}>{stat.student?.name}</td>
+                              <tr key={stat.id || Math.random()} className={`border-b last:border-0 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+                                <td className={`py-3 px-4 ${textPrimary}`}>{stat.student?.name || 'مستخدم غير معروف'}</td>
                                 <td className={`py-3 px-4`}>
                                   {stat.watched ? (
                                     <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs">مكتمل</span>

@@ -49,7 +49,7 @@ export default function ExamsPage() {
                     السؤال {idx + 1}: {q.question}
                   </h3>
                   <div className="space-y-3">
-                    {q.options.map((option: string, optIdx: number) => (
+                    {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? q.options.split('-') : [])).map((option: string, optIdx: number) => (
                       <label
                         key={optIdx}
                         className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 cursor-pointer transition-colors"

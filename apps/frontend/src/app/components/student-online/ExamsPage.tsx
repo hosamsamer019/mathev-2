@@ -239,7 +239,7 @@ export default function ExamsPage() {
             <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
               <h3 className="font-bold text-gray-900 mb-4">السؤال {idx + 1}: {q.questionText}</h3>
               <div className="space-y-3">
-                {q.options.map((option: string, optIdx: number) => (
+                {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? q.options.split('-') : [])).map((option: string, optIdx: number) => (
                   <label key={optIdx} className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors">
                     <input type="radio" name={`question-${q.id}`} value={optIdx} checked={answers[q.id] === optIdx.toString()} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-5 h-5 text-indigo-600" />
                     <span className="text-gray-900">{option}</span>
