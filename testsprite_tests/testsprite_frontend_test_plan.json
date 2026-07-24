@@ -1,0 +1,234 @@
+[
+  {
+    "id": "TC001",
+    "title": "Unauthenticated visitor is blocked from the student area",
+    "description": "This verifies that a visitor without a session is prevented from viewing the protected student area.",
+    "category": "Student Online Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /student-online"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access to the student area is blocked"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login page is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Unauthenticated visitor is blocked from homework",
+    "description": "This verifies that a visitor without a session is prevented from viewing the protected homework page.",
+    "category": "View Homework",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /student-online/homework"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access to the homework page is blocked"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login page is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Student logs in and reaches the dashboard",
+    "description": "This verifies that a student can sign in with valid credentials and land on the authenticated student dashboard.",
+    "category": "User Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the student online dashboard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Student sees homework after login",
+    "description": "This verifies that a signed-in student can open the homework section and view the assigned homework list.",
+    "category": "View Homework",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the homework section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the homework list is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Signed-in student can access the student area",
+    "description": "This verifies that an authenticated student can access the protected student area after signing in.",
+    "category": "Student Online Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /student-online"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the student online dashboard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Signed-in student can open homework directly",
+    "description": "This verifies that an authenticated student can access the homework page directly and see the homework list.",
+    "category": "View Homework",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /student-online/homework"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the homework list is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Authenticated admin can open the admin dashboard",
+    "description": "This verifies that an authenticated admin or teacher can access the admin area when signed in with the correct role.",
+    "category": "Admin access",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin dashboard is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC008",
+    "title": "Invalid login shows a failure message",
+    "description": "This verifies that submitting invalid credentials on the login page shows a clear login failure state.",
+    "category": "User Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with invalid@example.com"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with invalid-password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a login failure message is visible"
+      }
+    ],
+    "priority": "Low"
+  }
+]

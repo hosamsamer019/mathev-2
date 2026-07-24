@@ -28,10 +28,27 @@ const distributionData = [
   { name: 'جيد جداً', value: 45, color: '#3b82f6' },
 ];
 
+const subjectPerformance = [
+  { subject: 'الجبر', avg: 85 },
+  { subject: 'الهندسة', avg: 78 },
+  { subject: 'التفاضل', avg: 92 },
+];
+
+const recentActivities = [
+  { text: 'أحمد قام بتسليم الواجب', time: 'منذ 5 دقائق', icon: ClipboardCheck, color: 'text-emerald-600' },
+  { text: 'طالب جديد سجل في الدورة', time: 'منذ ساعة', icon: Users, color: 'text-blue-600' },
+];
+
+const atRiskStudents = [
+  { name: 'محمود خالد', grade: 'الصف الأول', risk: 'عالي', subject: 'الجبر', score: 45 },
+  { name: 'عمر سيد', grade: 'الصف الثاني', risk: 'متوسط', subject: 'الهندسة', score: 60 },
+];
+
 export default function TeacherHomePage() {
   const { isDark } = useTheme();
   const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState('week');
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';

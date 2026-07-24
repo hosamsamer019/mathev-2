@@ -1,0 +1,1 @@
+{"version":3,"file":"users.ts","sources":["E:\\Mathe\\Mathteachersmartplatform-main\\api\\users.ts"],"names":[],"mappings":";;;;;AAAA,+EAAqD;AACrD,kBAAe,eAAG,CAAC","sourcesContent":["import app from '../services/user-service/src/index';\nexport default app;\n"]}

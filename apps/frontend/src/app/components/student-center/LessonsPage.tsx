@@ -1,32 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Youtube, BookOpen } from 'lucide-react';
+import { courseApi } from '../../services/api';
 
 export default function LessonsPage() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const lessons = [
-    {
-      id: 1,
-      title: 'مقدمة في الجبر',
-      description: 'تعرف على أساسيات الجبر والمتغيرات',
-      youtubeId: 'dQw4w9WgXcQ',
-      course: 'الجبر',
-    },
-    {
-      id: 2,
-      title: 'المعادلات الخطية',
-      description: 'كيفية حل المعادلات من الدرجة الأولى',
-      youtubeId: 'dQw4w9WgXcQ',
-      course: 'الجبر',
-    },
-    {
-      id: 3,
-      title: 'الهندسة الإقليدية',
-      description: 'مقدمة في الهندسة والأشكال الهندسية',
-      youtubeId: 'dQw4w9WgXcQ',
-      course: 'الهندسة',
-    },
-  ];
+  useEffect(() => {
+    courseApi.get('/lessons')
+      .then(res => setLessons(res.data || []))
+      .catch(err => console.error('Failed to fetch lessons', err))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="p-8">
@@ -58,10 +44,10 @@ export default function LessonsPage() {
             </div>
             <div className="p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {lessons.find((l) => l.youtubeId === selectedVideo)?.title}
+                {lessons.find((l) => l.videoUrl === selectedVideo)?.title}
               </h2>
               <p className="text-gray-600">
-                {lessons.find((l) => l.youtubeId === selectedVideo)?.description}
+                {lessons.find((l) => l.videoUrl === selectedVideo)?.description}
               </p>
             </div>
           </div>
@@ -70,11 +56,11 @@ export default function LessonsPage() {
             <h3 className="text-xl font-bold text-gray-900 mb-4">الدروس الأخرى</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {lessons
-                .filter((l) => l.youtubeId !== selectedVideo)
+                .filter((l) => l.videoUrl !== selectedVideo)
                 .map((lesson) => (
                   <div
                     key={lesson.id}
-                    onClick={() => setSelectedVideo(lesson.youtubeId)}
+                    onClick={() => setSelectedVideo(lesson.videoUrl)}
                     className="flex items-center gap-4 p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 cursor-pointer transition-colors"
                   >
                     <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
@@ -82,7 +68,7 @@ export default function LessonsPage() {
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900">{lesson.title}</h4>
-                      <p className="text-sm text-gray-600">{lesson.course}</p>
+                      <p className="text-sm text-gray-600">{lesson.course?.title || 'دورة'}</p>
                     </div>
                   </div>
                 ))}
@@ -91,11 +77,13 @@ export default function LessonsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading && <div className="col-span-3 text-center py-8 text-gray-500">جاري تحميل الدروس...</div>}
+          {!loading && lessons.length === 0 && <div className="col-span-3 text-center py-8 text-gray-500">لا توجد دروس حالياً</div>}
           {lessons.map((lesson) => (
             <div
               key={lesson.id}
               className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
-              onClick={() => setSelectedVideo(lesson.youtubeId)}
+              onClick={() => setSelectedVideo(lesson.videoUrl)}
             >
               <div className="relative h-48 bg-gray-800 flex items-center justify-center">
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
@@ -104,7 +92,7 @@ export default function LessonsPage() {
                   </div>
                 </div>
                 <img
-                  src={`https://img.youtube.com/vi/${lesson.youtubeId}/maxresdefault.jpg`}
+                  src={`https://img.youtube.com/vi/${lesson.videoUrl}/maxresdefault.jpg`}
                   alt={lesson.title}
                   className="w-full h-full object-cover"
                 />
@@ -113,7 +101,7 @@ export default function LessonsPage() {
               <div className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <BookOpen className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-600 font-medium">{lesson.course}</span>
+                  <span className="text-sm text-green-600 font-medium">{lesson.course?.title || 'دورة'}</span>
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">{lesson.title}</h3>
                 <p className="text-sm text-gray-600 mb-4">{lesson.description}</p>

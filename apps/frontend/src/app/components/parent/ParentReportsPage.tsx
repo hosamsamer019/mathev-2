@@ -2,22 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, Award, Target, Star, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import axios from 'axios';
-
-// API Instances
-const userApi = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/users' });
-const analyticsApi = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/analytics' });
-
-userApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-analyticsApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { userApi, analyticsApi } from '../../services/api';
 
 export default function ParentReportsPage() {
   const { isDark } = useTheme();

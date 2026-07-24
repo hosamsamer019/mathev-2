@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CreditCard, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import axios from 'axios';
-
-const userApi = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/users' });
-userApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { userApi } from '../../services/api';
 
 const plans = [
   {

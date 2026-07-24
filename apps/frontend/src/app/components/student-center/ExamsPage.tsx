@@ -1,42 +1,31 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ClipboardCheck, Clock, CheckCircle } from 'lucide-react';
+import { courseApi, examApi } from '../../services/api';
 
 export default function ExamsPage() {
-  const [selectedExam, setSelectedExam] = useState<number | null>(null);
+  const [selectedExam, setSelectedExam] = useState<any>(null);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [exams, setExams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const exams = [
-    { id: 1, title: 'امتحان الجبر', status: 'completed', score: 90, questions: 10 },
-    { id: 2, title: 'امتحان الهندسة', status: 'available', score: null, questions: 15 },
-  ];
+  useEffect(() => {
+    examApi.get('/')
+      .then(res => setExams(res.data || []))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const questions = [
-    {
-      id: 1,
-      question: 'ما هو حل المعادلة: x + 5 = 12؟',
-      options: ['x = 5', 'x = 7', 'x = 10', 'x = 17'],
-      correct: 1,
-    },
-    {
-      id: 2,
-      question: 'أوجد قيمة y: 2y = 18',
-      options: ['y = 6', 'y = 9', 'y = 12', 'y = 18'],
-      correct: 1,
-    },
-  ];
-
-  const handleSubmit = () => {
-    let correctCount = 0;
-    questions.forEach((q) => {
-      if (parseInt(answers[q.id]) === q.correct) {
-        correctCount++;
-      }
-    });
-    const finalScore = Math.round((correctCount / questions.length) * 100);
-    setScore(finalScore);
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    try {
+      const res = await examApi.post('/submit', { examId: selectedExam.id, answers });
+      setScore(res.data?.score || 0);
+      setSubmitted(true);
+    } catch(err) {
+      console.error(err);
+      alert('فشل في إرسال الامتحان');
+    }
   };
 
   if (selectedExam && !submitted) {
@@ -51,16 +40,16 @@ export default function ExamsPage() {
           </button>
 
           <div className="bg-white rounded-xl shadow-md p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">امتحان الهندسة</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">{selectedExam.title}</h1>
 
             <div className="space-y-8">
-              {questions.map((q, idx) => (
+              {selectedExam.questions?.map((q: any, idx: number) => (
                 <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
                   <h3 className="font-bold text-gray-900 mb-4">
                     السؤال {idx + 1}: {q.question}
                   </h3>
                   <div className="space-y-3">
-                    {q.options.map((option, optIdx) => (
+                    {q.options.map((option: string, optIdx: number) => (
                       <label
                         key={optIdx}
                         className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 cursor-pointer transition-colors"
@@ -83,7 +72,7 @@ export default function ExamsPage() {
 
             <button
               onClick={handleSubmit}
-              disabled={Object.keys(answers).length < questions.length}
+              disabled={Object.keys(answers).length < (selectedExam.questions?.length || 0)}
               className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 mt-8"
             >
               إرسال الإجابات
@@ -128,6 +117,8 @@ export default function ExamsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading && <div className="col-span-3 text-center py-8 text-gray-500">جاري تحميل الامتحانات...</div>}
+        {!loading && exams.length === 0 && <div className="col-span-3 text-center py-8 text-gray-500">لا توجد امتحانات حالياً</div>}
         {exams.map((exam) => (
           <div key={exam.id} className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-start justify-between mb-4">
@@ -153,7 +144,14 @@ export default function ExamsPage() {
 
             {exam.status === 'available' ? (
               <button
-                onClick={() => setSelectedExam(exam.id)}
+                onClick={async () => {
+                  try {
+                    const res = await examApi.get(`/${exam.id}`);
+                    setSelectedExam(res.data);
+                  } catch(err) {
+                    console.error(err);
+                  }
+                }}
                 className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
               >
                 ابدأ الامتحان

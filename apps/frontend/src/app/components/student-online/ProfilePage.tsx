@@ -1,20 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save } from 'lucide-react';
+import { userApi } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    name: 'أحمد محمد علي',
-    email: 'ahmed.mohamed@example.com',
-    phone: '01012345678',
-    city: 'القاهرة',
-    school: 'مدرسة النور الثانوية',
-    grade: 'الصف الأول الثانوي',
-    joinDate: '2026-01-15',
+    name: 'جاري التحميل...',
+    email: '...',
+    role: 'طالب'
   });
 
-  const handleSave = () => {
-    setEditing(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role === 'student_online' ? 'طالب أونلاين' :
+              user.role === 'student_center' ? 'طالب سنتر' :
+              user.role === 'teacher' ? 'معلم' :
+              user.role === 'parent' ? 'ولي أمر' : 'طالب'
+      }));
+    }
+    setLoading(false);
+  }, [user]);
+
+  const handleSave = async () => {
+    try {
+      // In a real app we'd PUT /users/:id here
+      setEditing(false);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -30,11 +51,7 @@ export default function ProfilePage() {
             <User className="w-16 h-16 text-indigo-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">{formData.name}</h2>
-          <p className="text-gray-600 mb-4">{formData.grade}</p>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-            <Calendar className="w-4 h-4" />
-            <span>انضم في {formData.joinDate}</span>
-          </div>
+          <p className="text-gray-600 mb-4">{formData.role}</p>
         </div>
 
         <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
@@ -98,61 +115,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                رقم الهاتف
-              </label>
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-gray-400" />
-                {editing ? (
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  />
-                ) : (
-                  <span className="text-gray-900">{formData.phone}</span>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                المدينة
-              </label>
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-gray-400" />
-                {editing ? (
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  />
-                ) : (
-                  <span className="text-gray-900">{formData.city}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-gray-200">
-              <h3 className="font-medium text-gray-900 mb-4">معلومات الدراسة</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    المدرسة
-                  </label>
-                  <span className="text-gray-900">{formData.school}</span>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الصف الدراسي
-                  </label>
-                  <span className="text-gray-900">{formData.grade}</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

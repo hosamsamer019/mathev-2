@@ -1,0 +1,1 @@
+{"version":3,"file":"courses.ts","sources":["E:\\Mathe\\Mathteachersmartplatform-main\\api\\courses.ts"],"names":[],"mappings":";;;;;AAAA,iFAAuD;AACvD,kBAAe,eAAG,CAAC","sourcesContent":["import app from '../services/course-service/src/index';\nexport default app;\n"]}

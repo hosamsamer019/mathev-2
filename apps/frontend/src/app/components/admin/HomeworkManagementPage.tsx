@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
-import { courseApi } from '../../services/api';
+import { courseApi, homeworkApi } from '../../services/api';
 
 const DEFAULT_HOMEWORKS = [
   { id: '1', title: 'واجب الجبر - الأسبوع الأول', course: 'الجبر', questions: 10, deadline: '2026-04-25', status: 'نشط' },
@@ -12,7 +12,7 @@ export default function HomeworkManagementPage() {
   const [homeworks, setHomeworks] = useState<any[]>(DEFAULT_HOMEWORKS);
 
   useEffect(() => {
-    courseApi.get('/homework')
+    homeworkApi.get('/')
       .then(res => {
         if (res.data && res.data.length > 0) {
           const mapped = res.data.map((hw: any) => ({

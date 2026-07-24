@@ -1,22 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Play, FileText, CheckCircle, Clock, TrendingUp, BookOpen, Award, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import axios from 'axios';
-
-// API Instances
-const userApi = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/users' });
-const analyticsApi = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/analytics' });
-
-userApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-analyticsApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { userApi, analyticsApi } from '../../services/api';
 
 export default function ParentChildrenPage() {
   const { isDark } = useTheme();

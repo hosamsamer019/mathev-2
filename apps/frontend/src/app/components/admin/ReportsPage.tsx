@@ -1,23 +1,50 @@
+import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Download, TrendingUp, Users, Award } from 'lucide-react';
+import { Download, TrendingUp, Users, Award, BookOpen } from 'lucide-react';
+import { analyticsApi } from '../../services/api';
 
 export default function ReportsPage() {
-  const performanceData = [
-    { name: 'ممتاز (90-100)', value: 45 },
-    { name: 'جيد جداً (80-89)', value: 78 },
-    { name: 'جيد (70-79)', value: 56 },
-    { name: 'مقبول (60-69)', value: 23 },
-    { name: 'ضعيف (<60)', value: 12 },
-  ];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const monthlyProgress = [
-    { month: 'يناير', online: 120, center: 85 },
-    { month: 'فبراير', online: 150, center: 92 },
-    { month: 'مارس', online: 180, center: 105 },
-    { month: 'أبريل', online: 210, center: 118 },
-  ];
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#6b7280'];
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const res = await analyticsApi.get('/admin');
+      setData(res.data);
+    } catch (err) {
+      console.error('Failed to fetch analytics', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500">جاري تحميل الإحصائيات...</div>;
+  }
+
+  if (!data) {
+    return <div className="p-8 text-center text-red-500">حدث خطأ أثناء جلب البيانات.</div>;
+  }
+
+  const { overview, roleDistribution } = data;
+
+  const roleColors: Record<string, string> = {
+    'ADMIN': '#ef4444',
+    'TEACHER': '#f59e0b',
+    'ONLINE_STUDENT': '#3b82f6',
+    'CENTER_STUDENT': '#10b981',
+    'PARENT': '#8b5cf6'
+  };
+
+  const formattedRoleData = roleDistribution?.map((r: any) => ({
+    name: r.role,
+    value: r._count
+  })) || [];
 
   return (
     <div className="p-8">
@@ -36,20 +63,8 @@ export default function ReportsPage() {
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">متوسط الأداء العام</p>
-              <p className="text-3xl font-bold text-green-600">85%</p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm mb-1">الطلاب النشطون</p>
-              <p className="text-3xl font-bold text-blue-600">1,234</p>
+              <p className="text-gray-600 text-sm mb-1">إجمالي المستخدمين</p>
+              <p className="text-3xl font-bold text-blue-600">{overview?.totalUsers || 0}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
               <Users className="w-6 h-6 text-blue-600" />
@@ -60,8 +75,20 @@ export default function ReportsPage() {
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">معدل الإنجاز</p>
-              <p className="text-3xl font-bold text-purple-600">78%</p>
+              <p className="text-gray-600 text-sm mb-1">الدورات النشطة</p>
+              <p className="text-3xl font-bold text-green-600">{overview?.totalCourses || 0}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm mb-1">عدد الامتحانات</p>
+              <p className="text-3xl font-bold text-purple-600">{overview?.totalExams || 0}</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
               <Award className="w-6 h-6 text-purple-600" />
@@ -72,8 +99,8 @@ export default function ReportsPage() {
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">نسبة النجاح</p>
-              <p className="text-3xl font-bold text-orange-600">92%</p>
+              <p className="text-gray-600 text-sm mb-1">التسليمات</p>
+              <p className="text-3xl font-bold text-orange-600">{overview?.totalSubmissions || 0}</p>
             </div>
             <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-orange-600" />
@@ -84,11 +111,11 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">توزيع الأداء</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">توزيع المستخدمين</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={performanceData}
+                data={formattedRoleData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -97,101 +124,21 @@ export default function ReportsPage() {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {performanceData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {formattedRoleData.map((entry: any, index: number) => (
+                  <Cell key={`cell-${index}`} fill={roleColors[entry.name] || '#8884d8'} />
                 ))}
               </Pie>
               <Tooltip />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
-
+        
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">التقدم الشهري</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyProgress}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="online" fill="#4f46e5" name="طلاب أونلاين" />
-              <Bar dataKey="center" fill="#10b981" name="طلاب السنتر" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">تقرير الدورات</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-right py-3 px-4 font-medium text-gray-700">الدورة</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">عدد الطلاب</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">معدل الإنجاز</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">المتوسط</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">التقييم</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 text-gray-900">الجبر - الصف الأول</td>
-                <td className="py-3 px-4 text-gray-600">156</td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{ width: '75%' }}></div>
-                    </div>
-                    <span className="text-sm text-gray-600">75%</span>
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="font-bold text-green-600">85%</span>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="text-yellow-500">★★★★☆</span>
-                </td>
-              </tr>
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 text-gray-900">الهندسة - الصف الأول</td>
-                <td className="py-3 px-4 text-gray-600">142</td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{ width: '68%' }}></div>
-                    </div>
-                    <span className="text-sm text-gray-600">68%</span>
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="font-bold text-green-600">78%</span>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="text-yellow-500">★★★★☆</span>
-                </td>
-              </tr>
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 text-gray-900">حساب المثلثات</td>
-                <td className="py-3 px-4 text-gray-600">98</td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{ width: '82%' }}></div>
-                    </div>
-                    <span className="text-sm text-gray-600">82%</span>
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="font-bold text-green-600">82%</span>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="text-yellow-500">★★★★★</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">احصائيات أخرى ستضاف لاحقاً</h2>
+          <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+             <p className="text-gray-500">المزيد من الرسوم البيانية ستضاف هنا</p>
+          </div>
         </div>
       </div>
     </div>

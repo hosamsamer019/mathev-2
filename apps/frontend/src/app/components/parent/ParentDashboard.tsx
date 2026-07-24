@@ -5,6 +5,8 @@ import ParentHomePage from './ParentHomePage';
 import ParentChildrenPage from './ParentChildrenPage';
 import ParentReportsPage from './ParentReportsPage';
 import ParentSubscriptionPage from './ParentSubscriptionPage';
+import { useState, useEffect } from 'react';
+import { userApi } from '../../services/api';
 
 const menuItems: MenuItem[] = [
   { path: '/parent/home', icon: Home, label: 'الرئيسية' },
@@ -16,11 +18,27 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function ParentDashboard() {
+  const [profileName, setProfileName] = useState('جاري التحميل...');
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    userApi.get('/profile')
+      .then(res => setProfileName(res.data?.name || res.data?.firstName + ' ' + res.data?.lastName || 'ولي أمر'))
+      .catch(() => setProfileName('ولي أمر'));
+
+    // Optionally fetch unread messages if there is an endpoint, mocking for now to clear ghost data
+    setUnreadMessages(0); 
+  }, []);
+
+  const dynamicMenuItems: MenuItem[] = menuItems.map(item => 
+    item.label === 'التواصل مع المعلم' ? { ...item, badge: unreadMessages > 0 ? unreadMessages : undefined } : item
+  );
+
   return (
     <SharedLayout
-      menuItems={menuItems}
+      menuItems={dynamicMenuItems}
       title="بوابة ولي الأمر"
-      subtitle="محمد علي"
+      subtitle={profileName}
       accentColor="cyan"
       gradientFrom="cyan-600"
       gradientTo="blue-600"

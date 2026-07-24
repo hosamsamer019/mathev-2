@@ -22,6 +22,8 @@ services:
         sync: false
       - key: CLIENT_URL
         sync: false
+      - key: JWT_SECRET
+        sync: false
 
   - type: web
     name: ai-service
@@ -35,6 +37,10 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
 
   - type: web
     name: course-service
@@ -46,6 +52,8 @@ services:
         sync: false
       - key: CLIENT_URL
         sync: false
+      - key: JWT_SECRET
+        sync: false
 
   - type: web
     name: analytics-service
@@ -56,4 +64,6 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: CLIENT_URL
+        sync: false
+      - key: JWT_SECRET
         sync: false

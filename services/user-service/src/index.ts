@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 
 import userRoutes from './routes/user.routes.js';
+import attendanceRoutes from './routes/attendance.routes.js';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 app.use('/api/users', userRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {

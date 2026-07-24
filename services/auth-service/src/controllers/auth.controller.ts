@@ -29,11 +29,22 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    const roleMap: Record<string, string> = {
+      'admin': 'ADMIN',
+      'teacher': 'TEACHER',
+      'student_online': 'ONLINE_STUDENT',
+      'student_center': 'CENTER_STUDENT',
+      'parent': 'PARENT'
+    };
+    const prismaRole = roleMap[validatedData.role];
+
     const hashedPassword = await bcrypt.hash(validatedData.password, 10);
     const newUser = await db.user.create({
       data: {
-        ...validatedData,
-        password: hashedPassword
+        name: validatedData.name,
+        email: validatedData.email,
+        password: hashedPassword,
+        role: prismaRole as any
       }
     });
 
@@ -51,10 +62,20 @@ export const login = async (req: Request, res: Response) => {
   try {
     const validatedData = loginSchema.parse(req.body) as any;
     
+    const roleMap: Record<string, string> = {
+      'admin': 'ADMIN',
+      'teacher': 'TEACHER',
+      'student_online': 'ONLINE_STUDENT',
+      'student_center': 'CENTER_STUDENT',
+      'parent': 'PARENT'
+    };
+
+    const prismaRole = roleMap[validatedData.role];
+
     const user = await db.user.findFirst({
       where: { 
         email: validatedData.email,
-        role: validatedData.role
+        role: prismaRole as any
       }
     });
 
@@ -71,7 +92,7 @@ export const login = async (req: Request, res: Response) => {
 
     const token = jwt.sign(
       { userId: user.id, role: user.role, email: user.email },
-      process.env.JWT_SECRET || 'secret',
+      process.env.JWT_SECRET!,
       { expiresIn: '1d' }
     );
 
@@ -88,13 +109,21 @@ export const login = async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
+    const reverseRoleMap: Record<string, string> = {
+      'ADMIN': 'admin',
+      'TEACHER': 'teacher',
+      'ONLINE_STUDENT': 'student_online',
+      'CENTER_STUDENT': 'student_center',
+      'PARENT': 'parent'
+    };
+
     res.json({
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: reverseRoleMap[user.role] || user.role
       }
     });
   } catch (error: any) {
@@ -114,7 +143,18 @@ export const getMe = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json(user);
+    const reverseRoleMap: Record<string, string> = {
+      'ADMIN': 'admin',
+      'TEACHER': 'teacher',
+      'ONLINE_STUDENT': 'student_online',
+      'CENTER_STUDENT': 'student_center',
+      'PARENT': 'parent'
+    };
+
+    res.json({
+      ...user,
+      role: reverseRoleMap[user.role] || user.role
+    });
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
   }

@@ -1,13 +1,40 @@
-import { User, Mail, Phone, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Mail, Phone, MapPin, Edit2, Save } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ProfilePage() {
-  const profile = {
-    name: 'محمد أحمد علي',
-    email: 'mohamed.ahmed@example.com',
-    phone: '01098765432',
-    city: 'الجيزة',
-    center: 'سنتر التميز التعليمي',
-    grade: 'الصف الثاني الثانوي',
+  const [editing, setEditing] = useState(false);
+  const { user } = useAuth();
+  
+  const [formData, setFormData] = useState({
+    name: 'جاري التحميل...',
+    email: '...',
+    phone: 'غير متوفر',
+    city: 'غير متوفر',
+    center: 'غير متوفر',
+    grade: 'غير متوفر'
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || 'مستخدم',
+        email: user.email || '',
+        phone: (user as any).phoneNumber || 'غير متوفر',
+        city: (user as any).governorate || 'غير متوفر',
+        center: (user as any).institution || 'سنتر',
+        grade: user.grade || 'غير متوفر'
+      });
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    try {
+      // API update logic here
+      setEditing(false);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -22,54 +49,99 @@ export default function ProfilePage() {
           <div className="w-32 h-32 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="w-16 h-16 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">{profile.name}</h2>
-          <p className="text-gray-600">{profile.grade}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">{formData.name}</h2>
+          <p className="text-gray-600">{formData.grade}</p>
         </div>
 
         <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">المعلومات الشخصية</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">المعلومات الشخصية</h2>
+            {!editing ? (
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-2 text-green-600 hover:text-green-800"
+              >
+                <Edit2 className="w-5 h-5" />
+                <span>تعديل</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                <Save className="w-5 h-5" />
+                <span>حفظ</span>
+              </button>
+            )}
+          </div>
 
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <User className="w-5 h-5 text-gray-400" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">الاسم</p>
-                <p className="text-gray-900 font-medium">{profile.name}</p>
+                {editing ? (
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg mt-1" />
+                ) : (
+                  <p className="text-gray-900 font-medium">{formData.name}</p>
+                )}
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <Mail className="w-5 h-5 text-gray-400" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">البريد الإلكتروني</p>
-                <p className="text-gray-900 font-medium">{profile.email}</p>
+                {editing ? (
+                  <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border rounded-lg mt-1" />
+                ) : (
+                  <p className="text-gray-900 font-medium">{formData.email}</p>
+                )}
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <Phone className="w-5 h-5 text-gray-400" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">رقم الهاتف</p>
-                <p className="text-gray-900 font-medium">{profile.phone}</p>
+                {editing ? (
+                  <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg mt-1" />
+                ) : (
+                  <p className="text-gray-900 font-medium">{formData.phone}</p>
+                )}
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <MapPin className="w-5 h-5 text-gray-400" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">المدينة</p>
-                <p className="text-gray-900 font-medium">{profile.city}</p>
+                {editing ? (
+                  <input type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="w-full px-3 py-2 border rounded-lg mt-1" />
+                ) : (
+                  <p className="text-gray-900 font-medium">{formData.city}</p>
+                )}
               </div>
             </div>
 
             <div className="pt-6 border-t border-gray-200">
               <h3 className="font-medium text-gray-900 mb-4">معلومات السنتر</h3>
-              <div className="space-y-2">
-                <p className="text-gray-600">
-                  <span className="font-medium">اسم السنتر:</span> {profile.center}
+              <div className="space-y-4">
+                <p className="text-gray-600 flex items-center gap-2">
+                  <span className="font-medium w-24">اسم السنتر:</span>
+                  {editing ? (
+                    <input type="text" value={formData.center} onChange={e => setFormData({...formData, center: e.target.value})} className="flex-1 px-3 py-2 border rounded-lg" />
+                  ) : (
+                    <span>{formData.center}</span>
+                  )}
                 </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">الصف الدراسي:</span> {profile.grade}
+                <p className="text-gray-600 flex items-center gap-2">
+                  <span className="font-medium w-24">الصف الدراسي:</span>
+                  {editing ? (
+                    <input type="text" value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="flex-1 px-3 py-2 border rounded-lg" />
+                  ) : (
+                    <span>{formData.grade}</span>
+                  )}
                 </p>
               </div>
             </div>

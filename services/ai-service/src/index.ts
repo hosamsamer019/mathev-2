@@ -69,6 +69,7 @@ app.get('/api/ai/sessions', verifyToken, async (req: AuthRequest, res: Response)
     const sessions = await ChatService.getUserSessions(userId);
     res.json(sessions);
   } catch (error: any) {
+    console.error('getSessions error:', error);
     res.status(500).json({ message: 'Error fetching sessions', error: error.message });
   }
 });

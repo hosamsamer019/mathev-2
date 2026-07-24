@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_ybEFDAUK1awDIG2Dtuwe49nMY6Jw",
+  "orgId": "team_Ad3YZJnisPHLAgPJ6g2H20pU",
+  "projectName": "math-teacher-platform",
+  "settings": {
+    "createdAt": 1784308211406,
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

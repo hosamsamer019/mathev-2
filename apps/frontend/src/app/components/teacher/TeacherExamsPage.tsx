@@ -1,65 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldCheck, BarChart3 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const exams = [
-  {
-    id: 1,
-    title: 'امتحان الجبر - المنهج الأول',
-    subject: 'الجبر',
-    date: '٢٠٢٦/٠٥/٠١',
-    duration: '٩٠ دقيقة',
-    questions: 30,
-    students: 45,
-    status: 'قادم',
-    type: 'امتحان',
-    antiCheat: true,
-    randomize: true,
-    avgScore: null,
-  },
-  {
-    id: 2,
-    title: 'اختبار الهندسة الفراغية',
-    subject: 'الهندسة',
-    date: '٢٠٢٦/٠٤/٢٥',
-    duration: '٦٠ دقيقة',
-    questions: 20,
-    students: 38,
-    status: 'منتهي',
-    type: 'اختبار',
-    antiCheat: false,
-    randomize: true,
-    avgScore: 78,
-  },
-  {
-    id: 3,
-    title: 'واجب التفاضل والتكامل - الأسبوع ٣',
-    subject: 'التفاضل',
-    date: '٢٠٢٦/٠٤/٢٨',
-    duration: 'غير محدد',
-    questions: 10,
-    students: 29,
-    status: 'جاري',
-    type: 'واجب',
-    antiCheat: false,
-    randomize: false,
-    avgScore: null,
-  },
-  {
-    id: 4,
-    title: 'امتحان الإحصاء النهائي',
-    subject: 'الإحصاء',
-    date: '٢٠٢٦/٠٥/١٥',
-    duration: '١٢٠ دقيقة',
-    questions: 40,
-    students: 22,
-    status: 'قادم',
-    type: 'امتحان نهائي',
-    antiCheat: true,
-    randomize: true,
-    avgScore: null,
-  },
-];
+import { examApi } from '../../services/api';
 
 const questionTypes = [
   { label: 'اختيار من متعدد (MCQ)', count: 15, color: 'bg-blue-100 text-blue-700' },
@@ -72,6 +15,65 @@ export default function TeacherExamsPage() {
   const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'exams' | 'builder' | 'results'>('exams');
   const [showCreate, setShowCreate] = useState(false);
+  const [exams, setExams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string|null>(null);
+
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  const fetchExams = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Fetch exams related to courses (mocked route for exams)
+      const res = await examApi.get('/');
+      if (res.data) {
+        const mapped = res.data.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          subject: e.subject || 'عام',
+          date: new Date(e.createdAt).toLocaleDateString('ar-EG'),
+          duration: `${e.timeLimit || 60} دقيقة`,
+          questions: e.questions?.length || 0,
+          students: e.attempts?.length || 0,
+          status: 'قادم',
+          type: 'امتحان',
+          antiCheat: e.antiCheat || false,
+          randomize: e.randomize || false,
+          avgScore: null,
+        }));
+        setExams(mapped);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('فشل في جلب الامتحانات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateExam = async () => {
+    try {
+      await courseApi.post('/exams', { title: 'امتحان جديد' });
+      setShowCreate(false);
+      fetchExams();
+    } catch (err) {
+      console.error('Create failed', err);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if(confirm('هل أنت متأكد من الحذف؟')) {
+      try {
+        await courseApi.delete(`/exams/${id}`);
+        setExams(e => e.filter(x => x.id !== id));
+      } catch (err) {
+        console.error('Delete failed', err);
+      }
+    }
+  };
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -124,8 +126,12 @@ export default function TeacherExamsPage() {
         ))}
       </div>
 
-      {activeTab === 'exams' && (
+      {loading && <div className={`text-center py-8 ${textSecondary}`}>جاري تحميل البيانات...</div>}
+      {error && <div className="text-center py-8 text-red-500 bg-red-50 rounded-xl mb-4 border border-red-200">{error}</div>}
+
+      {activeTab === 'exams' && !loading && !error && (
         <div className="space-y-4">
+          {exams.length === 0 && <div className={`text-center py-8 ${textSecondary}`}>لا يوجد امتحانات</div>}
           {exams.map((exam) => (
             <div key={exam.id} className={`${cardBg} border rounded-2xl p-5`}>
               <div className="flex items-start justify-between gap-4">
@@ -171,13 +177,13 @@ export default function TeacherExamsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} text-blue-500 transition-colors`}>
+                  <button onClick={() => alert('جاري العرض...')} className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} text-blue-500 transition-colors`}>
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${textSecondary} transition-colors`}>
+                  <button onClick={() => alert('جاري التعديل...')} className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${textSecondary} transition-colors`}>
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">
+                  <button onClick={() => handleDelete(exam.id)} className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -205,7 +211,7 @@ export default function TeacherExamsPage() {
               </div>
             ))}
           </div>
-          <button className="bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90">
+          <button onClick={() => alert('ميزة بنك الأسئلة قيد التطوير')} className="bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90">
             إضافة أسئلة جديدة
           </button>
         </div>
@@ -217,8 +223,9 @@ export default function TeacherExamsPage() {
           <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>تحليل النتائج</h2>
           <p className={`${textSecondary} mb-6`}>اختر امتحاناً لعرض تحليل مفصل للنتائج</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {exams.filter(e => e.status === 'منتهي').length === 0 && <p className={textSecondary}>لا يوجد نتائج بعد.</p>}
             {exams.filter(e => e.status === 'منتهي').map((exam) => (
-              <button key={exam.id} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} text-right transition-colors`}>
+              <button key={exam.id} onClick={() => alert('عرض تقرير النتيجة')} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} text-right transition-colors`}>
                 <h3 className={`font-semibold ${textPrimary}`}>{exam.title}</h3>
                 <p className={`text-sm ${textSecondary} mt-1`}>{exam.students} طالب • متوسط: {exam.avgScore}٪</p>
               </button>
@@ -268,7 +275,7 @@ export default function TeacherExamsPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90">
+              <button onClick={handleCreateExam} className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90">
                 إنشاء الامتحان
               </button>
               <button onClick={() => setShowCreate(false)} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}>

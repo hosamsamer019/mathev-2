@@ -17,11 +17,11 @@
   status = 200
 
 [context.production.environment]
-  VITE_AUTH_API_URL = ""
-  VITE_USER_API_URL = ""
-  VITE_AI_API_URL = ""
-  VITE_COURSE_API_URL = ""
-  VITE_ANALYTICS_API_URL = ""
+  VITE_AUTH_API_URL = "https://auth-service.onrender.com"
+  VITE_USER_API_URL = "https://user-service.onrender.com"
+  VITE_AI_API_URL = "https://ai-service.onrender.com"
+  VITE_COURSE_API_URL = "https://course-service.onrender.com"
+  VITE_ANALYTICS_API_URL = "https://analytics-service.onrender.com"
 
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"

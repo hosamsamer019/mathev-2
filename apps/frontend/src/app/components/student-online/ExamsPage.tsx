@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ClipboardCheck, Clock, CheckCircle, AlertCircle, Camera, AlertTriangle } from 'lucide-react';
-import { courseApi } from '../../services/api';
+import { courseApi, examApi } from '../../services/api';
 
 export default function ExamsPage() {
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
@@ -10,13 +10,15 @@ export default function ExamsPage() {
   const [score, setScore] = useState(0);
   
   const [exams, setExams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string|null>(null);
   const [currentExam, setCurrentExam] = useState<any>(null);
   const [cameraActive, setCameraActive] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const syncRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Hardcode courseId for demonstration, in a real app this comes from routing
   const COURSE_ID = 'clqzxyzcourse0001';
@@ -27,10 +29,15 @@ export default function ExamsPage() {
 
   const fetchExams = async () => {
     try {
-      const res = await courseApi.get(`/exams/course/${COURSE_ID}`);
-      setExams(res.data);
+      setLoading(true);
+      setError(null);
+      const res = await examApi.get(`/`); // Changed from courseApi.get('/exams')
+      setExams(res.data || []);
     } catch (err) {
       console.error('Failed to fetch exams', err);
+      setError('فشل في تحميل الامتحانات');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,7 +45,7 @@ export default function ExamsPage() {
     setSelectedExam(examId);
     setExamState('setup');
     try {
-      const res = await courseApi.get(`/exams/${examId}`);
+      const res = await examApi.get(`/${examId}`);
       setCurrentExam(res.data);
     } catch (err) {
       console.error('Failed to load exam details', err);
@@ -282,8 +289,13 @@ export default function ExamsPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">الامتحانات</h1>
         <p className="text-gray-600">اختبر معلوماتك من خلال الامتحانات</p>
       </div>
+
+      {loading && <div className="text-center py-8 text-gray-500">جاري تحميل الامتحانات...</div>}
+      {error && <div className="text-center py-8 text-red-500 bg-red-50 rounded-xl mb-4">{error}</div>}
+
+      {!loading && !error && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {exams.length === 0 && <p className="text-gray-500">لا توجد امتحانات متاحة حالياً.</p>}
+        {exams.length === 0 && <p className="text-gray-500 col-span-3 text-center py-8">لا توجد امتحانات متاحة حالياً.</p>}
         {exams.map((exam) => (
           <div key={exam.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow">
             <div className="flex items-start justify-between mb-4">
@@ -313,6 +325,7 @@ export default function ExamsPage() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { Video, FileText, ClipboardCheck, BarChart3, MessageCircle, User, Home, BookOpen, Brain, Target } from 'lucide-react';
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
@@ -12,6 +13,7 @@ import CoursesPage from './CoursesPage';
 import CourseDetailsPage from './CourseDetailsPage';
 import AIMathSolverPage from '../ai/AIMathSolverPage';
 import AdaptiveLearningPage from '../ai/AdaptiveLearningPage';
+import { userApi, courseApi, homeworkApi } from '../../services/api';
 
 const menuItems: MenuItem[] = [
   { path: '/student/online/home', icon: Home, label: 'الرئيسية' },
@@ -27,11 +29,33 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function StudentOnlineDashboard() {
+  const [profileName, setProfileName] = useState('جاري التحميل...');
+  const [pendingHomework, setPendingHomework] = useState(0);
+
+  useEffect(() => {
+    userApi.get('/profile')
+      .then(res => setProfileName(res.data?.name || res.data?.firstName + ' ' + res.data?.lastName || 'طالب'))
+      .catch(() => setProfileName('طالب أونلاين'));
+
+    homeworkApi.get('/')
+      .then(res => {
+        if(res.data) {
+          const pending = res.data.filter((h: any) => h.status === 'draft' || h.status === 'pending');
+          setPendingHomework(pending.length);
+        }
+      })
+      .catch(() => setPendingHomework(0));
+  }, []);
+
+  const dynamicMenuItems: MenuItem[] = menuItems.map(item => 
+    item.label === 'الواجبات' ? { ...item, badge: pendingHomework > 0 ? pendingHomework : undefined } : item
+  );
+
   return (
     <SharedLayout
-      menuItems={menuItems}
+      menuItems={dynamicMenuItems}
       title="منصة الطالب الأونلاين"
-      subtitle="أحمد محمد علي"
+      subtitle={profileName}
       accentColor="indigo"
       gradientFrom="indigo-600"
       gradientTo="blue-600"

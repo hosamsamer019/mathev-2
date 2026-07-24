@@ -1,17 +1,71 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { courseApi } from '../../services/api';
 
 export default function CoursesManagementPage() {
   const [showModal, setShowModal] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const courses = [
-    { id: 1, title: 'الجبر - الصف الأول', lessons: 24, students: 156, status: 'نشط' },
-    { id: 2, title: 'الهندسة - الصف الأول', lessons: 18, students: 142, status: 'نشط' },
-    { id: 3, title: 'حساب المثلثات', lessons: 15, students: 98, status: 'مسودة' },
-  ];
+  // Form State
+  const [formData, setFormData] = useState({ title: '', description: '', teacherId: '' });
+  const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const res = await courseApi.get('/');
+      setCourses(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch courses', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if(confirm('هل أنت متأكد من الحذف؟')) {
+      try {
+        await courseApi.delete(`/${id}`);
+        setCourses(c => c.filter(x => x.id !== id));
+        showToast('تم الحذف بنجاح', 'success');
+      } catch (err) {
+        console.error('Delete failed', err);
+        showToast('فشل الحذف', 'error');
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await courseApi.post('/courses', formData);
+      showToast('تمت الإضافة بنجاح', 'success');
+      setShowModal(false);
+      setFormData({ title: '', description: '', teacherId: '' });
+      fetchCourses();
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+    }
+  };
 
   return (
-    <div className="p-8">
+    <div className="p-8 relative">
+      {toast && (
+        <div className={`fixed top-4 right-4 p-4 rounded shadow-lg text-white ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'} z-50`}>
+          {toast.message}
+        </div>
+      )}
+
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة الدورات</h1>
@@ -27,22 +81,18 @@ export default function CoursesManagementPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading && <div className="col-span-3 text-center py-8 text-gray-500">جاري تحميل الدورات...</div>}
+        {!loading && courses.length === 0 && <div className="col-span-3 text-center py-8 text-gray-500">لا توجد دورات حالياً</div>}
         {courses.map((course) => (
           <div key={course.id} className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-start justify-between mb-4">
               <h3 className="font-bold text-gray-900 text-lg">{course.title}</h3>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                course.status === 'نشط'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {course.status}
-              </span>
             </div>
 
             <div className="space-y-2 mb-4">
-              <p className="text-sm text-gray-600">عدد الدروس: {course.lessons}</p>
-              <p className="text-sm text-gray-600">عدد الطلاب: {course.students}</p>
+              <p className="text-sm text-gray-600">الوصف: {course.description}</p>
+              <p className="text-sm text-gray-600">عدد الدروس: {course._count?.lessons || 0}</p>
+              <p className="text-sm text-gray-600">عدد الطلاب: {course._count?.enrollments || 0}</p>
             </div>
 
             <div className="flex gap-2">
@@ -50,7 +100,7 @@ export default function CoursesManagementPage() {
                 <Edit className="w-4 h-4" />
                 <span>تعديل</span>
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
+              <button onClick={() => handleDelete(course.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
                 <Trash2 className="w-4 h-4" />
                 <span>حذف</span>
               </button>
@@ -74,6 +124,8 @@ export default function CoursesManagementPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الدورة</label>
                 <input
                   type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
               </div>
@@ -82,22 +134,26 @@ export default function CoursesManagementPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">الوصف</label>
                 <textarea
                   rows={4}
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 ></textarea>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الصف الدراسي</label>
-                <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                  <option>الأول الثانوي</option>
-                  <option>الثاني الثانوي</option>
-                  <option>الثالث الثانوي</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">معرف المعلم (Teacher ID)</label>
+                <input
+                  type="text"
+                  placeholder="Enter Teacher ID"
+                  value={formData.teacherId}
+                  onChange={(e) => setFormData({...formData, teacherId: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                />
               </div>
 
               <div className="flex gap-3 mt-6">
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={handleSave}
                   className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700"
                 >
                   حفظ

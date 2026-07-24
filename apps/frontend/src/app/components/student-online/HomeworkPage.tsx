@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { courseApi } from '../../services/api';
+import { homeworkApi } from '../../services/api';
 
 export default function HomeworkPage() {
   const [selectedHomework, setSelectedHomework] = useState<string | null>(null);
@@ -10,27 +10,41 @@ export default function HomeworkPage() {
 
   const [homeworks, setHomeworks] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string|null>(null);
 
   useEffect(() => {
-    courseApi.get('/homework')
+    fetchHomeworks();
+  }, []);
+
+  const fetchHomeworks = () => {
+    setLoading(true);
+    setError(null);
+    homeworkApi.get('/')
       .then((res) => {
         if (res.data && res.data.length > 0) {
           const mapped = res.data.map((hw: any) => ({
             id: hw.id,
             title: hw.title,
             status: hw.status === 'draft' ? 'pending' : hw.status,
-            score: null, // Would be fetched from submissions
-            deadline: new Date(hw.deadline).toLocaleDateString()
+            score: hw.score || null,
+            deadline: new Date(hw.deadline || Date.now()).toLocaleDateString()
           }));
           setHomeworks(mapped);
+        } else {
+          setHomeworks([]);
         }
       })
-      .catch((err) => console.error('Error fetching homeworks:', err));
-  }, []);
+      .catch((err) => {
+        console.error('Error fetching homeworks:', err);
+        setError('فشل في جلب الواجبات. تأكد من اتصال الخادم.');
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     if (selectedHomework) {
-      courseApi.get(`/homework/${selectedHomework}`)
+      homeworkApi.get(`/${selectedHomework}`)
         .then((res) => {
           if (res.data && res.data.questions?.length > 0) {
             setQuestions(res.data.questions);
@@ -49,7 +63,7 @@ export default function HomeworkPage() {
       selectedOption: parseInt(val)
     }));
 
-    courseApi.post(`/homework/${selectedHomework}/submit`, { answers: formattedAnswers })
+    homeworkApi.post(`/${selectedHomework}/submit`, { answers: formattedAnswers })
       .then((res) => {
         setScore(Math.round(res.data.score));
         setSubmitted(true);
@@ -68,7 +82,12 @@ export default function HomeworkPage() {
           <p className="text-gray-600">قم بحل الواجبات واحصل على التقييم الفوري</p>
         </div>
 
+        {loading && <div className="text-center py-8 text-gray-500">جاري تحميل الواجبات...</div>}
+        {error && <div className="text-center py-8 text-red-500 bg-red-50 rounded-xl mb-4">{error}</div>}
+
+        {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {homeworks.length === 0 && <p className="text-gray-500 col-span-3 text-center py-8">لا توجد واجبات متاحة حالياً.</p>}
           {homeworks.map((hw) => (
             <div
               key={hw.id}
@@ -106,6 +125,7 @@ export default function HomeworkPage() {
             </div>
           ))}
         </div>
+        )}
       </div>
     );
   }
@@ -195,7 +215,7 @@ export default function HomeworkPage() {
                   السؤال {idx + 1}: {q.question}
                 </h3>
                 <div className="space-y-3">
-                  {q.options.map((option, optIdx) => (
+                  {q.options.map((option: string, optIdx: number) => (
                     <label
                       key={optIdx}
                       className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors"

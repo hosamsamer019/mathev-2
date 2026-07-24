@@ -3,40 +3,13 @@ import { useNavigate } from 'react-router';
 import { BookOpen, Video, FileText, Lock, CheckCircle } from 'lucide-react';
 import { courseApi } from '../../services/api';
 
-const DEFAULT_COURSES = [
-  {
-    id: 'c1',
-    title: 'الجبر - الصف الأول الثانوي',
-    progress: 65,
-    lessons: 24,
-    completed: 16,
-    thumbnail: 'https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=400&h=250&fit=crop',
-    locked: false,
-  },
-  {
-    id: 'c2',
-    title: 'الهندسة - الصف الأول الثانوي',
-    progress: 40,
-    lessons: 18,
-    completed: 7,
-    thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=250&fit=crop',
-    locked: false,
-  },
-  {
-    id: 'c3',
-    title: 'حساب المثلثات',
-    progress: 0,
-    lessons: 15,
-    completed: 0,
-    thumbnail: 'https://images.unsplash.com/photo-1596495577886-d920f1fb7238?w=400&h=250&fit=crop',
-    locked: true,
-  },
-];
+// Mocks removed
 
 export default function CoursesPage() {
   const navigate = useNavigate();
-  const [courses, setCourses] = useState<any[]>(DEFAULT_COURSES);
+  const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string|null>(null);
 
   useEffect(() => {
     courseApi.get('/')
@@ -56,6 +29,7 @@ export default function CoursesPage() {
       })
       .catch((err) => {
         console.error('Failed to load courses from API:', err);
+        setError('فشل تحميل الدورات من الخادم.');
       })
       .finally(() => setLoading(false));
   }, []);
@@ -68,6 +42,12 @@ export default function CoursesPage() {
         <p className="text-gray-600">تصفح الدورات المتاحة وتابع تقدمك</p>
       </div>
 
+      {loading && <div className="text-center py-8 text-gray-500">جاري تحميل الدورات...</div>}
+      {error && <div className="text-center py-8 text-red-500 bg-red-50 rounded-xl mb-4">{error}</div>}
+      
+      {!loading && !error && courses.length === 0 && <div className="text-center py-8 text-gray-500">لا توجد دورات متاحة حالياً.</div>}
+
+      {!loading && !error && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses.map((course) => (
           <div
@@ -135,6 +115,7 @@ export default function CoursesPage() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

@@ -19,48 +19,6 @@ const sampleProblems = [
   'جد مجموع المتسلسلة: 1 + 2 + 3 + ... + 100',
 ];
 
-const solverHistory = [
-  { id: 1, problem: 'حل معادلة الدرجة الثانية: x² - 5x + 6 = 0', time: 'منذ ١٠ دقائق', saved: true },
-  { id: 2, problem: 'حساب التكامل: ∫sin(x)dx', time: 'منذ ٣٠ دقيقة', saved: false },
-  { id: 3, problem: 'إيجاد مشتقة دالة مركبة', time: 'أمس', saved: true },
-];
-
-const getMockSolution = (problem: string): { answer: string; steps: SolverStep[] } => ({
-  answer: 'x = 0.5 أو x = -3',
-  steps: [
-    {
-      step: 1,
-      title: 'تحديد نوع المعادلة',
-      content: 'هذه معادلة تربيعية من الشكل ax² + bx + c = 0',
-      formula: 'a = 2, b = 5, c = -3',
-    },
-    {
-      step: 2,
-      title: 'حساب المميز (Δ)',
-      content: 'نحسب المميز لمعرفة عدد وطبيعة الجذور',
-      formula: 'Δ = b² - 4ac = 25 + 24 = 49',
-    },
-    {
-      step: 3,
-      title: 'تطبيق قانون الحل',
-      content: 'بما أن Δ > 0، توجد جذران حقيقيان مختلفان',
-      formula: 'x = (-b ± √Δ) / 2a = (-5 ± 7) / 4',
-    },
-    {
-      step: 4,
-      title: 'حساب الجذرين',
-      content: 'نحسب قيمة كل جذر على حدة',
-      formula: 'x₁ = (-5 + 7) / 4 = 0.5 ،  x₂ = (-5 - 7) / 4 = -3',
-    },
-    {
-      step: 5,
-      title: 'التحقق من الإجابة',
-      content: 'نعوض في المعادلة الأصلية للتحقق',
-      formula: '2(0.5)² + 5(0.5) - 3 = 0.5 + 2.5 - 3 = 0 ✓',
-    },
-  ],
-});
-
 export default function AIMathSolverPage() {
   const { isDark } = useTheme();
   const [problem, setProblem] = useState('');
@@ -68,10 +26,29 @@ export default function AIMathSolverPage() {
   const [solution, setSolution] = useState<{ answer: string; steps: SolverStep[] } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [activeStep, setActiveStep] = useState<number | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
+
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const res = await aiApi.get('/ai/history');
+      setHistory(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch history', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleToggleHistory = () => {
+    if (!showHistory) fetchHistory();
+    setShowHistory(!showHistory);
+  };
 
   const handleSolve = async () => {
     if (!problem.trim()) return;
@@ -96,9 +73,33 @@ export default function AIMathSolverPage() {
       });
     } catch (error) {
       console.error('AI Solver failed:', error);
-      // Fallback to error state or notification
+      alert('حدث خطأ أثناء حل المسألة');
     } finally {
       setSolving(false);
+    }
+  };
+
+  const handleSaveSolution = async () => {
+    try {
+      await aiApi.post('/ai/history/save', { problem, solution });
+      alert('تم حفظ الحل في السجل بنجاح');
+      fetchHistory();
+    } catch (err) {
+      console.error('Failed to save', err);
+    }
+  };
+
+  const handleSimilar = async () => {
+    try {
+      const res = await aiApi.post('/ai/similar', { problem });
+      if (res.data?.similarProblem) {
+        setProblem(res.data.similarProblem);
+        setSolution(null);
+      } else {
+        alert('لا توجد مسائل مشابهة حالياً');
+      }
+    } catch (err) {
+      console.error('Failed to fetch similar', err);
     }
   };
 
@@ -117,7 +118,7 @@ export default function AIMathSolverPage() {
             </div>
           </div>
           <button
-            onClick={() => setShowHistory(!showHistory)}
+            onClick={handleToggleHistory}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'} hover:bg-gray-50 dark:hover:bg-gray-700`}
           >
             <History className="w-4 h-4" /> السجل
@@ -242,10 +243,10 @@ export default function AIMathSolverPage() {
                 </div>
 
                 <div className="flex gap-3 mt-6">
-                  <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  <button onClick={handleSimilar} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                     <BookOpen className="w-4 h-4" /> تمارين مشابهة
                   </button>
-                  <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  <button onClick={handleSaveSolution} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                     <Star className="w-4 h-4" /> حفظ الحل
                   </button>
                   <button onClick={() => { setSolution(null); setProblem(''); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
@@ -293,21 +294,27 @@ export default function AIMathSolverPage() {
           {showHistory && (
             <div className={`${cardBg} border rounded-2xl p-5`}>
               <h3 className={`font-bold ${textPrimary} mb-4`}>السجل السابق</h3>
-              <div className="space-y-3">
-                {solverHistory.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setProblem(item.problem)}
-                    className={`w-full text-right p-3 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-100 hover:bg-gray-50'} transition-colors`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm ${textPrimary} line-clamp-2`}>{item.problem}</p>
-                      {item.saved && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />}
-                    </div>
-                    <p className={`text-xs ${textSecondary} mt-1`}>{item.time}</p>
-                  </button>
-                ))}
-              </div>
+              {loadingHistory ? (
+                <div className="text-center py-4 text-gray-500">جاري التحميل...</div>
+              ) : history.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">لا يوجد سجل حالياً</div>
+              ) : (
+                <div className="space-y-3">
+                  {history.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setProblem(item.problem)}
+                      className={`w-full text-right p-3 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-100 hover:bg-gray-50'} transition-colors`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm ${textPrimary} line-clamp-2`}>{item.problem}</p>
+                        {item.saved && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />}
+                      </div>
+                      <p className={`text-xs ${textSecondary} mt-1`}>{new Date(item.createdAt || Date.now()).toLocaleDateString()}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

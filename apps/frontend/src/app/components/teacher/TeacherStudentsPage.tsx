@@ -1,20 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search, Filter, Plus, MoreVertical, TrendingUp, TrendingDown,
   Minus, Eye, MessageCircle, AlertTriangle, CheckCircle, Users, Download
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const students = [
-  { id: 1, name: 'أحمد محمد علي', grade: 'ثانوي ٢', type: 'أونلاين', avg: 88, status: 'ممتاز', trend: 'up', lastActive: 'اليوم', homework: 95, exams: 82, attendance: 98 },
-  { id: 2, name: 'سارة خالد حسن', grade: 'ثانوي ٣', type: 'سنتر', avg: 76, status: 'جيد جداً', trend: 'stable', lastActive: 'أمس', homework: 80, exams: 74, attendance: 90 },
-  { id: 3, name: 'محمود عبدالرحمن', grade: 'ثانوي ٢', type: 'أونلاين', avg: 45, status: 'في خطر', trend: 'down', lastActive: 'منذ ٣ أيام', homework: 40, exams: 48, attendance: 60 },
-  { id: 4, name: 'فاطمة إبراهيم', grade: 'ثانوي ١', type: 'سنتر', avg: 92, status: 'ممتاز', trend: 'up', lastActive: 'اليوم', homework: 98, exams: 90, attendance: 100 },
-  { id: 5, name: 'كريم عمر', grade: 'ثانوي ٣', type: 'أونلاين', avg: 62, status: 'جيد', trend: 'up', lastActive: 'اليوم', homework: 65, exams: 60, attendance: 75 },
-  { id: 6, name: 'نور محمد', grade: 'ثانوي ١', type: 'أونلاين', avg: 55, status: 'ضعيف', trend: 'down', lastActive: 'منذ أسبوع', homework: 50, exams: 58, attendance: 55 },
-  { id: 7, name: 'عمر حسام', grade: 'ثانوي ٢', type: 'سنتر', avg: 84, status: 'جيد جداً', trend: 'up', lastActive: 'أمس', homework: 88, exams: 82, attendance: 95 },
-  { id: 8, name: 'ليلى أحمد', grade: 'ثانوي ٣', type: 'سنتر', avg: 71, status: 'جيد', trend: 'stable', lastActive: 'اليوم', homework: 75, exams: 68, attendance: 85 },
-];
+import { Trash2 } from 'lucide-react';
+import { userApi } from '../../services/api';
 
 const statusConfig: Record<string, { color: string; bg: string; icon: React.ComponentType<{className?: string}> }> = {
   'ممتاز': { color: 'text-green-700', bg: 'bg-green-100', icon: CheckCircle },
@@ -28,7 +20,73 @@ export default function TeacherStudentsPage() {
   const { isDark } = useTheme();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [selectedStudent, setSelectedStudent] = useState<typeof students[0] | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await userApi.get('/users');
+      // Filter for only student roles
+      const studentData = res.data.filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT');
+      const mapped = studentData.map((s: any) => ({
+        id: s.id,
+        name: s.name || `${s.firstName} ${s.lastName}`,
+        grade: s.grade || 'غير محدد',
+        type: s.type || 'أونلاين',
+        avg: s.avgScore || 0,
+        status: s.avgScore >= 90 ? 'ممتاز' : s.avgScore >= 75 ? 'جيد جداً' : s.avgScore >= 60 ? 'جيد' : s.avgScore >= 40 ? 'ضعيف' : 'في خطر',
+        trend: 'stable',
+        lastActive: 'اليوم',
+        homework: s.homeworkScore || 0,
+        exams: s.examScore || 0,
+        attendance: 100
+      }));
+      setStudents(mapped);
+    } catch (err) {
+      console.error(err);
+      setError('فشل في جلب بيانات الطلاب. تأكد من اتصال الخادم.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddStudent = async () => {
+    try {
+      await userApi.post('/users', { name: 'طالب جديد', email: `student${Date.now()}@edu.com`, password: 'password123', role: 'ONLINE_STUDENT' });
+      fetchStudents();
+    } catch (err) {
+      console.error('Add failed', err);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await userApi.get('/users/export', { responseType: 'blob' });
+      alert('تم تصدير البيانات بنجاح!');
+    } catch (err) {
+      console.error('Export failed', err);
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if(confirm('هل أنت متأكد من حذف الطالب؟')) {
+      try {
+        await userApi.delete(`/users/${id}`);
+        setStudents(s => s.filter(x => x.id !== id));
+      } catch (err) {
+        console.error('Delete failed', err);
+      }
+    }
+  };
 
   const filtered = students.filter(s =>
     s.name.includes(search) &&
@@ -48,14 +106,17 @@ export default function TeacherStudentsPage() {
           <p className={textSecondary}>متابعة أداء وتقدم جميع طلابك</p>
         </div>
         <div className="flex gap-3">
-          <button className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} text-sm transition-colors`}>
+          <button onClick={handleExport} className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} text-sm transition-colors`}>
             <Download className="w-4 h-4" /> تصدير Excel
           </button>
-          <button className="flex items-center gap-2 bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90">
+          <button onClick={handleAddStudent} className="flex items-center gap-2 bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90">
             <Plus className="w-4 h-4" /> إضافة طالب
           </button>
         </div>
       </div>
+
+      {loading && <div className={`text-center py-8 ${textSecondary}`}>جاري تحميل البيانات...</div>}
+      {error && <div className="text-center py-8 text-red-500 bg-red-50 rounded-xl mb-4 border border-red-200">{error}</div>}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -111,6 +172,7 @@ export default function TeacherStudentsPage() {
       </div>
 
       {/* Students Table */}
+      {!loading && !error && (
       <div className={`${cardBg} border rounded-2xl overflow-hidden`}>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -123,7 +185,7 @@ export default function TeacherStudentsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {filtered.map((student) => {
-                const status = statusConfig[student.status];
+                const status = statusConfig[student.status] || statusConfig['جيد'];
                 return (
                   <tr
                     key={student.id}
@@ -185,14 +247,14 @@ export default function TeacherStudentsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <button onClick={() => setSelectedStudent(student)} className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                        <button onClick={() => alert('جاري فتح محادثة...')} className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
                           <MessageCircle className="w-4 h-4" />
                         </button>
-                        <button className={`p-1.5 rounded-lg ${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`}>
-                          <MoreVertical className="w-4 h-4" />
+                        <button onClick={(e) => handleDelete(student.id, e)} className={`p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors`}>
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -201,8 +263,12 @@ export default function TeacherStudentsPage() {
               })}
             </tbody>
           </table>
+          {filtered.length === 0 && (
+            <div className={`text-center py-8 ${textSecondary}`}>لا يوجد طلاب</div>
+          )}
         </div>
       </div>
+      )}
 
       {/* Student Detail Modal */}
       {selectedStudent && (
@@ -233,10 +299,10 @@ export default function TeacherStudentsPage() {
               ))}
             </div>
             <div className="flex gap-3">
-              <button className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 flex items-center justify-center gap-2">
+              <button onClick={() => alert('جاري تحميل تفاصيل الطالب...')} className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 flex items-center justify-center gap-2">
                 <Eye className="w-4 h-4" /> عرض التفاصيل
               </button>
-              <button className={`flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2 border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              <button onClick={() => alert('جاري فتح المحادثة...')} className={`flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2 border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                 <MessageCircle className="w-4 h-4" /> مراسلة
               </button>
             </div>

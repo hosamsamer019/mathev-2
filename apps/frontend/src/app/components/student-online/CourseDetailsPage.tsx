@@ -24,19 +24,17 @@ export default function CourseDetailsPage() {
       .then((res) => {
         if (res.data) {
           setCourse(res.data);
-          if (res.data.modules && res.data.modules.length > 0) {
-            const flattened = res.data.modules.flatMap((m: any) =>
-              m.lessons?.map((l: any) => ({
-                id: l.id,
-                title: l.title,
-                duration: typeof l.duration === 'number' ? `${l.duration}:00` : l.duration,
-                completed: false,
-                locked: false
-              })) || []
-            );
-            if (flattened.length > 0) {
-              setLessons(flattened);
-            }
+          if (res.data.lessons && res.data.lessons.length > 0) {
+            const mappedLessons = res.data.lessons.map((l: any) => ({
+              id: l.id,
+              title: l.title,
+              duration: l.duration || 'غير محدد',
+              completed: false, // Could be determined by progress tracking later
+              locked: false
+            }));
+            setLessons(mappedLessons);
+          } else {
+            setLessons([]);
           }
         }
       })

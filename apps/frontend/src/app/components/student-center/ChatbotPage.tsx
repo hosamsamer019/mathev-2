@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Send, Bot, User } from 'lucide-react';
+import { aiApi } from '../../services/api';
 
 export default function ChatbotPage() {
   const [messages, setMessages] = useState([
@@ -7,13 +8,14 @@ export default function ChatbotPage() {
       id: 1,
       text: 'أهلاً بك! أنا المساعد الذكي. كيف يمكنني مساعدتك؟',
       sender: 'bot',
-      time: '10:00',
+      time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
 
     const userMessage = {
       id: messages.length + 1,
@@ -22,15 +24,31 @@ export default function ChatbotPage() {
       time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
     };
 
-    const botResponse = {
-      id: messages.length + 2,
-      text: 'شكراً على سؤالك! سأقوم بمساعدتك قريباً.',
-      sender: 'bot',
-      time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages([...messages, userMessage, botResponse]);
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setLoading(true);
+
+    try {
+      const res = await aiApi.post('/chat', { message: input });
+      const botResponse = {
+        id: messages.length + 2,
+        text: res.data?.reply || 'عذراً، لم أتمكن من فهم ذلك.',
+        sender: 'bot',
+        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages(prev => [...prev, botResponse]);
+    } catch (err) {
+      console.error(err);
+      const errResponse = {
+        id: messages.length + 2,
+        text: 'حدث خطأ في الاتصال بالخادم.',
+        sender: 'bot',
+        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages(prev => [...prev, errResponse]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,10 +102,14 @@ export default function ChatbotPage() {
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim()}
-              className="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300"
+              disabled={!input.trim() || loading}
+              className="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center justify-center min-w-[50px]"
             >
-              <Send className="w-6 h-6" />
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send className="w-6 h-6" />
+              )}
             </button>
           </div>
         </div>

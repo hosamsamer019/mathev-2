@@ -1,10 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Edit, Save, Camera, Award, Star, BookOpen, Users } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function TeacherProfilePage() {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: 'أ. محمد إبراهيم',
+    email: 'teacher@edu.com',
+    phone: '٠١٢٢٣٤٥٦٧٨٩',
+    city: 'القاهرة، مصر',
+    bio: 'معلم رياضيات متخصص'
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || 'معلم',
+        email: user.email || '',
+        phone: (user as any).phoneNumber || 'غير متوفر',
+        city: (user as any).governorate || 'غير متوفر',
+        bio: 'معلم رياضيات متخصص' // Can be loaded from user if exists
+      });
+    }
+  }, [user]);
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -34,8 +55,8 @@ export default function TeacherProfilePage() {
               </button>
             </div>
             <div className="flex-1 text-center md:text-right">
-              <h1 className={`text-2xl font-bold ${textPrimary}`}>أ. محمد إبراهيم</h1>
-              <p className={textSecondary}>معلم رياضيات متخصص • منصة معلم الرياضيات</p>
+              <h1 className={`text-2xl font-bold ${textPrimary}`}>{formData.name}</h1>
+              <p className={textSecondary}>{formData.bio}</p>
               <div className="flex flex-wrap gap-2 justify-center md:justify-start mt-3">
                 <span className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">⭐ خطة مؤسسية</span>
                 <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">✅ حساب موثق</span>
@@ -70,30 +91,41 @@ export default function TeacherProfilePage() {
         <div className={`${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-6`}>المعلومات الشخصية</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { label: 'الاسم الكامل', value: 'محمد إبراهيم حسن', icon: User },
-              { label: 'البريد الإلكتروني', value: 'teacher@edu.com', icon: Mail },
-              { label: 'رقم الهاتف', value: '٠١٢٢٣٤٥٦٧٨٩', icon: Phone },
-              { label: 'المدينة', value: 'القاهرة، مصر', icon: MapPin },
-            ].map((field, idx) => (
-              <div key={idx}>
-                <label className={`text-sm font-medium ${textSecondary} block mb-2`}>{field.label}</label>
-                <div className="relative">
-                  <field.icon className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
-                  <input
-                    defaultValue={field.value}
-                    readOnly={!editing}
-                    className={`${inputClass} pr-10 ${!editing ? 'cursor-default' : ''}`}
-                  />
-                </div>
+            <div>
+              <label className={`text-sm font-medium ${textSecondary} block mb-2`}>الاسم الكامل</label>
+              <div className="relative">
+                <User className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
+                <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} readOnly={!editing} className={`${inputClass} pr-10 ${!editing ? 'cursor-default' : ''}`} />
               </div>
-            ))}
+            </div>
+            <div>
+              <label className={`text-sm font-medium ${textSecondary} block mb-2`}>البريد الإلكتروني</label>
+              <div className="relative">
+                <Mail className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
+                <input value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} readOnly={!editing} className={`${inputClass} pr-10 ${!editing ? 'cursor-default' : ''}`} />
+              </div>
+            </div>
+            <div>
+              <label className={`text-sm font-medium ${textSecondary} block mb-2`}>رقم الهاتف</label>
+              <div className="relative">
+                <Phone className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
+                <input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} readOnly={!editing} className={`${inputClass} pr-10 ${!editing ? 'cursor-default' : ''}`} />
+              </div>
+            </div>
+            <div>
+              <label className={`text-sm font-medium ${textSecondary} block mb-2`}>المدينة</label>
+              <div className="relative">
+                <MapPin className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
+                <input value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} readOnly={!editing} className={`${inputClass} pr-10 ${!editing ? 'cursor-default' : ''}`} />
+              </div>
+            </div>
           </div>
           <div className="mt-4">
             <label className={`text-sm font-medium ${textSecondary} block mb-2`}>نبذة شخصية</label>
             <textarea
               readOnly={!editing}
-              defaultValue="معلم رياضيات بخبرة ١٥ عاماً، متخصص في تعليم الرياضيات للمرحلة الثانوية. أسعى دائماً لتبسيط المفاهيم الصعبة وجعل الرياضيات ممتعة وسهلة الفهم."
+              value={formData.bio}
+              onChange={e => setFormData({...formData, bio: e.target.value})}
               rows={3}
               className={`${inputClass} resize-none`}
             />

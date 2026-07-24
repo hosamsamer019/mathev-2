@@ -35,6 +35,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.post('/login', { email, password, role });
       const { token, user: loggedUser } = response.data;
       
+      const roleMap: Record<string, UserRole> = {
+        'ADMIN': 'admin',
+        'TEACHER': 'teacher',
+        'ONLINE_STUDENT': 'student_online',
+        'CENTER_STUDENT': 'student_center',
+        'PARENT': 'parent'
+      };
+      
+      // Ensure the role is mapped to frontend format
+      if (loggedUser && loggedUser.role && roleMap[loggedUser.role]) {
+        loggedUser.role = roleMap[loggedUser.role];
+      }
+      
       setUser(loggedUser);
       localStorage.setItem('token', token);
       localStorage.setItem('edu-user', JSON.stringify(loggedUser));

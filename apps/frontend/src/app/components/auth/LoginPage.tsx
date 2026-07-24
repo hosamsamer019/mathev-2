@@ -116,6 +116,14 @@ export default function LoginPage() {
       <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
       <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl" />
 
+      {/* Back to Home Button */}
+      <button 
+        onClick={() => navigate('/')} 
+        className="absolute top-6 right-6 flex items-center gap-2 text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl backdrop-blur-sm"
+      >
+        <span>الرئيسية</span>
+      </button>
+
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}

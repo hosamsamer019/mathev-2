@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Clock, CheckCircle, BookOpen, Bell, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import axios from 'axios';
-
-const userApi = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/users' });
-userApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { userApi } from '../../services/api';
 
 export default function ParentHomePage() {
   const { isDark } = useTheme();

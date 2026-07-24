@@ -1,0 +1,69 @@
+{
+  "version": 3,
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^/api/auth(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$",
+      "dest": "/api/auth?match=$1",
+      "check": true
+    },
+    {
+      "src": "^/api/users(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$",
+      "dest": "/api/users?match=$1",
+      "check": true
+    },
+    {
+      "src": "^/api/ai(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$",
+      "dest": "/api/ai?match=$1",
+      "check": true
+    },
+    {
+      "src": "^/api/courses(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$",
+      "dest": "/api/courses?match=$1",
+      "check": true
+    },
+    {
+      "src": "^/api/homework(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$",
+      "dest": "/api/courses?match=$1",
+      "check": true
+    },
+    {
+      "src": "^/api/exams(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$",
+      "dest": "/api/courses?match=$1",
+      "check": true
+    },
+    {
+      "src": "^/api/analytics(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?$",
+      "dest": "/api/analytics?match=$1",
+      "check": true
+    },
+    {
+      "src": "^(?:/(.*))$",
+      "dest": "/index.html",
+      "check": true
+    },
+    {
+      "src": "^/api(/.*)?$",
+      "status": 404
+    },
+    {
+      "handle": "error"
+    },
+    {
+      "status": 404,
+      "src": "^(?!/api).*$",
+      "dest": "/404.html"
+    },
+    {
+      "handle": "miss"
+    },
+    {
+      "src": "^/api/(.+)(?:\\.(?:ts))$",
+      "dest": "/api/$1",
+      "check": true
+    }
+  ],
+  "crons": []
+}

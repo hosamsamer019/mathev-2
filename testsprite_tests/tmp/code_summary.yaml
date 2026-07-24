@@ -1,0 +1,47 @@
+version: "2"
+type: frontend
+tech_stack:
+  - React
+  - TypeScript
+  - Vite
+  - Tailwind CSS
+  - React Router
+routes:
+  - path: /login
+    file: apps/frontend/src/app/components/auth/LoginPage.tsx
+    auth_required: false
+    description: User login page
+  - path: /student-online
+    file: apps/frontend/src/app/components/student-online/StudentOnlineDashboard.tsx
+    auth_required: true
+    description: Online student dashboard
+  - path: /admin
+    file: apps/frontend/src/app/components/admin/AdminHomePage.tsx
+    auth_required: true
+    description: Admin dashboard
+features:
+  - name: User Login
+    description: Login with email and password credentials
+    files:
+      - apps/frontend/src/app/components/auth/LoginPage.tsx
+    entry_route: /login
+    user_interactions:
+      - Fill email input field
+      - Fill password input field
+      - Click Login button to submit
+    api_calls:
+      - method: POST
+        endpoint: /auth/login
+    auth_required: false
+  - name: View Homework
+    description: View homework for students
+    files:
+      - apps/frontend/src/app/components/student-online/HomeworkPage.tsx
+    entry_route: /student-online/homework
+    user_interactions:
+      - View list of homework
+    api_calls:
+      - method: GET
+        endpoint: /homework
+    auth_required: true
+known_limitations: []
