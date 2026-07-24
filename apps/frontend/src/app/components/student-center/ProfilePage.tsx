@@ -7,23 +7,23 @@ export default function ProfilePage() {
   const { user } = useAuth();
   
   const [formData, setFormData] = useState({
-    name: 'جاري التحميل...',
-    email: '...',
-    phone: 'غير متوفر',
-    city: 'غير متوفر',
-    center: 'غير متوفر',
-    grade: 'غير متوفر'
+    name: '',
+    email: '',
+    phone: '',
+    city: '',
+    center: '',
+    grade: ''
   });
 
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name || 'مستخدم',
+        name: user.name || '',
         email: user.email || '',
-        phone: (user as any).phoneNumber || 'غير متوفر',
-        city: (user as any).governorate || 'غير متوفر',
-        center: (user as any).institution || 'سنتر',
-        grade: user.grade || 'غير متوفر'
+        phone: (user as any).phoneNumber || '',
+        city: (user as any).governorate || '',
+        center: (user as any).institution || '',
+        grade: user.grade || ''
       });
     }
   }, [user]);

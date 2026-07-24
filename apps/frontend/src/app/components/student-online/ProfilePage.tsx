@@ -7,9 +7,9 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    name: 'جاري التحميل...',
-    email: '...',
-    role: 'طالب'
+    name: '',
+    email: '',
+    role: ''
   });
 
   const { user } = useAuth();

@@ -171,12 +171,7 @@ export default function VideoPlayerPage() {
     if (!playerRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     
-    // Support RTL direction
-    const isRTL = window.getComputedStyle(document.body).direction === 'rtl' || document.documentElement.dir === 'rtl';
-    let clickX = e.clientX - rect.left;
-    if (isRTL) {
-      clickX = rect.right - e.clientX;
-    }
+    const clickX = e.clientX - rect.left;
     
     const percentage = Math.max(0, Math.min(1, clickX / rect.width));
     
@@ -224,7 +219,6 @@ export default function VideoPlayerPage() {
                   <div className="text-white">جاري تحميل الفيديو...</div>
                 )}
 
-                {/* Invisible Overlay to block YouTube clicks completely and implement custom play/pause */}
                 <div 
                   className="absolute inset-0 z-10 cursor-pointer"
                   onClick={() => {
@@ -232,6 +226,20 @@ export default function VideoPlayerPage() {
                       playerRef.current?.pauseVideo();
                     } else {
                       playerRef.current?.playVideo();
+                    }
+                  }}
+                  onDoubleClick={(e) => {
+                    if (!playerRef.current) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const current = playerRef.current.getCurrentTime() || 0;
+                    const duration = playerRef.current.getDuration() || 0;
+                    if (clickX > rect.width / 2) {
+                      // Right side: Forward 10s
+                      playerRef.current.seekTo(Math.min(duration, current + 10), true);
+                    } else {
+                      // Left side: Backward 10s
+                      playerRef.current.seekTo(Math.max(0, current - 10), true);
                     }
                   }}
                 />

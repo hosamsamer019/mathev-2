@@ -1,1 +1,0 @@
-{"version":3,"file":"ai.ts","sources":["E:\\Mathe\\Mathteachersmartplatform-main\\api\\ai.ts"],"names":[],"mappings":";;;;;AAAA,6EAAmD;AACnD,kBAAe,eAAG,CAAC","sourcesContent":["import app from '../services/ai-service/src/index';\nexport default app;\n"]}

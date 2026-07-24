@@ -1,1 +1,0 @@
-{"version":3,"file":"analytics.ts","sources":["E:\\Mathe\\Mathteachersmartplatform-main\\api\\analytics.ts"],"names":[],"mappings":";;;;;AAAA,oFAA0D;AAC1D,kBAAe,eAAG,CAAC","sourcesContent":["import app from '../services/analytics-service/src/index';\nexport default app;\n"]}

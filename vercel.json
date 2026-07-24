@@ -1,4 +1,5 @@
 {
+  "name": "mathev-2",
   "version": 2,
   "buildCommand": "cd apps/frontend && npm install && npm run build",
   "outputDirectory": "apps/frontend/dist",

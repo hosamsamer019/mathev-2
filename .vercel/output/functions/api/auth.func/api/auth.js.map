@@ -1,1 +1,0 @@
-{"version":3,"file":"auth.ts","sources":["E:\\Mathe\\Mathteachersmartplatform-main\\api\\auth.ts"],"names":[],"mappings":";;;;;AAAA,+EAAqD;AACrD,kBAAe,eAAG,CAAC","sourcesContent":["import app from '../services/auth-service/src/index';\nexport default app;\n"]}

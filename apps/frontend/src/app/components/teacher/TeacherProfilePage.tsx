@@ -8,21 +8,21 @@ export default function TeacherProfilePage() {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: 'أ. محمد إبراهيم',
-    email: 'teacher@edu.com',
-    phone: '٠١٢٢٣٤٥٦٧٨٩',
-    city: 'القاهرة، مصر',
-    bio: 'معلم رياضيات متخصص'
+    name: '',
+    email: '',
+    phone: '',
+    city: '',
+    bio: ''
   });
 
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name || 'معلم',
+        name: user.name || '',
         email: user.email || '',
-        phone: (user as any).phoneNumber || 'غير متوفر',
-        city: (user as any).governorate || 'غير متوفر',
-        bio: 'معلم رياضيات متخصص' // Can be loaded from user if exists
+        phone: (user as any).phoneNumber || '',
+        city: (user as any).governorate || '',
+        bio: '' // Can be loaded from user if exists
       });
     }
   }, [user]);
