@@ -22,8 +22,9 @@ export default function HomeworkPage() {
     setError(null);
     homeworkApi.get('/')
       .then((res) => {
-        if (res.data && res.data.length > 0) {
-          const mapped = res.data.map((hw: any) => ({
+        const data = Array.isArray(res.data) ? res.data : [];
+        if (data.length > 0) {
+          const mapped = data.map((hw: any) => ({
             id: hw.id,
             title: hw.title,
             status: hw.status === 'draft' ? 'pending' : hw.status,
@@ -160,7 +161,7 @@ export default function HomeworkPage() {
                     <span className={`font-medium ${
                       parseInt(answers[q.id]) === q.correct ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {q.options[parseInt(answers[q.id])]}
+                      {(Array.isArray(q.options) ? q.options : [])[parseInt(answers[q.id])] || 'غير محدد'}
                     </span>
                     {parseInt(answers[q.id]) === q.correct ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
@@ -168,7 +169,7 @@ export default function HomeworkPage() {
                       <>
                         <XCircle className="w-4 h-4 text-red-600" />
                         <span className="text-sm text-gray-600 mr-2">
-                          الإجابة الصحيحة: {q.options[q.correct]}
+                          الإجابة الصحيحة: {(Array.isArray(q.options) ? q.options : [])[q.correct] || 'غير محدد'}
                         </span>
                       </>
                     )}

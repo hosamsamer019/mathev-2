@@ -14,8 +14,9 @@ export default function HomeworkManagementPage() {
   useEffect(() => {
     homeworkApi.get('/')
       .then(res => {
-        if (res.data && res.data.length > 0) {
-          const mapped = res.data.map((hw: any) => ({
+        const data = Array.isArray(res.data) ? res.data : [];
+        if (data.length > 0) {
+          const mapped = data.map((hw: any) => ({
             id: hw.id,
             title: hw.title,
             course: hw.course?.title || 'غير محدد',

@@ -8,7 +8,7 @@ export default function HomeworkPage() {
 
   useEffect(() => {
     homeworkApi.get('/')
-      .then(res => setHomeworks(res.data || []))
+      .then(res => setHomeworks(Array.isArray(res.data) ? res.data : []))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);

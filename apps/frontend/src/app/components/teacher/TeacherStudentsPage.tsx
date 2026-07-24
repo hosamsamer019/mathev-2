@@ -34,8 +34,9 @@ export default function TeacherStudentsPage() {
       setLoading(true);
       setError(null);
       const res = await userApi.get('/users');
+      const allUsers = Array.isArray(res.data) ? res.data : [];
       // Filter for only student roles
-      const studentData = res.data.filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT');
+      const studentData = allUsers.filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT');
       const mapped = studentData.map((s: any) => ({
         id: s.id,
         name: s.name || `${s.firstName} ${s.lastName}`,

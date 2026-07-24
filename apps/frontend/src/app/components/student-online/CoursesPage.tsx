@@ -14,8 +14,9 @@ export default function CoursesPage() {
   useEffect(() => {
     courseApi.get('/')
       .then((res) => {
-        if (res.data && res.data.length > 0) {
-          const mapped = res.data.map((c: any) => ({
+        const data = Array.isArray(res.data) ? res.data : [];
+        if (data.length > 0) {
+          const mapped = data.map((c: any) => ({
             id: c.id,
             title: c.title,
             progress: 0,

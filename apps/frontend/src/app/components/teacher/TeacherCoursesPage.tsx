@@ -37,7 +37,7 @@ export default function TeacherCoursesPage() {
       setLoading(true);
       setError(null);
       const res = await courseApi.get('/');
-      if (res.data && res.data.length > 0) {
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         const mapped = res.data.map((c: any) => ({
           id: c.id,
           title: c.title,

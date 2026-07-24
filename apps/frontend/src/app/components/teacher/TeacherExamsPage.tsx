@@ -29,7 +29,7 @@ export default function TeacherExamsPage() {
       setError(null);
       // Fetch exams related to courses (mocked route for exams)
       const res = await examApi.get('/');
-      if (res.data) {
+      if (Array.isArray(res.data)) {
         const mapped = res.data.map((e: any) => ({
           id: e.id,
           title: e.title,

@@ -39,8 +39,9 @@ export default function StudentOnlineDashboard() {
 
     homeworkApi.get('/')
       .then(res => {
-        if(res.data) {
-          const pending = res.data.filter((h: any) => h.status === 'draft' || h.status === 'pending');
+        const data = Array.isArray(res.data) ? res.data : [];
+        if(data.length > 0) {
+          const pending = data.filter((h: any) => h.status === 'draft' || h.status === 'pending');
           setPendingHomework(pending.length);
         }
       })

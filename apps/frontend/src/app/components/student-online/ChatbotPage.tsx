@@ -30,7 +30,7 @@ export default function ChatbotPage() {
   const fetchSessions = async () => {
     try {
       const res = await aiApi.get('/sessions');
-      setSessions(res.data);
+      setSessions(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch sessions', err);
     }
