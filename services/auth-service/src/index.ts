@@ -21,9 +21,7 @@ app.use(cors({
       return callback(null, true);
     }
     const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
-    if (origin === allowedOrigin) {
-      return callback(null, true);
-    }
+    if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
