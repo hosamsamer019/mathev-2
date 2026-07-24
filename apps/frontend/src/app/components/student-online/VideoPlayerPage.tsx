@@ -91,10 +91,13 @@ export default function VideoPlayerPage() {
 
       // Trigger Quizzes
       if (lesson?.quizzes) {
-        for (const quiz of lesson.quizzes) {
+        // Sort quizzes by timestamp to ensure chronological order
+        const sortedQuizzes = [...lesson.quizzes].sort((a, b) => a.timestampSec - b.timestampSec);
+        for (const quiz of sortedQuizzes) {
           if (currentTime >= quiz.timestampSec && !quizAnswered[quiz.id]) {
             playerRef.current.pauseVideo();
             setActiveQuiz(quiz);
+            break; // Stop after triggering the first unanswered quiz
           }
         }
       }
@@ -280,7 +283,8 @@ export default function VideoPlayerPage() {
                     <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
                     <h3 className="text-2xl font-bold text-white mb-6">{activeQuiz.question}</h3>
                     <div className="space-y-3">
-                      {activeQuiz.options.map((opt: string, i: number) => (
+                      {(Array.isArray(activeQuiz.options) ? activeQuiz.options : 
+                        (typeof activeQuiz.options === 'string' ? activeQuiz.options.split('-') : [])).map((opt: string, i: number) => (
                         <button
                           key={i}
                           onClick={() => handleQuizSubmit(opt)}
