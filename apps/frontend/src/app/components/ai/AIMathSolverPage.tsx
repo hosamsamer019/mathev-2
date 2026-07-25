@@ -37,7 +37,7 @@ export default function AIMathSolverPage() {
     try {
       setLoadingHistory(true);
       const res = await aiApi.get('/history');
-      setHistory(res.data || []);
+      setHistory(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch history', err);
     } finally {
@@ -61,7 +61,7 @@ export default function AIMathSolverPage() {
       const { result, steps, solution: explanation } = response.data;
       
       // Map API response to UI SolverStep format
-      const mappedSteps: SolverStep[] = steps.map((s: string, idx: number) => ({
+      const mappedSteps: SolverStep[] = Array.isArray(steps) ? steps.map((s: string, idx: number) => ({
         step: idx + 1,
         title: `الخطوة ${idx + 1}`,
         content: s
@@ -300,7 +300,7 @@ export default function AIMathSolverPage() {
                 <div className="text-center py-4 text-gray-500">لا يوجد سجل حالياً</div>
               ) : (
                 <div className="space-y-3">
-                  {history.map((item) => (
+                  {(Array.isArray(history) ? history : []).map((item) => (
                     <button
                       key={item.id}
                       onClick={() => setProblem(item.problem)}
