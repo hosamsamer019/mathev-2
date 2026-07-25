@@ -53,13 +53,15 @@ export default function ChatbotPage() {
     try {
       const res = await aiApi.get(`/sessions/${id}`);
       setSessionId(id);
-      if (res.data?.messages?.length > 0) {
+      if (res.data?.messages && Array.isArray(res.data.messages)) {
         setMessages(res.data.messages.map((m: any) => ({
           id: m.id,
           text: m.content,
           sender: m.role === 'user' ? 'user' : 'bot',
           time: new Date(m.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
         })));
+      } else {
+        setMessages([]);
       }
     } catch (err) {
       console.error('Failed to load session', err);
@@ -137,10 +139,10 @@ export default function ChatbotPage() {
               try {
                 const data = JSON.parse(line.replace('data: ', ''));
                 if (data.content) {
-                  setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, text: m.text + data.content } : m));
+                  setMessages(prev => (Array.isArray(prev) ? prev : []).map(m => m.id === botMessageId ? { ...m, text: m.text + data.content } : m));
                 }
                 if (data.error) {
-                   setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, text: m.text + '\n[خطأ: ' + data.error + ']' } : m));
+                   setMessages(prev => (Array.isArray(prev) ? prev : []).map(m => m.id === botMessageId ? { ...m, text: m.text + '\n[خطأ: ' + data.error + ']' } : m));
                 }
               } catch (e) {}
             }
@@ -180,7 +182,7 @@ export default function ChatbotPage() {
           <div className="w-64 bg-white rounded-xl shadow-md p-4 overflow-y-auto flex-shrink-0">
             <h3 className="font-bold text-gray-700 mb-3 text-sm">المحادثات السابقة</h3>
             <div className="space-y-2">
-              {sessions.map(s => (
+              {(Array.isArray(sessions) ? sessions : []).map(s => (
                 <button
                   key={s.id}
                   onClick={() => loadSession(s.id)}
@@ -197,7 +199,7 @@ export default function ChatbotPage() {
         {/* Chat area */}
         <div className="flex-1 bg-white rounded-xl shadow-md flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.map((message) => (
+            {(Array.isArray(messages) ? messages : []).map((message) => (
               <div
                 key={message.id}
                 className={`flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}
@@ -246,7 +248,7 @@ export default function ChatbotPage() {
             <div className="px-6 pb-4">
               <p className="text-sm text-gray-600 mb-3">أسئلة مقترحة:</p>
               <div className="grid grid-cols-2 gap-2">
-                {suggestedQuestions.map((question, idx) => (
+                {(Array.isArray(suggestedQuestions) ? suggestedQuestions : []).map((question, idx) => (
                   <button
                     key={idx}
                     onClick={() => setInput(question)}

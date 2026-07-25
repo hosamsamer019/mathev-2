@@ -60,7 +60,7 @@ export default function ChatbotPage() {
 
       <div className="flex-1 bg-white rounded-xl shadow-md flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {messages.map((message) => (
+          {(Array.isArray(messages) ? messages : []).map((message) => (
             <div
               key={message.id}
               className={`flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}
