@@ -32,7 +32,7 @@ export default function ExamsPage() {
       setLoading(true);
       setError(null);
       const res = await examApi.get(`/`); // Changed from courseApi.get('/exams')
-      setExams(res.data || []);
+      setExams(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch exams', err);
       setError('فشل في تحميل الامتحانات');
@@ -235,7 +235,7 @@ export default function ExamsPage() {
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-8 space-y-8">
-          {currentExam.questions?.map((q: any, idx: number) => (
+          {(Array.isArray(currentExam.questions) ? currentExam.questions : []).map((q: any, idx: number) => (
             <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
               <h3 className="font-bold text-gray-900 mb-4">السؤال {idx + 1}: {q.questionText}</h3>
               <div className="space-y-3">
@@ -296,7 +296,7 @@ export default function ExamsPage() {
       {!loading && !error && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {exams.length === 0 && <p className="text-gray-500 col-span-3 text-center py-8">لا توجد امتحانات متاحة حالياً.</p>}
-        {exams.map((exam) => (
+        {(Array.isArray(exams) ? exams : []).map((exam) => (
           <div key={exam.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow">
             <div className="flex items-start justify-between mb-4">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${exam.status === 'completed' ? 'bg-green-100' : 'bg-indigo-100'}`}>

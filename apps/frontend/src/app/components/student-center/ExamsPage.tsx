@@ -12,7 +12,7 @@ export default function ExamsPage() {
 
   useEffect(() => {
     examApi.get('/')
-      .then(res => setExams(res.data || []))
+      .then(res => setExams(Array.isArray(res.data) ? res.data : []))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);
@@ -43,7 +43,7 @@ export default function ExamsPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-6">{selectedExam.title}</h1>
 
             <div className="space-y-8">
-              {selectedExam.questions?.map((q: any, idx: number) => (
+              {(Array.isArray(selectedExam.questions) ? selectedExam.questions : []).map((q: any, idx: number) => (
                 <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
                   <h3 className="font-bold text-gray-900 mb-4">
                     السؤال {idx + 1}: {q.question}
@@ -119,7 +119,7 @@ export default function ExamsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading && <div className="col-span-3 text-center py-8 text-gray-500">جاري تحميل الامتحانات...</div>}
         {!loading && exams.length === 0 && <div className="col-span-3 text-center py-8 text-gray-500">لا توجد امتحانات حالياً</div>}
-        {exams.map((exam) => (
+        {(Array.isArray(exams) ? exams : []).map((exam) => (
           <div key={exam.id} className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-start justify-between mb-4">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
