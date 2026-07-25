@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { db } from '@smartmath/database';
+import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 
 export const markAttendance = async (req: AuthRequest, res: Response) => {

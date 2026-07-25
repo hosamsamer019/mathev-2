@@ -1,4 +1,4 @@
-import { db } from '@smartmath/database';
+import { db } from '../../../../packages/database/src/index.js';
 
 export class ChatRepository {
   static async createSession(userId: string) {
