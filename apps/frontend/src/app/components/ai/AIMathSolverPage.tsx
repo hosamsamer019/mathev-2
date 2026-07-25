@@ -65,7 +65,7 @@ export default function AIMathSolverPage() {
         step: idx + 1,
         title: `الخطوة ${idx + 1}`,
         content: s
-      }));
+      })) : [];
 
       setSolution({
         answer: result,
