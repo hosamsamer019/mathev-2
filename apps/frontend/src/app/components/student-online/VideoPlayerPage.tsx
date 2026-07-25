@@ -122,6 +122,8 @@ export default function VideoPlayerPage() {
   const [isBlurred, setIsBlurred] = useState(false);
 
   useEffect(() => {
+    let devToolsCheckInterval: any;
+
     const handleBlur = () => setIsBlurred(true);
     const handleFocus = () => setIsBlurred(false);
     
@@ -137,7 +139,16 @@ export default function VideoPlayerPage() {
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'PrintScreen' || (e.ctrlKey && e.key === 'p') || (e.metaKey && e.shiftKey && e.key === 's')) {
+      // Block PrintScreen, Ctrl+P, Windows+Shift+S, F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S
+      if (
+        e.key === 'PrintScreen' || 
+        (e.ctrlKey && e.key === 'p') || 
+        (e.metaKey && e.shiftKey && e.key === 's') ||
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+        (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'))
+      ) {
+        e.preventDefault();
         setIsBlurred(true);
         navigator.clipboard.writeText('حفظ حقوق النشر: غير مسموح بتصوير الشاشة').catch(() => {});
       }
@@ -155,12 +166,24 @@ export default function VideoPlayerPage() {
       e.clipboardData?.setData('text/plain', 'حفظ حقوق النشر: غير مسموح بالنسخ');
     };
 
+    const detectDevTools = () => {
+      const widthThreshold = window.outerWidth - window.innerWidth > 160;
+      const heightThreshold = window.outerHeight - window.innerHeight > 160;
+      if (widthThreshold || heightThreshold) {
+        setIsBlurred(true);
+        if (playerRef.current && playerState === 1) playerRef.current.pauseVideo();
+      }
+    };
+
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     document.addEventListener('copy', handleCopy);
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+    
+    devToolsCheckInterval = setInterval(detectDevTools, 1000);
     
     return () => {
       window.removeEventListener('blur', handleBlur);
@@ -169,6 +192,7 @@ export default function VideoPlayerPage() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       document.removeEventListener('copy', handleCopy);
+      clearInterval(devToolsCheckInterval);
     };
   }, [playerState]);
 
@@ -286,6 +310,9 @@ export default function VideoPlayerPage() {
                   @keyframes moveWatermark {
                     0% { transform: translate(0, 0) rotate(45deg); }
                     100% { transform: translate(100px, 50px) rotate(45deg); }
+                  }
+                  @media print {
+                    body { display: none !important; opacity: 0 !important; visibility: hidden !important; }
                   }
                 `}</style>
               </div>
