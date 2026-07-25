@@ -278,17 +278,17 @@ export default function VideoPlayerPage() {
 
               {/* Active Quiz Popup */}
               {activeQuiz && (
-                <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-6 z-50">
-                  <div className="bg-gray-800 border border-indigo-500 rounded-2xl p-8 max-w-lg w-full text-center shadow-2xl">
-                    <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold text-white mb-6">{activeQuiz.question}</h3>
-                    <div className="space-y-3">
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 sm:p-6 z-50 overflow-hidden">
+                  <div className="bg-gray-800 border border-indigo-500 rounded-2xl p-4 sm:p-8 max-w-lg w-full text-center shadow-2xl max-h-[90%] overflow-y-auto custom-scrollbar">
+                    <AlertTriangle className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500 mx-auto mb-2 sm:mb-4" />
+                    <h3 className="text-lg sm:text-2xl font-bold text-white mb-4 sm:mb-6">{activeQuiz.question}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       {(Array.isArray(activeQuiz.options) ? activeQuiz.options : 
                         (typeof activeQuiz.options === 'string' ? activeQuiz.options.split('-') : [])).map((opt: string, i: number) => (
                         <button
                           key={i}
                           onClick={() => handleQuizSubmit(opt)}
-                          className="w-full p-4 rounded-xl border border-gray-600 hover:bg-indigo-600 hover:border-indigo-500 text-white transition-colors"
+                          className="w-full p-3 sm:p-4 rounded-xl border border-gray-600 hover:bg-indigo-600 hover:border-indigo-500 text-white transition-colors text-sm sm:text-base"
                         >
                           {opt}
                         </button>
