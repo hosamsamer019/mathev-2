@@ -36,7 +36,7 @@ export default function AIMathSolverPage() {
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true);
-      const res = await aiApi.get('/ai/history');
+      const res = await aiApi.get('/history');
       setHistory(res.data || []);
     } catch (err) {
       console.error('Failed to fetch history', err);
@@ -57,7 +57,7 @@ export default function AIMathSolverPage() {
     setActiveStep(null);
     
     try {
-      const response = await aiApi.post('/ai/solve', { problem, level: 'high_school' });
+      const response = await aiApi.post('/solve', { problem, level: 'high_school' });
       const { result, steps, solution: explanation } = response.data;
       
       // Map API response to UI SolverStep format
@@ -81,7 +81,7 @@ export default function AIMathSolverPage() {
 
   const handleSaveSolution = async () => {
     try {
-      await aiApi.post('/ai/history/save', { problem, solution });
+      await aiApi.post('/history/save', { problem, solution });
       alert('تم حفظ الحل في السجل بنجاح');
       fetchHistory();
     } catch (err) {
@@ -91,7 +91,7 @@ export default function AIMathSolverPage() {
 
   const handleSimilar = async () => {
     try {
-      const res = await aiApi.post('/ai/similar', { problem });
+      const res = await aiApi.post('/similar', { problem });
       if (res.data?.similarProblem) {
         setProblem(res.data.similarProblem);
         setSolution(null);

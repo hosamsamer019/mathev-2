@@ -81,7 +81,7 @@ export default function ExamsManagementPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="bg-white rounded-xl shadow-md overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">

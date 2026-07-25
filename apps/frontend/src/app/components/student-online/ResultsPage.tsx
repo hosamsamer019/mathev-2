@@ -108,7 +108,7 @@ export default function ResultsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">نتائج الامتحانات</h2>
-          {charts.examResults.length > 0 ? (
+          {(charts.examResults || []).length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={charts.examResults}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -125,7 +125,7 @@ export default function ResultsPage() {
 
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">نتائج الواجبات</h2>
-          {charts.homeworkResults.length > 0 ? (
+          {(charts.homeworkResults || []).length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={charts.homeworkResults}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -143,7 +143,7 @@ export default function ResultsPage() {
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6">النتائج الأخيرة</h2>
-        {recentResults.length > 0 ? (
+        {(recentResults || []).length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -155,7 +155,7 @@ export default function ResultsPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentResults.map((result, idx) => (
+                {(recentResults || []).map((result, idx) => (
                   <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-gray-900">{result.title}</td>
                     <td className="py-3 px-4">
