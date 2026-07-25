@@ -37,7 +37,7 @@ export default function StudentsPage() {
     try {
       setLoading(true);
       const res = await userApi.get('/users'); 
-      setUsers(res.data || []);
+      setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch users', err);
     } finally {

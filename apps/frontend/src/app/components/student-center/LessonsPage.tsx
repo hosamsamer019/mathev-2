@@ -9,7 +9,7 @@ export default function LessonsPage() {
 
   useEffect(() => {
     courseApi.get('/lessons')
-      .then(res => setLessons(res.data || []))
+      .then(res => setLessons(Array.isArray(res.data) ? res.data : []))
       .catch(err => console.error('Failed to fetch lessons', err))
       .finally(() => setLoading(false));
   }, []);

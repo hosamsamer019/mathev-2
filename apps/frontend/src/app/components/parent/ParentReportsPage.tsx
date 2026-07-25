@@ -28,7 +28,7 @@ export default function ParentReportsPage() {
   const fetchChildren = async () => {
     try {
       const res = await userApi.get('/parent/children');
-      setChildren(res.data);
+      setChildren(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch children', err);
     } finally {

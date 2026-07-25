@@ -22,7 +22,7 @@ export default function AttendancePage() {
       const res = await axios.get(`${baseURL}/my-attendance`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setAttendances(res.data || []);
+      setAttendances(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch attendance', err);
     } finally {
