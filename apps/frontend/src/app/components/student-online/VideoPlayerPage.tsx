@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { Play, Pause, Eye, ChevronRight, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Play, Pause, Eye, ChevronRight, FileText, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import confetti from 'canvas-confetti';
 
 export default function VideoPlayerPage() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export default function VideoPlayerPage() {
   const [playerState, setPlayerState] = useState(-1);
   const [activeQuiz, setActiveQuiz] = useState<any>(null);
   const [quizAnswered, setQuizAnswered] = useState<Record<string, boolean>>({});
+  const [quizFeedback, setQuizFeedback] = useState<'success' | 'error' | null>(null);
   
   const playerRef = useRef<any>(null);
   const lastTimeRef = useRef(0);
@@ -187,12 +189,24 @@ export default function VideoPlayerPage() {
   const handleQuizSubmit = (option: string) => {
     if (!activeQuiz) return;
     if (option === activeQuiz.correctAnswer) {
-      alert('إجابة صحيحة!');
-      setQuizAnswered(prev => ({ ...prev, [activeQuiz.id]: true }));
-      setActiveQuiz(null);
-      playerRef.current.playVideo();
+      setQuizFeedback('success');
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#4F46E5', '#10B981', '#F59E0B']
+      });
+      setTimeout(() => {
+        setQuizAnswered(prev => ({ ...prev, [activeQuiz.id]: true }));
+        setActiveQuiz(null);
+        setQuizFeedback(null);
+        playerRef.current.playVideo();
+      }, 2500);
     } else {
-      alert('إجابة خاطئة، حاول مرة أخرى.');
+      setQuizFeedback('error');
+      setTimeout(() => {
+        setQuizFeedback(null);
+      }, 1500);
     }
   };
 
@@ -279,21 +293,38 @@ export default function VideoPlayerPage() {
               {/* Active Quiz Popup */}
               {activeQuiz && (
                 <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 sm:p-6 z-50 overflow-hidden">
-                  <div className="bg-gray-800 border border-indigo-500 rounded-2xl p-4 sm:p-8 max-w-lg w-full text-center shadow-2xl max-h-[90%] overflow-y-auto custom-scrollbar">
-                    <AlertTriangle className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500 mx-auto mb-2 sm:mb-4" />
-                    <h3 className="text-lg sm:text-2xl font-bold text-white mb-4 sm:mb-6">{activeQuiz.question}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      {(Array.isArray(activeQuiz.options) ? activeQuiz.options : 
-                        (typeof activeQuiz.options === 'string' ? activeQuiz.options.split('-') : [])).map((opt: string, i: number) => (
-                        <button
-                          key={i}
-                          onClick={() => handleQuizSubmit(opt)}
-                          className="w-full p-3 sm:p-4 rounded-xl border border-gray-600 hover:bg-indigo-600 hover:border-indigo-500 text-white transition-colors text-sm sm:text-base"
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
+                  <div className={`bg-gray-800 border ${quizFeedback === 'success' ? 'border-green-500' : quizFeedback === 'error' ? 'border-red-500' : 'border-indigo-500'} rounded-2xl p-4 sm:p-8 max-w-lg w-full text-center shadow-2xl max-h-[90%] overflow-y-auto custom-scrollbar transition-colors duration-300`}>
+                    
+                    {quizFeedback === 'success' ? (
+                      <div className="py-8 animate-in fade-in zoom-in duration-300">
+                        <CheckCircle className="w-16 h-16 sm:w-20 sm:h-20 text-green-500 mx-auto mb-4" />
+                        <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">إجابة صحيحة!</h3>
+                        <p className="text-gray-300">أحسنت 🌟 جاري استئناف الدرس...</p>
+                      </div>
+                    ) : quizFeedback === 'error' ? (
+                      <div className="py-8 animate-in fade-in zoom-in duration-300">
+                        <XCircle className="w-16 h-16 sm:w-20 sm:h-20 text-red-500 mx-auto mb-4" />
+                        <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">إجابة خاطئة</h3>
+                        <p className="text-gray-300">حاول مرة أخرى ❌</p>
+                      </div>
+                    ) : (
+                      <div className="animate-in fade-in duration-300">
+                        <AlertTriangle className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500 mx-auto mb-2 sm:mb-4" />
+                        <h3 className="text-lg sm:text-2xl font-bold text-white mb-4 sm:mb-6">{activeQuiz.question}</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                          {(Array.isArray(activeQuiz.options) ? activeQuiz.options : 
+                            (typeof activeQuiz.options === 'string' ? activeQuiz.options.split('-') : [])).map((opt: string, i: number) => (
+                            <button
+                              key={i}
+                              onClick={() => handleQuizSubmit(opt)}
+                              className="w-full p-3 sm:p-4 rounded-xl border border-gray-600 hover:bg-indigo-600 hover:border-indigo-500 text-white transition-colors text-sm sm:text-base"
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
