@@ -58,12 +58,12 @@ export default function ForgotPasswordPage() {
             </form>
           ) : (
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-8 h-8 text-green-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">تم إرسال البريد!</h3>
+              <h3 className="text-xl font-bold text-gray-900">ميزة قيد التطوير</h3>
               <p className="text-gray-600">
-                تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني
+                استعادة كلمة المرور تلقائياً غير متاحة حالياً. يرجى التواصل مع إدارة المنصة أو الدعم الفني لاستعادة حسابك.
               </p>
               <button
                 onClick={() => navigate('/login')}

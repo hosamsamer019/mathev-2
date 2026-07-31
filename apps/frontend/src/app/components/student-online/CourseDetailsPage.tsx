@@ -3,20 +3,12 @@ import { useNavigate, useParams } from 'react-router';
 import { Play, Lock, CheckCircle, Clock } from 'lucide-react';
 import { courseApi } from '../../services/api';
 
-const DEFAULT_LESSONS = [
-  { id: '1', title: 'مقدمة في الجبر', duration: '15:30', completed: true, locked: false },
-  { id: '2', title: 'العمليات الحسابية الأساسية', duration: '20:15', completed: true, locked: false },
-  { id: '3', title: 'المعادلات الخطية', duration: '25:45', completed: true, locked: false },
-  { id: '4', title: 'حل المعادلات', duration: '18:20', completed: false, locked: false },
-  { id: '5', title: 'المتباينات', duration: '22:10', completed: false, locked: false },
-  { id: '6', title: 'الدوال', duration: '30:00', completed: false, locked: true },
-];
 
 export default function CourseDetailsPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const [course, setCourse] = useState<any>({ title: 'الجبر - الصف الأول الثانوي', description: 'تعلم أساسيات الجبر والمعادلات الرياضية' });
-  const [lessons, setLessons] = useState<any[]>(DEFAULT_LESSONS);
+  const [course, setCourse] = useState<any>({ title: 'جاري التحميل...', description: '' });
+  const [lessons, setLessons] = useState<any[]>([]);
 
   useEffect(() => {
     if (!courseId) return;

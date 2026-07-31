@@ -23,6 +23,8 @@ export default function StudentsPage() {
   });
 
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchUsers();
@@ -48,6 +50,7 @@ export default function StudentsPage() {
   const handleAdd = () => {
     setEditingUser(null);
     setFormData({ name: '', email: '', password: '', role: 'ONLINE_STUDENT', parentId: '', centerGroupId: '', parentName: '', parentEmail: '', parentPassword: '' });
+    setValidationErrors({});
     setShowModal(true);
   };
 
@@ -64,6 +67,7 @@ export default function StudentsPage() {
       parentEmail: '',
       parentPassword: ''
     });
+    setValidationErrors({});
     setShowModal(true);
   };
 
@@ -82,6 +86,8 @@ export default function StudentsPage() {
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
+      setValidationErrors({});
       if (editingUser) {
         await userApi.put(`/users/${editingUser.id}`, formData);
         showToast('تم التعديل بنجاح', 'success');
@@ -93,7 +99,20 @@ export default function StudentsPage() {
       fetchUsers();
     } catch(err: any) {
       console.error(err);
-      showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+      if (err.response?.data?.errors) {
+        const errors: Record<string, string> = {};
+        err.response.data.errors.forEach((e: any) => {
+          if (e.path && e.path.length > 0) {
+            errors[e.path[0]] = e.message;
+          }
+        });
+        setValidationErrors(errors);
+        showToast('يرجى مراجعة الحقول المطلوبة', 'error');
+      } else {
+        showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -193,8 +212,9 @@ export default function StudentsPage() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
+                {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
               </div>
 
               <div>
@@ -203,8 +223,9 @@ export default function StudentsPage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
+                {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>}
               </div>
 
               <div>
@@ -215,9 +236,10 @@ export default function StudentsPage() {
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                   placeholder={editingUser ? '••••••••' : ''}
                 />
+                {validationErrors.password && <p className="text-red-500 text-xs mt-1">{validationErrors.password}</p>}
               </div>
 
               <div>
@@ -225,7 +247,7 @@ export default function StudentsPage() {
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.role ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 >
                   <option value="ADMIN">ADMIN</option>
                   <option value="TEACHER">TEACHER</option>
@@ -233,6 +255,7 @@ export default function StudentsPage() {
                   <option value="CENTER_STUDENT">CENTER_STUDENT</option>
                   <option value="PARENT">PARENT</option>
                 </select>
+                {validationErrors.role && <p className="text-red-500 text-xs mt-1">{validationErrors.role}</p>}
               </div>
 
               {(formData.role === 'ONLINE_STUDENT' || formData.role === 'CENTER_STUDENT') && !editingUser && (
@@ -299,13 +322,15 @@ export default function StudentsPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleSave}
-                  className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700"
+                  disabled={isSaving}
+                  className={`flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  حفظ
+                  {isSaving ? 'جاري الحفظ...' : 'حفظ'}
                 </button>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300"
+                  disabled={isSaving}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
                 >
                   إلغاء
                 </button>

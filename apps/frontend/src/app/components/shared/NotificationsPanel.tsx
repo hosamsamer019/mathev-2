@@ -1,58 +1,17 @@
-import { Bell, CheckCircle, AlertCircle, Info, BookOpen, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Bell, CheckCircle, AlertCircle, Info, BookOpen, X, Loader2 } from 'lucide-react';
+import { notificationApi } from '../../services/api';
 
 interface Notification {
-  id: number;
-  type: 'success' | 'warning' | 'info' | 'course';
+  id: string;
+  type: 'success' | 'warning' | 'info' | 'course' | string;
   title: string;
   message: string;
-  time: string;
+  createdAt: string;
   read: boolean;
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    type: 'success',
-    title: 'تم تصحيح الواجب',
-    message: 'تم تصحيح واجب الجبر وحصلت على 90/100',
-    time: 'منذ 5 دقائق',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'warning',
-    title: 'امتحان قادم',
-    message: 'امتحان التفاضل والتكامل غداً الساعة 10:00 صباحاً',
-    time: 'منذ ساعة',
-    read: false,
-  },
-  {
-    id: 3,
-    type: 'info',
-    title: 'فيديو جديد',
-    message: 'تم رفع فيديو جديد: المعادلات التفاضلية',
-    time: 'منذ 3 ساعات',
-    read: false,
-  },
-  {
-    id: 4,
-    type: 'course',
-    title: 'دورة جديدة',
-    message: 'دورة الإحصاء التطبيقي متاحة الآن',
-    time: 'أمس',
-    read: true,
-  },
-  {
-    id: 5,
-    type: 'success',
-    title: 'إنجاز جديد!',
-    message: 'حصلت على شارة "المتفوق" في امتحان الهندسة',
-    time: 'أمس',
-    read: true,
-  },
-];
-
-const iconMap = {
+const iconMap: Record<string, any> = {
   success: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
   warning: { icon: AlertCircle, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
   info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
@@ -65,7 +24,35 @@ interface NotificationsPanelProps {
 }
 
 export default function NotificationsPanel({ onClose, isDark }: NotificationsPanelProps) {
-  const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.read).length;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await notificationApi.get('');
+      setNotifications(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Failed to fetch notifications', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (id: string, currentlyRead: boolean) => {
+    if (currentlyRead) return;
+    try {
+      await notificationApi.put(`/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (err) {
+      console.error('Failed to mark as read', err);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div
@@ -93,11 +80,16 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
 
       {/* Notifications List */}
       <div className="max-h-80 overflow-y-auto">
-        {MOCK_NOTIFICATIONS.map((notification) => {
-          const { icon: Icon, color, bg } = iconMap[notification.type];
+        {loading ? (
+          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+        ) : notifications.length === 0 ? (
+          <div className="text-center py-8 text-gray-500 text-sm">لا توجد إشعارات حالياً</div>
+        ) : notifications.map((notification) => {
+          const { icon: Icon, color, bg } = iconMap[notification.type] || iconMap['info'];
           return (
             <div
               key={notification.id}
+              onClick={() => markAsRead(notification.id, notification.read)}
               className={`px-4 py-3 flex items-start gap-3 border-b cursor-pointer transition-colors ${
                 isDark ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-50 hover:bg-gray-50'
               } ${!notification.read ? (isDark ? 'bg-indigo-900/10' : 'bg-indigo-50/50') : ''}`}
@@ -118,7 +110,7 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
                   {notification.message}
                 </p>
                 <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {notification.time}
+                  {new Date(notification.createdAt).toLocaleDateString('ar-EG')}
                 </p>
               </div>
             </div>

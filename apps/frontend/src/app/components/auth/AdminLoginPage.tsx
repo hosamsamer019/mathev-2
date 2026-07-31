@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError('');
     await new Promise((r) => setTimeout(r, 800));
-    login(formData.email || 'admin@edu.com', formData.password, 'admin');
+    login(formData.email || 'admin@edu.com', formData.password, 'ADMIN');
     navigate('/admin/home');
     setLoading(false);
   };

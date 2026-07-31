@@ -2,11 +2,11 @@ import { Routes, Route, Navigate } from 'react-router';
 import { Home, Video, FileText, ClipboardCheck, MessageCircle, User, Brain, Target } from 'lucide-react';
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
 import LessonsPage from './LessonsPage';
-import HomeworkPage from './HomeworkPage';
-import ExamsPage from './ExamsPage';
-import ChatbotPage from './ChatbotPage';
+import HomeworkPage from '../student-shared/HomeworkPage';
+import ExamsPage from '../student-shared/ExamsPage';
+import ChatbotPage from '../student-shared/ChatbotPage';
 import AttendancePage from './AttendancePage';
-import ProfilePage from './ProfilePage';
+import ProfilePage from '../student-shared/ProfilePage';
 import AIMathSolverPage from '../ai/AIMathSolverPage';
 import AdaptiveLearningPage from '../ai/AdaptiveLearningPage';
 import { useState, useEffect } from 'react';
@@ -30,7 +30,7 @@ export default function StudentCenterDashboard() {
 
   useEffect(() => {
     userApi.get('/profile')
-      .then(res => setProfileName(res.data?.name || res.data?.firstName + ' ' + res.data?.lastName || 'طالب سنتر'))
+      .then(res => setProfileName(res.data?.name || (res.data?.firstName ? `${res.data.firstName} ${res.data.lastName || ''}`.trim() : null) || 'طالب سنتر'))
       .catch(() => setProfileName('طالب سنتر'));
 
     homeworkApi.get('/')

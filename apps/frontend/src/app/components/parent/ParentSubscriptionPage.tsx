@@ -43,31 +43,13 @@ export default function ParentSubscriptionPage() {
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
 
   useEffect(() => {
-    fetchSubscription();
+    // Stubbed until Payment module is implemented
+    setSubscription({ status: 'coming_soon' });
+    setLoading(false);
   }, []);
 
-  const fetchSubscription = async () => {
-    try {
-      const res = await userApi.get('/subscription');
-      setSubscription(res.data);
-    } catch (err) {
-      console.error('Failed to fetch subscription', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCheckout = async (planId: string) => {
-    setCheckoutLoading(true);
-    try {
-      await userApi.post('/subscription/checkout', { planId });
-      await fetchSubscription();
-      alert('تم الاشتراك بنجاح!');
-    } catch (err) {
-      alert('حدث خطأ أثناء الاشتراك.');
-    } finally {
-      setCheckoutLoading(false);
-    }
+    alert('عذراً، ميزة الدفع والاشتراكات قيد التطوير حالياً (قريباً).');
   };
 
   if (loading) {
@@ -88,13 +70,13 @@ export default function ParentSubscriptionPage() {
       {/* Current Subscription Status */}
       <div className={`${cardBg} border rounded-2xl p-6 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}>
         <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${subscription?.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${subscription?.status === 'active' ? 'bg-green-100 text-green-600' : subscription?.status === 'coming_soon' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
             {subscription?.status === 'active' ? <Check className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
           </div>
           <div>
             <h2 className={`text-lg font-bold ${textPrimary}`}>حالة الاشتراك</h2>
-            <p className={`${subscription?.status === 'active' ? 'text-green-600 font-medium' : 'text-orange-600'} mt-1`}>
-              {subscription?.status === 'active' ? 'نشط' : subscription?.status === 'past_due' ? 'منتهي الصلاحية' : 'غير مشترك'}
+            <p className={`${subscription?.status === 'active' ? 'text-green-600 font-medium' : subscription?.status === 'coming_soon' ? 'text-blue-600' : 'text-orange-600'} mt-1`}>
+              {subscription?.status === 'active' ? 'نشط' : subscription?.status === 'coming_soon' ? 'قريباً (قيد التطوير)' : subscription?.status === 'past_due' ? 'منتهي الصلاحية' : 'غير مشترك'}
             </p>
           </div>
         </div>

@@ -10,6 +10,8 @@ export default function CoursesManagementPage() {
   // Form State
   const [formData, setFormData] = useState({ title: '', description: '', teacherId: '' });
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchCourses();
@@ -47,6 +49,8 @@ export default function CoursesManagementPage() {
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
+      setValidationErrors({});
       await courseApi.post('/courses', formData);
       showToast('تمت الإضافة بنجاح', 'success');
       setShowModal(false);
@@ -54,7 +58,20 @@ export default function CoursesManagementPage() {
       fetchCourses();
     } catch (err: any) {
       console.error(err);
-      showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+      if (err.response?.data?.errors) {
+        const errors: Record<string, string> = {};
+        err.response.data.errors.forEach((e: any) => {
+          if (e.path && e.path.length > 0) {
+            errors[e.path[0]] = e.message;
+          }
+        });
+        setValidationErrors(errors);
+        showToast('يرجى مراجعة الحقول المطلوبة', 'error');
+      } else {
+        showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -126,8 +143,9 @@ export default function CoursesManagementPage() {
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
+                {validationErrors.title && <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>}
               </div>
 
               <div>
@@ -136,8 +154,9 @@ export default function CoursesManagementPage() {
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.description ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 ></textarea>
+                {validationErrors.description && <p className="text-red-500 text-xs mt-1">{validationErrors.description}</p>}
               </div>
 
               <div>
@@ -147,20 +166,23 @@ export default function CoursesManagementPage() {
                   placeholder="Enter Teacher ID"
                   value={formData.teacherId}
                   onChange={(e) => setFormData({...formData, teacherId: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.teacherId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
+                {validationErrors.teacherId && <p className="text-red-500 text-xs mt-1">{validationErrors.teacherId}</p>}
               </div>
 
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleSave}
-                  className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700"
+                  disabled={isSaving}
+                  className={`flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  حفظ
+                  {isSaving ? 'جاري الحفظ...' : 'حفظ'}
                 </button>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300"
+                  disabled={isSaving}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
                 >
                   إلغاء
                 </button>

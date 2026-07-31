@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import courseRoutes from './routes/course.routes.js';
 import homeworkRoutes from './routes/homework.routes.js';
 import examRoutes from './routes/exam.routes.js';
+import questionRoutes from './routes/question.routes.js';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api/courses', courseRoutes);
 app.use('/api/homework', homeworkRoutes);
 app.use('/api/exams', examRoutes);
+app.use('/api/questions', questionRoutes);
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {

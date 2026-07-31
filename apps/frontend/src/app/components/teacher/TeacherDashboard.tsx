@@ -11,6 +11,8 @@ import TeacherAnalyticsPage from './TeacherAnalyticsPage';
 import TeacherExamsPage from './TeacherExamsPage';
 import TeacherAIPage from './TeacherAIPage';
 import TeacherProfilePage from './TeacherProfilePage';
+import TeacherQuestionBankPage from './TeacherQuestionBankPage';
+import { Database } from 'lucide-react';
 
 const menuItems: MenuItem[] = [
   { path: '/teacher/home', icon: Home, label: 'لوحة التحكم' },
@@ -18,6 +20,7 @@ const menuItems: MenuItem[] = [
   { path: '/teacher/courses', icon: BookOpen, label: 'الدورات والمحتوى' },
   { path: '/teacher/videos', icon: Video, label: 'الفيديوهات' },
   { path: '/teacher/exams', icon: ClipboardCheck, label: 'الامتحانات والواجبات' },
+  { path: '/teacher/questions', icon: Database, label: 'بنك الأسئلة' },
   { path: '/teacher/analytics', icon: BarChart3, label: 'التحليلات والتقارير' },
   { path: '/teacher/ai', icon: Brain, label: 'أدوات الذكاء الاصطناعي' },
   { path: '/teacher/profile', icon: User, label: 'الملف الشخصي' },
@@ -41,6 +44,7 @@ export default function TeacherDashboard() {
         <Route path="/courses" element={<TeacherCoursesPage />} />
         <Route path="/videos" element={<TeacherCoursesPage />} />
         <Route path="/exams" element={<TeacherExamsPage />} />
+        <Route path="/questions" element={<TeacherQuestionBankPage />} />
         <Route path="/analytics" element={<TeacherAnalyticsPage />} />
         <Route path="/ai" element={<TeacherAIPage />} />
         <Route path="/profile" element={<TeacherProfilePage />} />

@@ -48,74 +48,92 @@ export default function CoursesPage() {
       
       {!loading && !error && courses.length === 0 && <div className="text-center py-8 text-gray-500">لا توجد دورات متاحة حالياً.</div>}
 
-      {!loading && !error && (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses.map((course) => (
-          <div
-            key={course.id}
-            className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
-            onClick={() => !course.locked && navigate(`/student/online/courses/${course.id}`)}
-          >
-            <div className="relative h-48">
-              <img
-                src={course.thumbnail}
-                alt={course.title}
-                className="w-full h-full object-cover"
-              />
-              {course.locked && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <Lock className="w-12 h-12 mx-auto mb-2" />
-                    <p className="font-medium">مقفل</p>
+      {!loading && !error && courses.length > 0 && (
+        <div className="space-y-12">
+          {Object.entries(courses.reduce((acc, course) => {
+            const cat = course.category || 'عام';
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(course);
+            return acc;
+          }, {} as Record<string, any[]>)).map(([category, categoryCourses]) => (
+            <div key={category}>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-indigo-600" />
+                {category}
+                <span className="text-sm font-normal text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                  {categoryCourses.length} دورات
+                </span>
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categoryCourses.map((course: any) => (
+                  <div
+                    key={course.id}
+                    className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
+                    onClick={() => !course.locked && navigate(`/student/online/courses/${course.id}`)}
+                  >
+                    <div className="relative h-48">
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="w-full h-full object-cover"
+                      />
+                      {course.locked && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                          <div className="text-center text-white">
+                            <Lock className="w-12 h-12 mx-auto mb-2" />
+                            <p className="font-medium">مقفل</p>
+                          </div>
+                        </div>
+                      )}
+                      {!course.locked && course.progress > 0 && (
+                        <div className="absolute top-3 left-3 bg-white px-3 py-1 rounded-full text-sm font-medium">
+                          {course.progress}%
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">{course.title}</h3>
+
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                        <div className="flex items-center gap-1">
+                          <Video className="w-4 h-4" />
+                          <span>{course.lessons} درس</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span>{course.completed} مكتمل</span>
+                        </div>
+                      </div>
+
+                      {!course.locked && course.progress > 0 && (
+                        <div className="mb-4">
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-indigo-600 h-2 rounded-full"
+                              style={{ width: `${course.progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        className={`w-full py-2 rounded-lg font-medium ${
+                          course.locked
+                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        }`}
+                        disabled={course.locked}
+                      >
+                        {course.locked ? 'مقفل' : 'متابعة التعلم'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-              {!course.locked && course.progress > 0 && (
-                <div className="absolute top-3 left-3 bg-white px-3 py-1 rounded-full text-sm font-medium">
-                  {course.progress}%
-                </div>
-              )}
-            </div>
-
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">{course.title}</h3>
-
-              <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-                <div className="flex items-center gap-1">
-                  <Video className="w-4 h-4" />
-                  <span>{course.lessons} درس</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>{course.completed} مكتمل</span>
-                </div>
+                ))}
               </div>
-
-              {!course.locked && course.progress > 0 && (
-                <div className="mb-4">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-indigo-600 h-2 rounded-full"
-                      style={{ width: `${course.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-
-              <button
-                className={`w-full py-2 rounded-lg font-medium ${
-                  course.locked
-                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                }`}
-                disabled={course.locked}
-              >
-                {course.locked ? 'مقفل' : 'متابعة التعلم'}
-              </button>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
     </div>
   );

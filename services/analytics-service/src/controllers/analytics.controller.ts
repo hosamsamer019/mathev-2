@@ -43,6 +43,69 @@ export const getParentAnalytics = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getParentChildOverview = async (req: AuthRequest, res: Response) => {
+  try {
+    const parentId = req.user?.userId;
+    const childId = req.params.id;
+
+    if (!parentId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const child = await db.user.findFirst({
+      where: { id: childId, parentId },
+      include: {
+        examAttempts: { include: { exam: true } },
+        submissions: { include: { homework: true } },
+        attendances: true
+      }
+    });
+
+    if (!child) return res.status(404).json({ message: 'Child not found' });
+
+    const examsCompleted = child.examAttempts.length;
+    const homeworksCompleted = child.submissions.length;
+    let totalScore = 0;
+    
+    const recent = [];
+    const examResults = [];
+    const homeworkResults = [];
+
+    for (const attempt of child.examAttempts) {
+      totalScore += attempt.score;
+      recent.push({ id: attempt.id, title: attempt.exam.title, type: 'exam', score: attempt.score, date: attempt.createdAt.toISOString().split('T')[0] });
+      examResults.push({ name: attempt.exam.title, score: attempt.score });
+    }
+
+    for (const sub of child.submissions) {
+      totalScore += sub.grade || 0;
+      recent.push({ id: sub.id, title: sub.homework.title, type: 'homework', score: sub.grade || 0, date: sub.createdAt.toISOString().split('T')[0] });
+      homeworkResults.push({ name: sub.homework.title, score: sub.grade || 0 });
+    }
+
+    recent.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const overallRate = (examsCompleted + homeworksCompleted) > 0 
+      ? Math.round(totalScore / (examsCompleted + homeworksCompleted)) 
+      : 0;
+
+    res.json({
+      overview: {
+        overallRate,
+        examsCompleted,
+        homeworksCompleted,
+        rank: 1 // Placeholder for now
+      },
+      recent,
+      charts: {
+        examResults,
+        homeworkResults
+      }
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching child overview', error: error.message });
+  }
+};
+
 export const getTeacherAnalytics = async (req: Request, res: Response) => {
   try {
     const { id: teacherId } = req.params;

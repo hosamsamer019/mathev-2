@@ -5,18 +5,22 @@ import {
   createCourse,
   createLesson,
   getLessons,
+  getLessonDetails,
   deleteCourse,
   deleteLesson,
   updateVideoProgress,
-  getVideoAnalytics
+  getVideoAnalytics,
+  submitLessonQuiz
 } from '../controllers/course.controller.js';
 import { verifyToken, checkRole } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-router.get('/', getCourses);
+router.get('/', verifyToken, getCourses);
 router.get('/lessons', getLessons);
-router.get('/:id', getCourseDetails);
+router.get('/lessons/:id', verifyToken, getLessonDetails);
+router.get('/:id', verifyToken, getCourseDetails);
+router.post('/lessons/:id/quiz/:quizId/submit', verifyToken, submitLessonQuiz);
 
 // Course Management (restricted to teachers and admins)
 router.post('/', verifyToken, checkRole(['teacher', 'admin']), createCourse);

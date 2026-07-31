@@ -4,11 +4,11 @@ import { Video, FileText, ClipboardCheck, BarChart3, MessageCircle, User, Home, 
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
 import VideosPage from './VideosPage';
 import VideoPlayerPage from './VideoPlayerPage';
-import HomeworkPage from './HomeworkPage';
-import ExamsPage from './ExamsPage';
+import HomeworkPage from '../student-shared/HomeworkPage';
+import ExamsPage from '../student-shared/ExamsPage';
 import ResultsPage from './ResultsPage';
-import ChatbotPage from './ChatbotPage';
-import ProfilePage from './ProfilePage';
+import ChatbotPage from '../student-shared/ChatbotPage';
+import ProfilePage from '../student-shared/ProfilePage';
 import CoursesPage from './CoursesPage';
 import CourseDetailsPage from './CourseDetailsPage';
 import AIMathSolverPage from '../ai/AIMathSolverPage';
@@ -34,7 +34,7 @@ export default function StudentOnlineDashboard() {
 
   useEffect(() => {
     userApi.get('/profile')
-      .then(res => setProfileName(res.data?.name || res.data?.firstName + ' ' + res.data?.lastName || 'طالب'))
+      .then(res => setProfileName(res.data?.name || (res.data?.firstName ? `${res.data.firstName} ${res.data.lastName || ''}`.trim() : null) || 'طالب'))
       .catch(() => setProfileName('طالب أونلاين'));
 
     homeworkApi.get('/')

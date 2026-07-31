@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { authApi } from '../services/api';
 
-export type UserRole = 'student_online' | 'student_center' | 'teacher' | 'admin' | 'parent';
+export type UserRole = 'ONLINE_STUDENT' | 'CENTER_STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT';
 
 export interface User {
   id: string;
@@ -19,6 +19,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
+  checkAuth: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -34,19 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authApi.post('/login', { email, password, role });
       const { token, user: loggedUser } = response.data;
-      
-      const roleMap: Record<string, UserRole> = {
-        'ADMIN': 'admin',
-        'TEACHER': 'teacher',
-        'ONLINE_STUDENT': 'student_online',
-        'CENTER_STUDENT': 'student_center',
-        'PARENT': 'parent'
-      };
-      
-      // Ensure the role is mapped to frontend format
-      if (loggedUser && loggedUser.role && roleMap[loggedUser.role]) {
-        loggedUser.role = roleMap[loggedUser.role];
-      }
       
       setUser(loggedUser);
       localStorage.setItem('token', token);
@@ -64,8 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('edu-user');
   };
 
+  const checkAuth = async () => {
+    try {
+      const res = await authApi.get('/me').catch(async () => {
+        // Fallback to user-service profile if auth /me isn't available
+        const { userApi } = await import('../services/api');
+        return await userApi.get('/profile');
+      });
+      if (res.data) {
+        setUser(res.data);
+        localStorage.setItem('edu-user', JSON.stringify(res.data));
+      }
+    } catch (err) {
+      console.error('checkAuth failed:', err);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, checkAuth, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

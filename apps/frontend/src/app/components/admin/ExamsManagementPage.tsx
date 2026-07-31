@@ -11,6 +11,8 @@ export default function ExamsManagementPage() {
   // Form State
   const [formData, setFormData] = useState({ title: '', courseId: '' });
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchExams();
@@ -48,6 +50,8 @@ export default function ExamsManagementPage() {
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
+      setValidationErrors({});
       await examApi.post('/', formData);
       showToast('تمت الإضافة بنجاح', 'success');
       setShowModal(false);
@@ -55,7 +59,20 @@ export default function ExamsManagementPage() {
       fetchExams();
     } catch (err: any) {
       console.error(err);
-      showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+      if (err.response?.data?.errors) {
+        const errors: Record<string, string> = {};
+        err.response.data.errors.forEach((e: any) => {
+          if (e.path && e.path.length > 0) {
+            errors[e.path[0]] = e.message;
+          }
+        });
+        setValidationErrors(errors);
+        showToast('يرجى مراجعة الحقول المطلوبة', 'error');
+      } else {
+        showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -139,8 +156,9 @@ export default function ExamsManagementPage() {
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
+                {validationErrors.title && <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>}
               </div>
 
               <div>
@@ -150,20 +168,23 @@ export default function ExamsManagementPage() {
                   placeholder="Enter Course ID"
                   value={formData.courseId}
                   onChange={(e) => setFormData({...formData, courseId: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-4 py-2 border ${validationErrors.courseId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
+                {validationErrors.courseId && <p className="text-red-500 text-xs mt-1">{validationErrors.courseId}</p>}
               </div>
 
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleSave}
-                  className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700"
+                  disabled={isSaving}
+                  className={`flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  حفظ
+                  {isSaving ? 'جاري الحفظ...' : 'حفظ'}
                 </button>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300"
+                  disabled={isSaving}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
                 >
                   إلغاء
                 </button>

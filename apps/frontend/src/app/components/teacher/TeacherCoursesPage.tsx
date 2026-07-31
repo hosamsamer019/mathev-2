@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Play, Edit, Trash2, Eye, Upload, Youtube, Clock, Users, Star, BookOpen } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { courseApi } from '../../services/api';
+import { courseApi, homeworkApi } from '../../services/api';
 
 const videoTypes = [
   { icon: Upload, label: 'رفع فيديو محلي', color: 'bg-blue-100 text-blue-700' },
@@ -19,6 +19,7 @@ export default function TeacherCoursesPage() {
   const [activeTab, setActiveTab] = useState<'courses' | 'videos'>('courses');
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [lessonAnalytics, setLessonAnalytics] = useState<Record<string, any[]>>({});
+  const [courseHomeworks, setCourseHomeworks] = useState<any[]>([]);
 
   // Video Form State
   const [videoTitle, setVideoTitle] = useState('');
@@ -42,8 +43,8 @@ export default function TeacherCoursesPage() {
           id: c.id,
           title: c.title,
           description: c.description || '',
-          students: c.students || 0,
-          videos: c.lessons?.length || 0,
+          students: c._count?.enrollments || 0,
+          videos: c._count?.lessons || 0,
           rating: c.rating || 5.0,
           progress: 0,
           status: c.status || 'مفعّل',
@@ -66,19 +67,34 @@ export default function TeacherCoursesPage() {
 
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseLevel, setNewCourseLevel] = useState('ثانوي ١');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddCourse = async () => {
+    setFormErrors({});
     if (!newCourseTitle.trim()) {
-      alert('يرجى كتابة اسم الدورة');
+      setFormErrors({ title: 'يرجى كتابة اسم الدورة' });
       return;
     }
     try {
+      setIsSubmitting(true);
       await courseApi.post('/', { title: newCourseTitle, level: newCourseLevel });
       setShowAddCourse(false);
       setNewCourseTitle('');
       fetchCourses();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to add course', err);
+      if (err.response?.data?.errors) {
+        const errors: Record<string, string> = {};
+        err.response.data.errors.forEach((e: any) => {
+          errors[e.path[0]] = e.message;
+        });
+        setFormErrors(errors);
+      } else {
+        setFormErrors({ global: 'حدث خطأ أثناء الإضافة' });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -93,12 +109,17 @@ export default function TeacherCoursesPage() {
     }
   };
 
+  const [videoFormErrors, setVideoFormErrors] = useState<Record<string, string>>({});
+  const [isVideoSubmitting, setIsVideoSubmitting] = useState(false);
+
   const handleAddVideoSubmit = async () => {
+    setVideoFormErrors({});
     if (!videoTitle || !videoUrl || !selectedCourseId) {
-      alert('يرجى تعبئة جميع الحقول المطلوبة');
+      setVideoFormErrors({ global: 'يرجى تعبئة جميع الحقول المطلوبة' });
       return;
     }
     try {
+      setIsVideoSubmitting(true);
       await courseApi.post('/lessons', { 
         title: videoTitle, 
         videoUrl: videoUrl, 
@@ -118,9 +139,19 @@ export default function TeacherCoursesPage() {
       setSelectedCourseId('');
       alert('تم إضافة الفيديو بنجاح');
       fetchCourses();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('حدث خطأ أثناء إضافة الفيديو');
+      if (err.response?.data?.errors) {
+        const errors: Record<string, string> = {};
+        err.response.data.errors.forEach((e: any) => {
+          errors[e.path[0]] = e.message;
+        });
+        setVideoFormErrors(errors);
+      } else {
+        setVideoFormErrors({ global: 'حدث خطأ أثناء إضافة الفيديو' });
+      }
+    } finally {
+      setIsVideoSubmitting(false);
     }
   };
 
@@ -154,6 +185,14 @@ export default function TeacherCoursesPage() {
         }
       }
       setLessonAnalytics(analyticsObj);
+
+      // Fetch homeworks for this course
+      try {
+        const hwRes = await homeworkApi.get(`/course/${course.id}`);
+        setCourseHomeworks(Array.isArray(hwRes.data) ? hwRes.data : []);
+      } catch (err) {
+        setCourseHomeworks([]);
+      }
     } catch(err) {
       console.error(err);
     }
@@ -344,22 +383,33 @@ export default function TeacherCoursesPage() {
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-md shadow-2xl`} onClick={(e) => e.stopPropagation()}>
             <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>إضافة دورة جديدة</h2>
             <div className="space-y-4">
-              <input 
-                placeholder="اسم الدورة (مثال: فيزياء ثالثة ثانوي)" 
-                value={newCourseTitle}
-                onChange={e => setNewCourseTitle(e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`} 
-              />
-              <input 
-                placeholder="المرحلة (مثال: ثانوي ١)" 
-                value={newCourseLevel}
-                onChange={e => setNewCourseLevel(e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`} 
-              />
+              <div className="space-y-1">
+                <input 
+                  placeholder="اسم الدورة (مثال: فيزياء ثالثة ثانوي)" 
+                  value={newCourseTitle}
+                  onChange={e => setNewCourseTitle(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border ${formErrors.title ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200')} text-sm`} 
+                />
+                {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
+              </div>
+              <div className="space-y-1">
+                <input 
+                  placeholder="المرحلة (مثال: ثانوي ١)" 
+                  value={newCourseLevel}
+                  onChange={e => setNewCourseLevel(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border ${formErrors.level ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200')} text-sm`} 
+                />
+                {formErrors.level && <p className="text-red-500 text-xs mt-1">{formErrors.level}</p>}
+              </div>
+              {formErrors.global && <p className="text-red-500 text-sm text-center">{formErrors.global}</p>}
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={handleAddCourse} className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90">
-                إضافة
+              <button 
+                onClick={handleAddCourse} 
+                disabled={isSubmitting}
+                className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {isSubmitting ? 'جاري الإضافة...' : 'إضافة'}
               </button>
               <button onClick={() => setShowAddCourse(false)} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'} font-medium`}>
                 إلغاء
@@ -385,34 +435,46 @@ export default function TeacherCoursesPage() {
               ))}
             </div>
             <div className="space-y-4">
-              <select
-                value={selectedCourseId}
-                onChange={e => setSelectedCourseId(e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`}
-              >
-                <option value="">اختر الدورة...</option>
-                {courses.map(c => (
-                  <option key={c.id} value={c.id}>{c.title}</option>
-                ))}
-              </select>
-              <input
-                placeholder="عنوان الفيديو"
-                value={videoTitle}
-                onChange={e => setVideoTitle(e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-              />
-              <input
-                placeholder="رابط الفيديو (مثال: رابط يوتيوب)"
-                value={videoUrl}
-                onChange={e => setVideoUrl(e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-              />
-              <input
-                placeholder="رابط المرفقات (PDF) (اختياري)"
-                value={pdfUrl}
-                onChange={e => setPdfUrl(e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-              />
+              <div className="space-y-1">
+                <select
+                  value={selectedCourseId}
+                  onChange={e => setSelectedCourseId(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.courseId ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200')} text-sm`}
+                >
+                  <option value="">اختر الدورة...</option>
+                  {courses.map(c => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </select>
+                {videoFormErrors.courseId && <p className="text-red-500 text-xs mt-1">{videoFormErrors.courseId}</p>}
+              </div>
+              <div className="space-y-1">
+                <input
+                  placeholder="عنوان الفيديو"
+                  value={videoTitle}
+                  onChange={e => setVideoTitle(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.title ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                />
+                {videoFormErrors.title && <p className="text-red-500 text-xs mt-1">{videoFormErrors.title}</p>}
+              </div>
+              <div className="space-y-1">
+                <input
+                  placeholder="رابط الفيديو (مثال: رابط يوتيوب)"
+                  value={videoUrl}
+                  onChange={e => setVideoUrl(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.videoUrl ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                />
+                {videoFormErrors.videoUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.videoUrl}</p>}
+              </div>
+              <div className="space-y-1">
+                <input
+                  placeholder="رابط المرفقات (PDF) (اختياري)"
+                  value={pdfUrl}
+                  onChange={e => setPdfUrl(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.pdfUrl ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                />
+                {videoFormErrors.pdfUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.pdfUrl}</p>}
+              </div>
               
               <div className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'} space-y-3`}>
                 <h4 className={`text-sm font-bold ${textPrimary}`}>أسئلة منبثقة تفاعلية داخل الفيديو</h4>
@@ -429,10 +491,15 @@ export default function TeacherCoursesPage() {
                   </ul>
                 )}
               </div>
+              {videoFormErrors.global && <p className="text-red-500 text-sm text-center">{videoFormErrors.global}</p>}
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={handleAddVideoSubmit} className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90">
-                إضافة
+              <button 
+                onClick={handleAddVideoSubmit} 
+                disabled={isVideoSubmitting}
+                className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {isVideoSubmitting ? 'جاري الإضافة...' : 'إضافة'}
               </button>
               <button onClick={() => setShowAddVideo(false)} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'} font-medium`}>
                 إلغاء
@@ -509,26 +576,32 @@ export default function TeacherCoursesPage() {
                           </p>
                         </div>
                         
-                        {/* Fake Homework submissions for this lesson */}
-                        <div className="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
-                          <h4 className="font-bold text-gray-800 dark:text-gray-300 flex items-center gap-2 mb-3">
-                            <BookOpen className="w-4 h-4 text-emerald-600" /> تسليمات الواجب (مرفقات الدرس)
-                          </h4>
-                          <ul className="space-y-2 text-sm">
-                            <li className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                              <span className="text-gray-700 dark:text-gray-300">أحمد محمد (رابط Google Drive)</span>
-                              <button onClick={() => alert('جاري تحميل المرفق...')} className="text-indigo-600 hover:underline">عرض الحل</button>
-                            </li>
-                            <li className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                              <span className="text-gray-700 dark:text-gray-300">سارة أحمد (لم يتم التسليم بعد)</span>
-                              <span className="text-gray-400">---</span>
-                            </li>
-                          </ul>
-                        </div>
                       </div>
                     )}
                   </div>
                 ))}
+
+                {courseHomeworks.length > 0 && (
+                  <div className={`p-4 mt-6 rounded-xl border ${cardBg}`}>
+                    <h3 className={`font-bold ${textPrimary} mb-4 flex items-center gap-2`}>
+                      <BookOpen className="text-emerald-500 w-5 h-5" /> 
+                      واجبات الدورة ({courseHomeworks.length})
+                    </h3>
+                    <div className="space-y-4">
+                      {courseHomeworks.map(hw => (
+                        <div key={hw.id} className={`p-4 border ${isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'} rounded-xl`}>
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className={`font-bold ${textPrimary}`}>{hw.title}</h4>
+                            <span className="text-sm bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg">
+                              تسليمات: {hw._count?.submissions || 0}
+                            </span>
+                          </div>
+                          <p className={`text-xs ${textSecondary}`}>أُضيف في: {new Date(hw.createdAt).toLocaleDateString('ar-EG')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             

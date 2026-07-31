@@ -15,6 +15,7 @@ export default function VideoPlayerPage() {
   const [activeQuiz, setActiveQuiz] = useState<any>(null);
   const [quizAnswered, setQuizAnswered] = useState<Record<string, boolean>>({});
   const [quizFeedback, setQuizFeedback] = useState<'success' | 'error' | null>(null);
+  const [courseHomeworks, setCourseHomeworks] = useState<any[]>([]);
   
   const playerRef = useRef<any>(null);
   const lastTimeRef = useRef(0);
@@ -34,10 +35,14 @@ export default function VideoPlayerPage() {
     const fetchLesson = async () => {
       try {
         const { courseApi } = await import('../../services/api');
-        // Because we don't have a GET /lessons/:id, fetch all and find
-        const res = await courseApi.get('/lessons');
-        const currentLesson = res.data.find((l: any) => l.id === videoId);
-        setLesson(currentLesson);
+        const res = await courseApi.get(`/lessons/${videoId}`);
+        setLesson(res.data);
+        
+        if (res.data?.courseId) {
+          const { homeworkApi } = await import('../../services/api');
+          const hwRes = await homeworkApi.get(`/course/${res.data.courseId}`);
+          setCourseHomeworks(hwRes.data || []);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -210,23 +215,33 @@ export default function VideoPlayerPage() {
     }
   };
 
-  const handleQuizSubmit = (option: string) => {
+  const handleQuizSubmit = async (option: string) => {
     if (!activeQuiz) return;
-    if (option === activeQuiz.correctAnswer) {
-      setQuizFeedback('success');
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#4F46E5', '#10B981', '#F59E0B']
-      });
-      setTimeout(() => {
-        setQuizAnswered(prev => ({ ...prev, [activeQuiz.id]: true }));
-        setActiveQuiz(null);
-        setQuizFeedback(null);
-        playerRef.current.playVideo();
-      }, 2500);
-    } else {
+    try {
+      const { courseApi } = await import('../../services/api');
+      const res = await courseApi.post(`/lessons/${videoId}/quiz/${activeQuiz.id}/submit`, { answer: option });
+      if (res.data.correct) {
+        setQuizFeedback('success');
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#4F46E5', '#10B981', '#F59E0B']
+        });
+        setTimeout(() => {
+          setQuizAnswered(prev => ({ ...prev, [activeQuiz.id]: true }));
+          setActiveQuiz(null);
+          setQuizFeedback(null);
+          playerRef.current.playVideo();
+        }, 2500);
+      } else {
+        setQuizFeedback('error');
+        setTimeout(() => {
+          setQuizFeedback(null);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error(err);
       setQuizFeedback('error');
       setTimeout(() => {
         setQuizFeedback(null);
@@ -238,6 +253,12 @@ export default function VideoPlayerPage() {
     <div className={`min-h-screen bg-gray-900 transition-all duration-300 ${isBlurred ? 'blur-xl grayscale select-none pointer-events-none' : ''}`}>
       {isBlurred && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 text-white text-3xl font-bold">
+          {/* 
+            TECHNICAL NOTE FOR DEVELOPERS:
+            This is a soft deterrent, not real DRM. It is bypassable via disabling JavaScript, 
+            using DevTools before blur triggers, or DOM manipulation. It is purely meant to 
+            deter casual screenshots/recording.
+          */}
           تم إيقاف العرض مؤقتاً لحماية المحتوى
         </div>
       )}
@@ -432,20 +453,36 @@ export default function VideoPlayerPage() {
               <div className="mb-6 bg-gray-900 border border-gray-700 p-4 rounded-xl">
                 <h4 className="text-white font-medium mb-2">تسليم واجب الدرس</h4>
                 <p className="text-gray-400 text-sm mb-4">قم برفع الحل الخاص بك (أو ضع رابط للملف) ليقوم المعلم بتصحيحه.</p>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="رابط الواجب (مثال: رابط Google Drive)" className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" id="homework-input" />
-                  <button onClick={() => {
-                    const input = document.getElementById('homework-input') as HTMLInputElement;
-                    if(input && input.value) {
-                      alert('تم تسليم الواجب بنجاح! سيقوم المعلم بمراجعته.');
-                      input.value = '';
-                    } else {
-                      alert('يرجى وضع رابط الواجب أولاً.');
-                    }
-                  }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
-                    رفع الحل
-                  </button>
-                </div>
+                {courseHomeworks.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    <select className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" id="homework-select">
+                      {courseHomeworks.map(hw => <option key={hw.id} value={hw.id}>{hw.title}</option>)}
+                    </select>
+                    <div className="flex gap-2">
+                      <input type="text" placeholder="رابط الواجب (مثال: رابط Google Drive)" className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" id="homework-input" />
+                      <button onClick={async () => {
+                        const input = document.getElementById('homework-input') as HTMLInputElement;
+                        const select = document.getElementById('homework-select') as HTMLSelectElement;
+                        if(input && input.value && select && select.value) {
+                          try {
+                            const { homeworkApi } = await import('../../services/api');
+                            await homeworkApi.post(`/${select.value}/submit`, { url: input.value, answers: [] });
+                            alert('تم تسليم الواجب بنجاح! سيقوم المعلم بمراجعته.');
+                            input.value = '';
+                          } catch (err) {
+                            alert('فشل في تسليم الواجب');
+                          }
+                        } else {
+                          alert('يرجى وضع رابط الواجب أولاً.');
+                        }
+                      }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                        رفع الحل
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-yellow-500 text-sm">لا توجد واجبات متاحة لهذه الدورة حالياً.</p>
+                )}
               </div>
 
               <div className="border-t border-gray-700 pt-4">

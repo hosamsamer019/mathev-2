@@ -44,6 +44,8 @@ model User {
   payments      Payment[]
   videoProgress VideoProgress[]
   chatSessions  ChatSession[]
+  notifications Notification[]
+  questions     Question[]
 }
 
 model CenterGroup {
@@ -60,6 +62,7 @@ model Course {
   id          String   @id @default(uuid())
   title       String
   description String?
+  category    String?
   teacherId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -107,6 +110,8 @@ model Exam {
 
   course   Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   attempts ExamAttempt[]
+  questions Json?
+  requiresCamera Boolean @default(false)
 }
 
 model ExamAttempt {
@@ -118,6 +123,7 @@ model ExamAttempt {
 
   student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
   exam    Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers Json?
 }
 
 model Homework {
@@ -130,6 +136,7 @@ model Homework {
 
   course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   submissions Submission[]
+  questions   Json?
 }
 
 model Submission {
@@ -143,6 +150,7 @@ model Submission {
 
   student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   homework Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  answers  Json?
 }
 
 model Attendance {
@@ -214,4 +222,30 @@ model ChatMessage {
   createdAt  DateTime @default(now())
 
   session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // 'success' | 'warning' | 'info' | 'course'
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  teacherId     String
+  text          String
+  type          String   @default("MCQ")
+  options       Json
+  correctAnswer Int
+  tag           String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  teacher       User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 }

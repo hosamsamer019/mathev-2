@@ -1,10 +1,14 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChatRepository } from '../repositories/chat.repository.js';
 import Redis from 'ioredis';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'placeholder_key'
-});
+const getGeminiClient = () => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key || key === 'placeholder_key' || key === '') {
+    throw new Error('500 Internal Server Error: GEMINI_API_KEY is missing');
+  }
+  return new GoogleGenerativeAI(key);
+};
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: 1,
@@ -16,12 +20,26 @@ const CHAT_SYSTEM_PROMPT = `أنت مساعد رياضيات ذكي ودود ي�
 
 const MAX_REQUESTS_PER_MINUTE = 10;
 
+const inMemoryRateLimiter = new Map<string, { count: number; resetAt: number }>();
+
 export class ChatService {
   static async checkRateLimit(userId: string): Promise<boolean> {
+    const handleInMemoryLimit = () => {
+      const now = Date.now();
+      let record = inMemoryRateLimiter.get(userId);
+      if (!record || now > record.resetAt) {
+        record = { count: 1, resetAt: now + 60000 };
+      } else {
+        record.count++;
+      }
+      inMemoryRateLimiter.set(userId, record);
+      return record.count <= MAX_REQUESTS_PER_MINUTE;
+    };
+
     try {
       if (redis.status !== 'ready') {
-        // Fallback for local development if Redis is not running
-        return true; 
+        console.error('Redis is not ready, falling back to in-memory rate limiter');
+        return handleInMemoryLimit();
       }
       const key = `ratelimit:ai:chat:${userId}`;
       const current = await redis.incr(key);
@@ -36,8 +54,8 @@ export class ChatService {
       
       return true;
     } catch (e) {
-      console.warn('Redis rate limit error, bypassing limit for local dev:', e);
-      return true;
+      console.error('Redis rate limit error:', e, 'falling back to in-memory rate limiter');
+      return handleInMemoryLimit();
     }
   }
 
@@ -54,6 +72,9 @@ export class ChatService {
   }
 
   static async chatStream(userId: string, sessionId: string, userMessage: string, res: any) {
+    // Check key before anything
+    const genAI = getGeminiClient();
+    
     // Validate session ownership
     const session = await ChatRepository.getSessionById(sessionId, userId);
     if (!session) throw new Error('Session not found');
@@ -64,29 +85,29 @@ export class ChatService {
     // Get recent messages for context (last 10)
     const recentMessages = await ChatRepository.getRecentMessages(sessionId, 10);
 
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: CHAT_SYSTEM_PROMPT },
-      ...recentMessages.map((m: any) => ({
-        role: m.role as 'user' | 'assistant' | 'system',
-        content: m.content
-      }))
-    ];
-
-    // Check for real API key
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'placeholder_key') {
-      throw new Error('500 Internal Server Error: OPENAI_API_KEY is missing');
-    }
-
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages,
-      max_tokens: 1024,
-      stream: true
+    // Prepare Gemini model
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-3.6-flash',
+      systemInstruction: CHAT_SYSTEM_PROMPT,
     });
 
+    // Map history to Gemini format. Discard the new userMessage from the history array since we pass it to sendMessageStream.
+    // Wait, recentMessages will include the message we just saved.
+    // Let's filter it out or just send it as part of generateContentStream.
+    // Actually, ChatRepository.addMessage is awaited BEFORE getRecentMessages.
+    // So recentMessages includes the current userMessage.
+    
+    // So we can just use generateContentStream with all messages.
+    const contents = recentMessages.map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const result = await model.generateContentStream({ contents });
+
     let fullReply = '';
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
+    for await (const chunk of result.stream) {
+      const content = chunk.text();
       if (content) {
         fullReply += content;
         res.write(`data: ${JSON.stringify({ content })}\n\n`);
@@ -97,5 +118,4 @@ export class ChatService {
     res.write(`data: [DONE]\n\n`);
     res.end();
   }
-
 }

@@ -23,7 +23,7 @@ export default function ParentDashboard() {
 
   useEffect(() => {
     userApi.get('/profile')
-      .then(res => setProfileName(res.data?.name || res.data?.firstName + ' ' + res.data?.lastName || 'ولي أمر'))
+      .then(res => setProfileName(res.data?.name || (res.data?.firstName ? `${res.data.firstName} ${res.data.lastName || ''}`.trim() : null) || 'ولي أمر'))
       .catch(() => setProfileName('ولي أمر'));
 
     // Optionally fetch unread messages if there is an endpoint, mocking for now to clear ghost data

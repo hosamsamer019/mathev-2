@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Users, BookOpen, Video, ClipboardCheck, TrendingUp, Award, AlertTriangle, Brain, DollarSign, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
+import { analyticsApi } from '../../services/api';
 
 const enrollmentData = [
   { month: 'سبتمبر', students: 120 },
@@ -38,6 +40,18 @@ const recentActivities = [
 
 export default function AdminHomePage() {
   const { isDark } = useTheme();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    analyticsApi.get('/admin').then(res => {
+      setData(res.data);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -45,10 +59,10 @@ export default function AdminHomePage() {
   const tooltipStyle = { background: isDark ? '#1f2937' : '#fff', border: 'none', borderRadius: 12 };
 
   const stats = [
-    { label: 'إجمالي الطلاب', value: '١,٢٣٤', change: '+٤٧', icon: Users, color: 'from-blue-500 to-indigo-600' },
-    { label: 'الدورات النشطة', value: '٤٥', change: '+٣', icon: BookOpen, color: 'from-green-500 to-emerald-600' },
-    { label: 'إجمالي الفيديوهات', value: '٣٢٠', change: '+١٨', icon: Video, color: 'from-purple-500 to-violet-600' },
-    { label: 'الامتحانات', value: '٧٨', change: '+٥', icon: ClipboardCheck, color: 'from-orange-500 to-red-500' },
+    { label: 'إجمالي المستخدمين', value: data?.overview?.totalUsers ?? '...', change: '', icon: Users, color: 'from-blue-500 to-indigo-600' },
+    { label: 'الدورات النشطة', value: data?.overview?.totalCourses ?? '...', change: '', icon: BookOpen, color: 'from-green-500 to-emerald-600' },
+    { label: 'إجمالي الامتحانات', value: data?.overview?.totalExams ?? '...', change: '', icon: ClipboardCheck, color: 'from-orange-500 to-red-500' },
+    { label: 'تسليمات الواجبات', value: data?.overview?.totalSubmissions ?? '...', change: '', icon: Activity, color: 'from-pink-500 to-rose-600' },
     { label: 'إيرادات الشهر', value: '٢٨,٣٠٠ج', change: '+١٠٪', icon: DollarSign, color: 'from-cyan-500 to-blue-600' },
     { label: 'المشتركون النشطون', value: '٢٨٣', change: '+٢٧', icon: Activity, color: 'from-pink-500 to-rose-600' },
     { label: 'طلاب في خطر', value: '١٥', change: '-٢', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
@@ -60,7 +74,7 @@ export default function AdminHomePage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className={`text-2xl font-bold ${textPrimary}`}>لوحة التحكم الرئيسية</h1>
-        <p className={textSecondary}>الأربعاء، ٢٩ أبريل ٢٠٢٦ - نظرة شاملة على المنصة</p>
+        <p className={textSecondary}>نظرة شاملة على المنصة</p>
       </div>
 
       {/* Stats Grid */}

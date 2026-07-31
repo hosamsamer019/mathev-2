@@ -44,6 +44,10 @@ export default defineConfig({
         target: 'http://localhost:4002',
         changeOrigin: true,
       },
+      '/api/notifications': {
+        target: 'http://localhost:4002',
+        changeOrigin: true,
+      },
       '/api/ai': {
         target: 'http://localhost:4003',
         changeOrigin: true,
@@ -57,6 +61,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api/exams': {
+        target: 'http://localhost:4004',
+        changeOrigin: true,
+      },
+      '/api/questions': {
         target: 'http://localhost:4004',
         changeOrigin: true,
       },

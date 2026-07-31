@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import { 
   getAdminAnalytics, 
-  getParentAnalytics, 
+  getParentAnalytics,
+  getParentChildOverview,
   getTeacherAnalytics,
   getStudentOverview,
   getStudentCharts,
@@ -13,6 +14,7 @@ const router = Router();
 
 router.get('/admin', verifyToken, getAdminAnalytics);
 router.get('/parent', verifyToken, getParentAnalytics);
+router.get('/parent/child/:id/overview', verifyToken, getParentChildOverview);
 router.get('/teacher/:id/overview', verifyToken, getTeacherAnalytics);
 
 router.get('/student/overview', verifyToken, getStudentOverview);

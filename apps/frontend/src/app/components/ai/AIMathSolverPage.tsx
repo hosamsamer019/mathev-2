@@ -58,18 +58,17 @@ export default function AIMathSolverPage() {
     
     try {
       const response = await aiApi.post('/solve', { problem, level: 'high_school' });
-      const { result, steps, solution: explanation } = response.data;
+      const { solution: explanation } = response.data;
       
-      // Map API response to UI SolverStep format
-      const mappedSteps: SolverStep[] = Array.isArray(steps) ? steps.map((s: string, idx: number) => ({
-        step: idx + 1,
-        title: `الخطوة ${idx + 1}`,
-        content: s
-      })) : [];
-
       setSolution({
-        answer: result,
-        steps: mappedSteps
+        answer: 'تم الحل (انظر التفاصيل)',
+        steps: [
+          {
+            step: 1,
+            title: 'خطوات الحل والشرح التفصيلي',
+            content: explanation || 'لم يتم العثور على حل.',
+          }
+        ]
       });
     } catch (error) {
       console.error('AI Solver failed:', error);

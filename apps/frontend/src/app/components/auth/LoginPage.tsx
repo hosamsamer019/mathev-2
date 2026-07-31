@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { User, Building2, GraduationCap, Users, ChevronLeft, Eye, EyeOff, Sparkles, Lock, Mail } from 'lucide-react';
+import { User, Building2, GraduationCap, Users, ChevronLeft, Eye, EyeOff, Sparkles, Lock, Mail, ShieldCheck, KeyRound } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth, UserRole } from '../../contexts/AuthContext';
 
@@ -18,48 +18,48 @@ interface RoleOption {
 
 const roles: RoleOption[] = [
   {
-    role: 'student_online',
+    role: 'ONLINE_STUDENT',
     label: 'طالب أونلاين',
     description: 'تعلم عن بُعد مع محتوى تفاعلي',
     icon: User,
     color: 'text-indigo-600',
-    gradient: 'from-indigo-500 to-blue-600',
+    gradient: 'from-blue-500 to-indigo-500',
     path: '/student/online/home',
   },
   {
-    role: 'student_center',
-    label: 'طالب السنتر',
+    role: 'CENTER_STUDENT',
+    label: 'طالب سنتر',
     description: 'دروس السنتر مع الفيديوهات والواجبات',
     icon: Building2,
     color: 'text-green-600',
-    gradient: 'from-green-500 to-emerald-600',
+    gradient: 'from-orange-500 to-rose-500',
     path: '/student/center/lessons',
   },
   {
-    role: 'teacher',
-    label: 'معلم / أستاذ',
+    role: 'TEACHER',
+    label: 'معلم',
     description: 'إدارة الطلاب والمحتوى والتحليلات',
-    icon: GraduationCap,
+    icon: Users,
     color: 'text-emerald-600',
-    gradient: 'from-emerald-500 to-teal-600',
+    gradient: 'from-emerald-500 to-teal-500',
     path: '/teacher/home',
   },
   {
-    role: 'parent',
-    label: 'ولي الأمر',
+    role: 'PARENT',
+    label: 'ولي أمر',
     description: 'متابعة أداء وتقدم أبنائك',
-    icon: Users,
+    icon: ShieldCheck,
     color: 'text-cyan-600',
-    gradient: 'from-cyan-500 to-blue-600',
+    gradient: 'from-purple-500 to-pink-500',
     path: '/parent/home',
   },
   {
-    role: 'admin',
-    label: 'المدير العام',
+    role: 'ADMIN',
+    label: 'إدارة',
     description: 'إدارة المنصة بالكامل والتقارير المالية',
-    icon: Sparkles,
+    icon: KeyRound,
     color: 'text-purple-600',
-    gradient: 'from-purple-500 to-indigo-600',
+    gradient: 'from-slate-700 to-slate-900',
     path: '/admin/dashboard',
   },
 ];
@@ -81,11 +81,11 @@ export default function LoginPage() {
 
   const getTestEmail = (role: UserRole) => {
     switch (role) {
-      case 'admin': return 'admin@edu.com';
-      case 'teacher': return 'teacher@edu.com';
-      case 'student_online': return 'student@edu.com';
-      case 'student_center': return 'center@edu.com';
-      case 'parent': return 'parent@edu.com';
+      case 'ADMIN': return 'admin@edu.com';
+      case 'TEACHER': return 'teacher@edu.com';
+      case 'ONLINE_STUDENT': return 'student@edu.com';
+      case 'CENTER_STUDENT': return 'center@edu.com';
+      case 'PARENT': return 'parent@edu.com';
       default: return `${role}@edu.com`;
     }
   };
@@ -173,7 +173,7 @@ export default function LoginPage() {
                 </button>
                 <p className="text-xs text-indigo-400">
                   ليس لديك حساب؟ {' '}
-                  <button className="text-white hover:underline">إنشاء حساب جديد</button>
+                  <button onClick={() => navigate('/register')} className="text-white hover:underline">إنشاء حساب جديد</button>
                 </p>
               </div>
             </motion.div>

@@ -15,9 +15,10 @@
     "postinstall": "npm run build --prefix packages/database"
   },
   "dependencies": {
-    "@smartmath/database": "file:packages/database",
     "@prisma/client": "^5.9.1",
-    "prisma": "^5.9.1"
+    "@smartmath/database": "file:packages/database",
+    "prisma": "^5.9.1",
+    "puppeteer": "^25.4.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

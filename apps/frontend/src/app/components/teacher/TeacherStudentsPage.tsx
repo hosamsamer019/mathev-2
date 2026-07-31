@@ -39,16 +39,16 @@ export default function TeacherStudentsPage() {
       const studentData = allUsers.filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT');
       const mapped = studentData.map((s: any) => ({
         id: s.id,
-        name: s.name || `${s.firstName} ${s.lastName}`,
+        name: s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim(),
         grade: s.grade || 'غير محدد',
-        type: s.type || 'أونلاين',
+        type: s.role === 'ONLINE_STUDENT' ? 'أونلاين' : 'سنتر',
         avg: s.avgScore || 0,
         status: s.avgScore >= 90 ? 'ممتاز' : s.avgScore >= 75 ? 'جيد جداً' : s.avgScore >= 60 ? 'جيد' : s.avgScore >= 40 ? 'ضعيف' : 'في خطر',
         trend: 'stable',
         lastActive: 'اليوم',
         homework: s.homeworkScore || 0,
         exams: s.examScore || 0,
-        attendance: 100
+        attendance: s.attendancePercentage !== null ? s.attendancePercentage : 'لا توجد بيانات'
       }));
       setStudents(mapped);
     } catch (err) {
@@ -69,12 +69,7 @@ export default function TeacherStudentsPage() {
   };
 
   const handleExport = async () => {
-    try {
-      await userApi.get('/users/export', { responseType: 'blob' });
-      alert('تم تصدير البيانات بنجاح!');
-    } catch (err) {
-      console.error('Export failed', err);
-    }
+    alert('عذراً، ميزة تصدير البيانات قيد التطوير حالياً (قريباً).');
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -109,9 +104,6 @@ export default function TeacherStudentsPage() {
         <div className="flex gap-3">
           <button onClick={handleExport} className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} text-sm transition-colors`}>
             <Download className="w-4 h-4" /> تصدير Excel
-          </button>
-          <button onClick={handleAddStudent} className="flex items-center gap-2 bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90">
-            <Plus className="w-4 h-4" /> إضافة طالب
           </button>
         </div>
       </div>
@@ -230,7 +222,13 @@ export default function TeacherStudentsPage() {
                       <span className={`text-sm ${textPrimary}`}>{student.exams}٪</span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`text-sm ${student.attendance >= 80 ? 'text-green-600' : 'text-red-600'}`}>{student.attendance}٪</span>
+                      {typeof student.attendance === 'number' ? (
+                        <span className={`text-sm ${student.attendance >= 80 ? 'text-green-600' : 'text-red-600'}`}>
+                          {student.attendance}٪
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">{student.attendance}</span>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${status.bg} ${status.color}`}>

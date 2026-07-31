@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 import { SolverService } from './services/solver.service.js';
 import { ChatService } from './services/chat.service.js';
+import { GeneratorService } from './services/generator.service.js';
 import { verifyToken, AuthRequest } from './middlewares/auth.middleware.js';
 
 dotenv.config();
@@ -24,6 +25,12 @@ const solveSchema = z.object({
 const chatSchema = z.object({
   sessionId: z.string(),
   message: z.string().min(1).max(500)
+});
+
+const generateQuestionsSchema = z.object({
+  topic: z.string().min(1).max(500),
+  difficulty: z.string().min(1).max(50),
+  count: z.number().int().min(1).max(20) // Capped at 20 to bound costs
 });
 
 // Solve endpoint — now requires authentication
@@ -115,6 +122,39 @@ app.post('/api/ai/chat', verifyToken, async (req: AuthRequest, res: Response) =>
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
       res.end();
     }
+  }
+});
+
+// Smart Homework Generation endpoint
+app.post('/api/ai/generate-questions', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const role = req.user?.role;
+    if (!userId || (role !== 'TEACHER' && role !== 'ADMIN')) {
+      return res.status(403).json({ message: 'Forbidden: Only teachers can generate questions' });
+    }
+
+    // Reuse Phase 1 rate limiter to cap costs
+    const isAllowed = await ChatService.checkRateLimit(userId);
+    if (!isAllowed) {
+      return res.status(429).json({ message: 'Rate limit exceeded. Please wait.' });
+    }
+
+    const { topic, difficulty, count } = generateQuestionsSchema.parse(req.body);
+    
+    // GeneratorService retries internally if parsing fails
+    const result = await GeneratorService.generateMCQ(topic, difficulty, count);
+    
+    // Log token usage for basic cost visibility
+    console.log(`[Smart Generation] User ${userId} generated ${count} questions. Tokens used: ${result.tokensUsed}`);
+    
+    res.json({ questions: result.data.questions, tokensUsed: result.tokensUsed });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ errors: error.errors });
+    }
+    console.error('generate-questions error:', error);
+    res.status(500).json({ message: 'Failed to generate questions', error: error.message });
   }
 });
 
