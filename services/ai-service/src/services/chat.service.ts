@@ -87,7 +87,7 @@ export class ChatService {
 
     // Prepare Gemini model
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.6-flash',
+      model: 'gemini-1.5-flash',
       systemInstruction: CHAT_SYSTEM_PROMPT,
     });
 

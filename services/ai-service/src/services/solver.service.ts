@@ -11,7 +11,7 @@ const getGeminiClient = () => {
 export class SolverService {
   static async solve(problem: string, level?: string): Promise<{ solution: string }> {
     const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     let prompt = `أنت مدرس رياضيات خبير. قم بحل المسألة التالية بالتفصيل مع الشرح خطوة بخطوة باللغة العربية.\nالمسألة: ${problem}`;
     
