@@ -8,6 +8,8 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
+import { LoadingState } from '../ui/LoadingState';
+import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 
 const analyticsApi = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api/analytics' });
@@ -46,6 +48,7 @@ const atRiskStudents = [
 
 export default function TeacherHomePage() {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week');
@@ -60,13 +63,9 @@ export default function TeacherHomePage() {
 
   const fetchOverview = async () => {
     try {
-      const userStr = localStorage.getItem('user');
-      let teacherId = 'teacher-1';
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        teacherId = user.id;
-      }
-      const res = await analyticsApi.get(`/teacher/${teacherId}/overview`);
+      if (!user) return;
+      setLoading(true);
+      const res = await analyticsApi.get(`/teacher/${user.id}/overview`);
       setOverview(res.data);
     } catch (err) {
       console.error('Failed to fetch teacher overview', err);
@@ -76,11 +75,7 @@ export default function TeacherHomePage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8 flex justify-center items-center h-full">
-        <Loader2 className="w-12 h-12 text-teal-600 animate-spin" />
-      </div>
-    );
+    return <LoadingState message="جاري تحميل لوحة التحكم للمعلم..." />;
   }
 
   return (

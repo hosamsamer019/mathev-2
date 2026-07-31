@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { SocketProvider } from './contexts/SocketContext';
 import LoginPage from './components/auth/LoginPage';
 import RegisterPage from './components/auth/RegisterPage';
 import AdminLoginPage from './components/auth/AdminLoginPage';
@@ -21,8 +22,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <BrowserRouter>
+        <SocketProvider>
+          <AuthProvider>
+            <BrowserRouter>
             <div className="size-full" dir="rtl">
               <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>}>
                 <Routes>
@@ -64,8 +66,9 @@ export default function App() {
                 </Routes>
               </Suspense>
             </div>
-          </BrowserRouter>
-        </AuthProvider>
+            </BrowserRouter>
+          </AuthProvider>
+        </SocketProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

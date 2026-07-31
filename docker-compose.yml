@@ -1,6 +1,93 @@
 version: '3.8'
 
 services:
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - VITE_AUTH_API_URL=http://auth-service:4001/api/auth
+      - VITE_USER_API_URL=http://user-service:4002/api/users
+      - VITE_AI_API_URL=http://ai-service:4003/api/ai
+      - VITE_COURSE_API_URL=http://course-service:4004/api/courses
+      - VITE_ANALYTICS_API_URL=http://analytics-service:4005/api/analytics
+    depends_on:
+      - auth-service
+      - user-service
+      - ai-service
+      - course-service
+      - analytics-service
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: auth-service
+    restart: always
+    ports:
+      - "4001:4001"
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: user-service
+    restart: always
+    ports:
+      - "4002:4002"
+    env_file: .env
+    depends_on:
+      - postgres
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: ai-service
+    restart: always
+    ports:
+      - "4003:4003"
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+
+  course-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: course-service
+    restart: always
+    ports:
+      - "4004:4004"
+    env_file: .env
+    depends_on:
+      - postgres
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: analytics-service
+    restart: always
+    ports:
+      - "4005:4005"
+    env_file: .env
+    depends_on:
+      - postgres
+
   postgres:
     image: postgres:15-alpine
     container_name: math_platform_db
@@ -13,6 +100,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d math_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -20,6 +112,11 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

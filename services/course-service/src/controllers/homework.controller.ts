@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
+import { io } from '../index.js';
 
 export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
   try {
@@ -19,13 +20,30 @@ export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
       };
     }
 
-    const homeworks = await db.homework.findMany({
-      where: whereClause,
-      include: {
-        _count: { select: { submissions: true } }
-      }
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const skip = (page - 1) * limit;
+
+    const [homeworks, total] = await Promise.all([
+      db.homework.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        include: {
+          _count: { select: { submissions: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      db.homework.count({ where: whereClause })
+    ]);
+    
+    res.json({
+      data: homeworks,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     });
-    res.json(homeworks);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching all homeworks', error: error.message });
   }
@@ -93,6 +111,7 @@ export const createHomework = async (req: Request, res: Response) => {
         questions: questions || []
       }
     });
+    io.to(`course:${courseId}`).emit('homework_assigned', homework);
     res.status(201).json(homework);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -152,6 +171,7 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
       }
     });
     
+    io.to(`course:${homework.courseId}`).emit('homework_submitted', submission);
     res.status(201).json({ ...submission, score: calculatedGrade });
   } catch (error: any) {
     res.status(500).json({ message: 'Error submitting homework', error: error.message });
@@ -185,7 +205,23 @@ export const deleteHomework = async (req: AuthRequest, res: Response) => {
 };
 
 export const getStudentSubmission = async (req: AuthRequest, res: Response) => {
-  res.json({ message: 'Stub for getStudentSubmission' });
+  try {
+    const { id: homeworkId } = req.params;
+    const userId = req.user?.userId;
+    
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const submission = await db.submission.findFirst({
+      where: { homeworkId, studentId: userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Some frontend components might expect just the object, others `{ submission: object }`
+    // Based on common patterns in this app, returning the object directly or null is safest.
+    res.json(submission || null);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching submission', error: error.message });
+  }
 };
 
 export const addQuestion = async (req: AuthRequest, res: Response) => {

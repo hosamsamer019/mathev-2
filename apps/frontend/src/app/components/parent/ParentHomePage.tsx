@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Clock, CheckCircle, BookOpen, Bell, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { userApi } from '../../services/api';
+import { LoadingState } from '../ui/LoadingState';
+import { EmptyState } from '../ui/EmptyState';
 
 export default function ParentHomePage() {
   const { isDark } = useTheme();
@@ -28,11 +30,7 @@ export default function ParentHomePage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8 flex justify-center items-center h-full">
-        <Loader2 className="w-12 h-12 text-cyan-600 animate-spin" />
-      </div>
-    );
+    return <LoadingState message="جاري تحميل بيانات الأبناء..." />;
   }
 
   return (
@@ -43,9 +41,7 @@ export default function ParentHomePage() {
       </div>
 
       {children.length === 0 ? (
-        <div className={`text-center py-12 ${cardBg} rounded-2xl border`}>
-          <p className={textSecondary}>لا يوجد أبناء مرتبطين بحسابك بعد.</p>
-        </div>
+        <EmptyState message="لا يوجد أبناء مرتبطين بحسابك بعد" subMessage="يرجى التواصل مع الإدارة لربط حسابات أبنائك" />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {children.map((child, idx) => (

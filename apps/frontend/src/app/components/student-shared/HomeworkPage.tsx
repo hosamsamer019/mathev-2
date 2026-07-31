@@ -22,7 +22,7 @@ export default function HomeworkPage() {
     setError(null);
     homeworkApi.get('/')
       .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : [];
+        const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if (data.length > 0) {
           const mapped = data.map((hw: any) => ({
             id: hw.id,

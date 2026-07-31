@@ -4,39 +4,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useTheme } from '../../contexts/ThemeContext';
 import { analyticsApi } from '../../services/api';
 
-const enrollmentData = [
-  { month: 'سبتمبر', students: 120 },
-  { month: 'أكتوبر', students: 180 },
-  { month: 'نوفمبر', students: 250 },
-  { month: 'ديسمبر', students: 220 },
-  { month: 'يناير', students: 320 },
-  { month: 'فبراير', students: 390 },
-  { month: 'مارس', students: 450 },
-  { month: 'أبريل', students: 520 },
-];
+import { LoadingState } from '../ui/LoadingState';
 
-const performanceData = [
-  { course: 'الجبر', average: 85 },
-  { course: 'الهندسة', average: 78 },
-  { course: 'المثلثات', average: 82 },
-  { course: 'التفاضل', average: 75 },
-  { course: 'الإحصاء', average: 88 },
-];
-
-const revenueData = [
-  { month: 'يناير', revenue: 18900 },
-  { month: 'فبراير', revenue: 22100 },
-  { month: 'مارس', revenue: 25600 },
-  { month: 'أبريل', revenue: 28300 },
-];
-
-const recentActivities = [
-  { text: 'تسجيل طالب جديد: أحمد محمد', time: 'منذ 5 دقائق', type: 'success' },
-  { text: 'إضافة فيديو جديد: المعادلات الخطية', time: 'منذ 15 دقيقة', type: 'info' },
-  { text: '⚠️ طالبان في خطر الرسوب تم اكتشافهما', time: 'منذ ساعة', type: 'warning' },
-  { text: 'إنشاء امتحان جديد: اختبار الجبر', time: 'منذ ساعة', type: 'info' },
-  { text: 'مدرسة النور اشتركت في الخطة المؤسسية', time: 'منذ ساعتين', type: 'success' },
-];
+// Mocks removed, using backend data
 
 export default function AdminHomePage() {
   const { isDark } = useTheme();
@@ -57,6 +27,10 @@ export default function AdminHomePage() {
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
   const tooltipStyle = { background: isDark ? '#1f2937' : '#fff', border: 'none', borderRadius: 12 };
+
+  if (loading) {
+    return <LoadingState message="جاري تحميل لوحة التحكم..." />;
+  }
 
   const stats = [
     { label: 'إجمالي المستخدمين', value: data?.overview?.totalUsers ?? '...', change: '', icon: Users, color: 'from-blue-500 to-indigo-600' },
@@ -104,7 +78,7 @@ export default function AdminHomePage() {
         <div className={`lg:col-span-2 ${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-6`}>اتجاه التسجيلات الشهرية</h2>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={enrollmentData}>
+            <AreaChart data={data?.enrollmentData || []}>
               <defs>
                 <linearGradient id="enrollGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3} />
@@ -150,7 +124,7 @@ export default function AdminHomePage() {
         <div className={`${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-6`}>متوسط الأداء حسب الدورة</h2>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={performanceData}>
+            <BarChart data={data?.performanceData || []}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f0f0f0'} />
               <XAxis dataKey="course" tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 11 }} />
               <YAxis domain={[0, 100]} tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 11 }} />
@@ -164,7 +138,7 @@ export default function AdminHomePage() {
         <div className={`${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-6`}>الإيرادات (آخر ٤ أشهر)</h2>
           <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={revenueData}>
+            <LineChart data={data?.revenueData || []}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f0f0f0'} />
               <XAxis dataKey="month" tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }} />
               <YAxis tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }} />
@@ -179,7 +153,7 @@ export default function AdminHomePage() {
       <div className={`${cardBg} border rounded-2xl p-6`}>
         <h2 className={`font-bold ${textPrimary} mb-6`}>النشاطات الأخيرة على المنصة</h2>
         <div className="space-y-3">
-          {recentActivities.map((activity, idx) => (
+          {(data?.recentActivities || []).map((activity: any, idx: number) => (
             <div key={idx} className={`flex items-start gap-3 p-3 rounded-xl ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'} transition-colors`}>
               <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${
                 activity.type === 'success' ? 'bg-green-500' :

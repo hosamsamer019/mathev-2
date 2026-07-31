@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Video, FileText, ClipboardCheck, BarChart3, MessageCircle, User, Home, BookOpen, Brain, Target } from 'lucide-react';
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
 import VideosPage from './VideosPage';
@@ -39,7 +39,7 @@ export default function StudentOnlineDashboard() {
 
     homeworkApi.get('/')
       .then(res => {
-        const data = Array.isArray(res.data) ? res.data : [];
+        const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if(data.length > 0) {
           const pending = data.filter((h: any) => h.status === 'draft' || h.status === 'pending');
           setPendingHomework(pending.length);

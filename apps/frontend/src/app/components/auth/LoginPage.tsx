@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { User, Building2, GraduationCap, Users, ChevronLeft, Eye, EyeOff, Sparkles, Lock, Mail, ShieldCheck, KeyRound } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth, UserRole } from '../../contexts/AuthContext';

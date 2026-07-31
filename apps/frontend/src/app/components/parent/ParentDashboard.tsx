@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Home, Users, BarChart3, MessageCircle, CreditCard, User } from 'lucide-react';
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
 import ParentHomePage from './ParentHomePage';
@@ -6,7 +6,7 @@ import ParentChildrenPage from './ParentChildrenPage';
 import ParentReportsPage from './ParentReportsPage';
 import ParentSubscriptionPage from './ParentSubscriptionPage';
 import { useState, useEffect } from 'react';
-import { userApi } from '../../services/api';
+import { userApi, notificationApi } from '../../services/api';
 
 const menuItems: MenuItem[] = [
   { path: '/parent/home', icon: Home, label: 'الرئيسية' },
@@ -26,8 +26,13 @@ export default function ParentDashboard() {
       .then(res => setProfileName(res.data?.name || (res.data?.firstName ? `${res.data.firstName} ${res.data.lastName || ''}`.trim() : null) || 'ولي أمر'))
       .catch(() => setProfileName('ولي أمر'));
 
-    // Optionally fetch unread messages if there is an endpoint, mocking for now to clear ghost data
-    setUnreadMessages(0); 
+    notificationApi.get('/')
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setUnreadMessages(res.data.filter((n: any) => !n.read).length);
+        }
+      })
+      .catch(err => console.error('Failed to fetch notifications', err));
   }, []);
 
   const dynamicMenuItems: MenuItem[] = menuItems.map(item => 

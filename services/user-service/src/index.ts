@@ -6,8 +6,10 @@ import dotenv from 'dotenv';
 import userRoutes from './routes/user.routes.js';
 import attendanceRoutes from './routes/attendance.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
 
 dotenv.config();
+validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 4002;
@@ -24,9 +26,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/notifications', notificationRoutes);
 
+app.use(globalErrorHandler);
+
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`🚀 User Service running on http://localhost:${PORT}`);
+    logger.info(`🚀 User Service running on http://localhost:${PORT}`);
   });
 }
 

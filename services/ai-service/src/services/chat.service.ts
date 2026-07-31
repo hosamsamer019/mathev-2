@@ -1,13 +1,9 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { OpenRouterClient } from './openrouter.client.js';
 import { ChatRepository } from '../repositories/chat.repository.js';
 import Redis from 'ioredis';
 
-const getGeminiClient = () => {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key || key === 'placeholder_key' || key === '') {
-    throw new Error('500 Internal Server Error: GEMINI_API_KEY is missing');
-  }
-  return new GoogleGenerativeAI(key);
+const getOpenRouterClient = () => {
+  return new OpenRouterClient({ timeoutMs: 60000 }); // Longer timeout for streaming
 };
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -72,8 +68,7 @@ export class ChatService {
   }
 
   static async chatStream(userId: string, sessionId: string, userMessage: string, res: any) {
-    // Check key before anything
-    const genAI = getGeminiClient();
+    const client = getOpenRouterClient();
     
     // Validate session ownership
     const session = await ChatRepository.getSessionById(sessionId, userId);
@@ -85,36 +80,34 @@ export class ChatService {
     // Get recent messages for context (last 10)
     const recentMessages = await ChatRepository.getRecentMessages(sessionId, 10);
 
-    // Prepare Gemini model
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      systemInstruction: CHAT_SYSTEM_PROMPT,
-    });
-
-    // Map history to Gemini format. Discard the new userMessage from the history array since we pass it to sendMessageStream.
-    // Wait, recentMessages will include the message we just saved.
-    // Let's filter it out or just send it as part of generateContentStream.
-    // Actually, ChatRepository.addMessage is awaited BEFORE getRecentMessages.
-    // So recentMessages includes the current userMessage.
-    
-    // So we can just use generateContentStream with all messages.
-    const contents = recentMessages.map((m: any) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
-
-    const result = await model.generateContentStream({ contents });
+    // Build OpenRouter messages array with system prompt + chat history
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: CHAT_SYSTEM_PROMPT },
+      ...recentMessages.map((m: any) => ({
+        role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+        content: m.content as string,
+      })),
+    ];
 
     let fullReply = '';
-    for await (const chunk of result.stream) {
-      const content = chunk.text();
-      if (content) {
-        fullReply += content;
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    try {
+      for await (const content of client.chatCompletionStream({ messages })) {
+        if (content) {
+          fullReply += content;
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+    } catch (error: any) {
+      console.error('[ChatService] OpenRouter streaming error:', error.message);
+      if (!fullReply) {
+        // No content was sent yet, send error as a stream event
+        res.write(`data: ${JSON.stringify({ error: 'حدث خطأ أثناء الاتصال بالذكاء الاصطناعي. حاول مرة أخرى.' })}\n\n`);
       }
     }
 
-    await ChatRepository.addMessage(sessionId, 'assistant', fullReply);
+    if (fullReply) {
+      await ChatRepository.addMessage(sessionId, 'assistant', fullReply);
+    }
     res.write(`data: [DONE]\n\n`);
     res.end();
   }

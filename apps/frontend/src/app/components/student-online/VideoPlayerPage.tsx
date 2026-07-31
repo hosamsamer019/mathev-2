@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Pause, Eye, ChevronRight, FileText, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import confetti from 'canvas-confetti';
+import SupabaseUploader from '../ui/SupabaseUploader';
 
 export default function VideoPlayerPage() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function VideoPlayerPage() {
   const [quizAnswered, setQuizAnswered] = useState<Record<string, boolean>>({});
   const [quizFeedback, setQuizFeedback] = useState<'success' | 'error' | null>(null);
   const [courseHomeworks, setCourseHomeworks] = useState<any[]>([]);
+  const [homeworkUrl, setHomeworkUrl] = useState('');
   
   const playerRef = useRef<any>(null);
   const lastTimeRef = useRef(0);
@@ -458,26 +460,47 @@ export default function VideoPlayerPage() {
                     <select className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" id="homework-select">
                       {courseHomeworks.map(hw => <option key={hw.id} value={hw.id}>{hw.title}</option>)}
                     </select>
-                    <div className="flex gap-2">
-                      <input type="text" placeholder="رابط الواجب (مثال: رابط Google Drive)" className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" id="homework-input" />
-                      <button onClick={async () => {
-                        const input = document.getElementById('homework-input') as HTMLInputElement;
-                        const select = document.getElementById('homework-select') as HTMLSelectElement;
-                        if(input && input.value && select && select.value) {
-                          try {
-                            const { homeworkApi } = await import('../../services/api');
-                            await homeworkApi.post(`/${select.value}/submit`, { url: input.value, answers: [] });
-                            alert('تم تسليم الواجب بنجاح! سيقوم المعلم بمراجعته.');
-                            input.value = '';
-                          } catch (err) {
-                            alert('فشل في تسليم الواجب');
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-white text-sm">رفع ملف الواجب (PDF/صور)</label>
+                        <SupabaseUploader 
+                          bucketName="homeworks"
+                          label="اسحب ملف الواجب هنا للرفع"
+                          maxSizeMB={20}
+                          onUploadSuccess={(url) => setHomeworkUrl(url)}
+                          onUploadError={(err) => alert(err)}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">أو</span>
+                        <div className="flex-1 border-t border-gray-700"></div>
+                      </div>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="رابط الواجب (مثال: رابط Google Drive)" 
+                          className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" 
+                          value={homeworkUrl}
+                          onChange={(e) => setHomeworkUrl(e.target.value)}
+                        />
+                        <button onClick={async () => {
+                          const select = document.getElementById('homework-select') as HTMLSelectElement;
+                          if(homeworkUrl && select && select.value) {
+                            try {
+                              const { homeworkApi } = await import('../../services/api');
+                              await homeworkApi.post(`/${select.value}/submit`, { url: homeworkUrl, answers: [] });
+                              alert('تم تسليم الواجب بنجاح! سيقوم المعلم بمراجعته.');
+                              setHomeworkUrl('');
+                            } catch (err) {
+                              alert('فشل في تسليم الواجب');
+                            }
+                          } else {
+                            alert('يرجى رفع ملف الواجب أو وضع رابطه أولاً.');
                           }
-                        } else {
-                          alert('يرجى وضع رابط الواجب أولاً.');
-                        }
-                      }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
-                        رفع الحل
-                      </button>
+                        }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                          تسليم الواجب
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (

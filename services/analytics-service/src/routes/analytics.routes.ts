@@ -9,8 +9,13 @@ import {
   getStudentCharts,
   getStudentRecent
 } from '../controllers/analytics.controller.js';
+import { stripeWebhook } from '../controllers/stripe.webhook.js';
+import express from 'express';
 
 const router = Router();
+
+// Stripe webhook — must use raw body BEFORE express.json() parses it
+router.post('/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 
 router.get('/admin', verifyToken, getAdminAnalytics);
 router.get('/parent', verifyToken, getParentAnalytics);

@@ -1,17 +1,9 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const getGeminiClient = () => {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key || key === 'placeholder_key' || key === '') {
-    throw new Error('500 Internal Server Error: GEMINI_API_KEY is missing');
-  }
-  return new GoogleGenerativeAI(key);
-};
+import { OpenRouterClient } from './openrouter.client.js';
+import { db } from '@smartmath/database';
 
 export class SolverService {
   static async solve(problem: string, level?: string): Promise<{ solution: string }> {
-    const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const client = new OpenRouterClient();
 
     let prompt = `أنت مدرس رياضيات خبير. قم بحل المسألة التالية بالتفصيل مع الشرح خطوة بخطوة باللغة العربية.\nالمسألة: ${problem}`;
     
@@ -20,12 +12,37 @@ export class SolverService {
     }
 
     try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await client.chatCompletion({
+        messages: [
+          { role: 'system', content: 'أنت مدرس رياضيات خبير. تحل المسائل بالتفصيل خطوة بخطوة باللغة العربية.' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.3,
+      });
+
+      const text = result.choices?.[0]?.message?.content || '';
+      if (!text) throw new Error('No content returned from OpenRouter');
+
       return { solution: text };
     } catch (error: any) {
-      console.error('Gemini Solver Error:', error);
+      console.error('OpenRouter Solver Error:', error.message);
       throw new Error('Failed to solve math problem');
     }
+  }
+  static async getHistory(studentId: string) {
+    return (db as any).savedMathSolution.findMany({
+      where: { studentId },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  static async saveSolution(studentId: string, problem: string, solution: any) {
+    return (db as any).savedMathSolution.create({
+      data: {
+        studentId,
+        problem,
+        solution
+      }
+    });
   }
 }

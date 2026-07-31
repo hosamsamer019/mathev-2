@@ -52,47 +52,49 @@ export default function AttendancePage() {
           </div>
         </div>
 
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-right py-4 px-6 font-medium text-gray-700">التاريخ</th>
-              <th className="text-right py-4 px-6 font-medium text-gray-700">اليوم</th>
-              <th className="text-right py-4 px-6 font-medium text-gray-700">الحالة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td colSpan={3} className="text-center py-8 text-gray-500">جاري تحميل السجل...</td></tr>
-            )}
-            {!loading && attendances.length === 0 && (
-              <tr><td colSpan={3} className="text-center py-8 text-gray-500">لا يوجد سجل حضور حالياً.</td></tr>
-            )}
-            {attendances.map((record) => (
-              <tr key={record.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="py-4 px-6 text-gray-900">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-gray-400" />
-                    <span>{new Date(record.date).toLocaleDateString('ar-EG')}</span>
-                  </div>
-                </td>
-                <td className="py-4 px-6 text-gray-600">
-                  {new Date(record.date).toLocaleDateString('ar-EG', { weekday: 'long' })}
-                </td>
-                <td className="py-4 px-6">
-                  {record.status === 'PRESENT' ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                      <CheckCircle className="w-4 h-4" /> حاضر
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
-                      <XCircle className="w-4 h-4" /> غائب
-                    </span>
-                  )}
-                </td>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="text-right py-4 px-6 font-medium text-gray-700">التاريخ</th>
+                <th className="text-right py-4 px-6 font-medium text-gray-700">اليوم</th>
+                <th className="text-right py-4 px-6 font-medium text-gray-700">الحالة</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr><td colSpan={3} className="text-center py-8 text-gray-500">جاري تحميل السجل...</td></tr>
+              )}
+              {!loading && attendances.length === 0 && (
+                <tr><td colSpan={3} className="text-center py-8 text-gray-500">لا يوجد سجل حضور حالياً.</td></tr>
+              )}
+              {attendances.map((record) => (
+                <tr key={record.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <td className="py-4 px-6 text-gray-900">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-gray-400" />
+                      <span>{new Date(record.date).toLocaleDateString('ar-EG')}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-gray-600">
+                    {new Date(record.date).toLocaleDateString('ar-EG', { weekday: 'long' })}
+                  </td>
+                  <td className="py-4 px-6">
+                    {record.status === 'PRESENT' ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                        <CheckCircle className="w-4 h-4" /> حاضر
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
+                        <XCircle className="w-4 h-4" /> غائب
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Play, Edit, Trash2, Eye, Upload, Youtube, Clock, Users, Star, BookOpen } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { courseApi, homeworkApi } from '../../services/api';
+import SupabaseUploader from '../ui/SupabaseUploader';
 
 const videoTypes = [
   { icon: Upload, label: 'رفع فيديو محلي', color: 'bg-blue-100 text-blue-700' },
@@ -25,6 +26,7 @@ export default function TeacherCoursesPage() {
   const [videoTitle, setVideoTitle] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
+  const [selectedVideoType, setSelectedVideoType] = useState('رفع فيديو محلي');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [newQuiz, setNewQuiz] = useState({ timestampSec: '', question: '', options: '', correctAnswer: '' });
@@ -38,8 +40,9 @@ export default function TeacherCoursesPage() {
       setLoading(true);
       setError(null);
       const res = await courseApi.get('/');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        const mapped = res.data.map((c: any) => ({
+      const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
+      if (data && data.length > 0) {
+        const mapped = data.map((c: any) => ({
           id: c.id,
           title: c.title,
           description: c.description || '',
@@ -138,6 +141,7 @@ export default function TeacherCoursesPage() {
       setQuizzes([]);
       setSelectedCourseId('');
       alert('تم إضافة الفيديو بنجاح');
+      setSelectedVideoType('رفع فيديو محلي');
       fetchCourses();
     } catch (err: any) {
       console.error(err);
@@ -424,13 +428,21 @@ export default function TeacherCoursesPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAddVideo(false)}>
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-md shadow-2xl`} onClick={(e) => e.stopPropagation()}>
             <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>إضافة فيديو جديد</h2>
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mb-6 flex gap-2">
               {videoTypes.map((type, idx) => (
-                <button key={idx} className={`w-full flex items-center gap-3 p-4 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
+                <button 
+                  key={idx} 
+                  onClick={() => setSelectedVideoType(type.label)}
+                  className={`flex-1 flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-colors ${
+                    selectedVideoType === type.label 
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' 
+                      : (isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50')
+                  }`}
+                >
                   <span className={`p-2 rounded-lg ${type.color}`}>
                     <type.icon className="w-5 h-5" />
                   </span>
-                  <span className={`font-medium ${textPrimary}`}>{type.label}</span>
+                  <span className={`text-xs font-medium ${textPrimary}`}>{type.label}</span>
                 </button>
               ))}
             </div>
@@ -457,21 +469,44 @@ export default function TeacherCoursesPage() {
                 />
                 {videoFormErrors.title && <p className="text-red-500 text-xs mt-1">{videoFormErrors.title}</p>}
               </div>
-              <div className="space-y-1">
-                <input
-                  placeholder="رابط الفيديو (مثال: رابط يوتيوب)"
-                  value={videoUrl}
-                  onChange={e => setVideoUrl(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.videoUrl ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-                />
-                {videoFormErrors.videoUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.videoUrl}</p>}
-              </div>
-              <div className="space-y-1">
-                <input
-                  placeholder="رابط المرفقات (PDF) (اختياري)"
-                  value={pdfUrl}
-                  onChange={e => setPdfUrl(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.pdfUrl ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+              {selectedVideoType === 'رابط يوتيوب' ? (
+                <div className="space-y-1">
+                  <input
+                    placeholder="رابط الفيديو (مثال: رابط يوتيوب)"
+                    value={videoUrl}
+                    onChange={e => setVideoUrl(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.videoUrl ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                  />
+                  {videoFormErrors.videoUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.videoUrl}</p>}
+                </div>
+              ) : selectedVideoType === 'رفع فيديو محلي' ? (
+                <div className="space-y-1">
+                  <label className={`block text-sm font-medium mb-1 ${textPrimary}`}>الفيديو (MP4)</label>
+                  <SupabaseUploader 
+                    bucketName="videos"
+                    acceptedFileTypes="video/mp4,video/webm"
+                    label="اسحب ملف الفيديو هنا للرفع"
+                    maxSizeMB={500}
+                    onUploadSuccess={(url) => setVideoUrl(url)}
+                    onUploadError={(err) => alert(err)}
+                  />
+                  {videoFormErrors.videoUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.videoUrl}</p>}
+                </div>
+              ) : (
+                <div className={`p-4 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm`}>
+                  قم بتشغيل تطبيق التسجيل المباشر. سيبدأ البث بعد النقر على إضافة.
+                </div>
+              )}
+              
+              <div className="space-y-1 mt-4">
+                <label className={`block text-sm font-medium mb-1 ${textPrimary}`}>المرفقات (PDF) - اختياري</label>
+                <SupabaseUploader 
+                  bucketName="pdfs"
+                  acceptedFileTypes="application/pdf"
+                  label="اسحب ملف PDF هنا للرفع (مذكرة الدرس)"
+                  maxSizeMB={50}
+                  onUploadSuccess={(url) => setPdfUrl(url)}
+                  onUploadError={(err) => alert(err)}
                 />
                 {videoFormErrors.pdfUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.pdfUrl}</p>}
               </div>

@@ -15,8 +15,7 @@ export default function ProfilePage() {
     email: '',
     password: '',
     role: '',
-    center: 'سنتر الفرسان', // Mock data
-    grade: 'الصف الثالث الثانوي' // Mock data
+    center: ''
   });
 
   const { user, checkAuth } = useAuth();
@@ -31,7 +30,8 @@ export default function ProfilePage() {
         role: user.role === 'ONLINE_STUDENT' ? 'طالب أونلاين' :
               user.role === 'CENTER_STUDENT' ? 'طالب سنتر' :
               user.role === 'TEACHER' ? 'معلم' :
-              user.role === 'PARENT' ? 'ولي أمر' : 'طالب'
+              user.role === 'PARENT' ? 'ولي أمر' : 'طالب',
+        center: (user as any).centerGroup?.name || 'غير محدد'
       }));
     }
     setLoading(false);
@@ -209,24 +209,10 @@ export default function ProfilePage() {
             {user?.role === 'CENTER_STUDENT' && (
               <div className="pt-6 border-t border-gray-200">
                 <h3 className="font-medium text-gray-900 mb-4">معلومات السنتر</h3>
-                <div className="space-y-4">
                   <p className="text-gray-600 flex items-center gap-2">
                     <span className="font-medium w-24">اسم السنتر:</span>
-                    {editing ? (
-                      <input type="text" value={formData.center} onChange={e => setFormData({...formData, center: e.target.value})} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-                    ) : (
-                      <span className="text-gray-900 font-medium">{formData.center}</span>
-                    )}
+                    <span className="text-gray-900 font-medium">{formData.center}</span>
                   </p>
-                  <p className="text-gray-600 flex items-center gap-2">
-                    <span className="font-medium w-24">الصف الدراسي:</span>
-                    {editing ? (
-                      <input type="text" value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-                    ) : (
-                      <span className="text-gray-900 font-medium">{formData.grade}</span>
-                    )}
-                  </p>
-                </div>
               </div>
             )}
           </div>

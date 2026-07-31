@@ -26,7 +26,7 @@ export default function CoursesManagementPage() {
     try {
       setLoading(true);
       const res = await courseApi.get('/');
-      setCourses(Array.isArray(res.data) ? res.data : []);
+      setCourses(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch courses', err);
     } finally {

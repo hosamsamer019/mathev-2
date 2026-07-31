@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, ChevronLeft, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { authApi } from '../../services/api';

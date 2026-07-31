@@ -1,5 +1,5 @@
 import { useState, ReactNode } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LogOut, Bell, Sun, Moon, ChevronLeft, ChevronRight,
   Search, Settings, Menu, X
@@ -156,7 +156,7 @@ export default function SharedLayout({
                 </span>
               )}
               {collapsed && item.badge && item.badge > 0 && (
-                <span className="absolute top-1 left-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute top-1 end-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                   {item.badge}
                 </span>
               )}
@@ -213,13 +213,13 @@ export default function SharedLayout({
 
       {/* Sidebar - Mobile */}
       <aside
-        className={`fixed top-0 right-0 h-full w-72 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-2xl z-50 lg:hidden transition-transform duration-300 ${
+        className={`fixed top-0 start-0 h-full w-72 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-2xl z-50 lg:hidden transition-transform duration-300 ${
           mobileOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute top-4 left-4 p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+          className="absolute top-4 end-4 p-2 rounded-lg text-gray-500 hover:bg-gray-100"
         >
           <X className="w-5 h-5" />
         </button>
@@ -242,17 +242,17 @@ export default function SharedLayout({
 
           {/* Search */}
           <div className="flex-1 max-w-md relative hidden md:block">
-            <Search className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
+            <Search className={`absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ابحث في المنصة..."
-              className={`w-full pr-10 pl-4 py-2 rounded-lg text-sm ${isDark ? 'bg-gray-700 text-white placeholder-gray-400 border-gray-600' : 'bg-gray-50 text-gray-900 placeholder-gray-400 border-gray-200'} border focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+              className={`w-full ps-10 pe-4 py-2 rounded-lg text-sm ${isDark ? 'bg-gray-700 text-white placeholder-gray-400 border-gray-600' : 'bg-gray-50 text-gray-900 placeholder-gray-400 border-gray-200'} border focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             />
           </div>
 
-          <div className="flex items-center gap-2 mr-auto">
+          <div className="flex items-center gap-2 ms-auto">
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
@@ -269,7 +269,7 @@ export default function SharedLayout({
                 className={`p-2 rounded-lg relative transition-colors ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                <span className="absolute top-1 end-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
               {showNotifications && (
                 <NotificationsPanel onClose={() => setShowNotifications(false)} isDark={isDark} />

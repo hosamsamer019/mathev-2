@@ -31,8 +31,8 @@ export default function ExamsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await examApi.get(`/`); // Changed from courseApi.get('/exams')
-      setExams(Array.isArray(res.data) ? res.data : []);
+      const res = await examApi.get(`/`);
+      setExams(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch exams', err);
       setError('فشل في تحميل الامتحانات');

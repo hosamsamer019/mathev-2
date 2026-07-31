@@ -56,12 +56,27 @@ export const getQuestions = async (req: AuthRequest, res: Response) => {
       where.tag = { contains: tag, mode: 'insensitive' };
     }
 
-    const questions = await db.question.findMany({
-      where,
-      orderBy: { createdAt: 'desc' }
-    });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 20);
+    const skip = (page - 1) * limit;
 
-    res.json(questions);
+    const [questions, total] = await Promise.all([
+      db.question.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      db.question.count({ where })
+    ]);
+
+    res.json({
+      data: questions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (error) {
     console.error('getQuestions error:', error);
     res.status(500).json({ message: 'Error fetching questions' });

@@ -9,8 +9,8 @@ interface SolverStep {
   content: string;
   formula?: string;
 }
-
-const sampleProblems = [
+// Restored features
+const sampleProblems: string[] = [
   'حل المعادلة: 2x² + 5x - 3 = 0',
   'احسب مشتقة: f(x) = x³ + 2x² - 5x + 1',
   'احسب التكامل: ∫(3x² + 2x)dx',
@@ -33,6 +33,7 @@ export default function AIMathSolverPage() {
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
 
+  // Restored handlers
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true);
@@ -48,6 +49,30 @@ export default function AIMathSolverPage() {
   const handleToggleHistory = () => {
     if (!showHistory) fetchHistory();
     setShowHistory(!showHistory);
+  };
+
+  const handleSaveSolution = async () => {
+    try {
+      await aiApi.post('/history/save', { problem, solution });
+      alert('تم حفظ الحل في السجل بنجاح');
+      fetchHistory();
+    } catch (err) {
+      console.error('Failed to save', err);
+    }
+  };
+
+  const handleSimilar = async () => {
+    try {
+      const res = await aiApi.post('/similar', { problem });
+      if (res.data?.similarProblem) {
+        setProblem(res.data.similarProblem);
+        setSolution(null);
+      } else {
+        alert('لا توجد مسائل مشابهة حالياً');
+      }
+    } catch (err) {
+      console.error('Failed to fetch similar', err);
+    }
   };
 
   const handleSolve = async () => {
@@ -78,29 +103,6 @@ export default function AIMathSolverPage() {
     }
   };
 
-  const handleSaveSolution = async () => {
-    try {
-      await aiApi.post('/history/save', { problem, solution });
-      alert('تم حفظ الحل في السجل بنجاح');
-      fetchHistory();
-    } catch (err) {
-      console.error('Failed to save', err);
-    }
-  };
-
-  const handleSimilar = async () => {
-    try {
-      const res = await aiApi.post('/similar', { problem });
-      if (res.data?.similarProblem) {
-        setProblem(res.data.similarProblem);
-        setSolution(null);
-      } else {
-        alert('لا توجد مسائل مشابهة حالياً');
-      }
-    } catch (err) {
-      console.error('Failed to fetch similar', err);
-    }
-  };
 
   return (
     <div className={`p-6 lg:p-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} min-h-full`}>
@@ -124,7 +126,6 @@ export default function AIMathSolverPage() {
           </button>
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Input Section */}
         <div className="lg:col-span-2 space-y-6">
@@ -242,9 +243,9 @@ export default function AIMathSolverPage() {
                 </div>
 
                 <div className="flex gap-3 mt-6">
-                  <button onClick={handleSimilar} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  {/* <button onClick={handleSimilar} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                     <BookOpen className="w-4 h-4" /> تمارين مشابهة
-                  </button>
+                  </button> */}
                   <button onClick={handleSaveSolution} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                     <Star className="w-4 h-4" /> حفظ الحل
                   </button>
@@ -259,11 +260,10 @@ export default function AIMathSolverPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Sample Problems */}
           <div className={`${cardBg} border rounded-2xl p-5`}>
             <h3 className={`font-bold ${textPrimary} mb-4`}>أمثلة للتجربة</h3>
             <div className="space-y-2">
-              {sampleProblems.map((sample, idx) => (
+              {sampleProblems?.map((sample, idx) => (
                 <button
                   key={idx}
                   onClick={() => setProblem(sample)}
@@ -277,7 +277,6 @@ export default function AIMathSolverPage() {
             </div>
           </div>
 
-          {/* Topics */}
           <div className={`${cardBg} border rounded-2xl p-5`}>
             <h3 className={`font-bold ${textPrimary} mb-4`}>المواضيع المتاحة</h3>
             <div className="flex flex-wrap gap-2">
@@ -289,13 +288,12 @@ export default function AIMathSolverPage() {
             </div>
           </div>
 
-          {/* History Panel */}
           {showHistory && (
             <div className={`${cardBg} border rounded-2xl p-5`}>
               <h3 className={`font-bold ${textPrimary} mb-4`}>السجل السابق</h3>
               {loadingHistory ? (
                 <div className="text-center py-4 text-gray-500">جاري التحميل...</div>
-              ) : history.length === 0 ? (
+              ) : history?.length === 0 ? (
                 <div className="text-center py-4 text-gray-500">لا يوجد سجل حالياً</div>
               ) : (
                 <div className="space-y-3">

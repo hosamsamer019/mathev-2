@@ -1,13 +1,5 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { OpenRouterClient } from './openrouter.client.js';
 import { z } from 'zod';
-
-const getGeminiClient = () => {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key || key === 'placeholder_key' || key === '') {
-    throw new Error('500 Internal Server Error: GEMINI_API_KEY is missing');
-  }
-  return new GoogleGenerativeAI(key);
-};
 
 export const generatedQuestionsSchema = z.object({
   questions: z.array(z.object({
@@ -21,63 +13,58 @@ export type GeneratedQuestions = z.infer<typeof generatedQuestionsSchema>;
 
 export class GeneratorService {
   static async generateMCQ(topic: string, difficulty: string, count: number): Promise<{ data: GeneratedQuestions, tokensUsed: number }> {
-    const genAI = getGeminiClient();
+    const client = new OpenRouterClient();
 
     const systemPrompt = `أنت مساعد تعليمي خبير في الرياضيات للمناهج العربية.
 مهمتك توليد أسئلة اختيار من متعدد (MCQ) لموضوع معين ومستوى صعوبة محدد.
+يجب أن ترد بصيغة JSON فقط بدون أي نص إضافي.
 كل سؤال يجب أن يحتوي على:
 - "text": نص السؤال باللغة العربية
 - "options": مصفوفة نصوص تحتوي على الخيارات (يجب أن تكون 4 خيارات عادةً)
-- "correctAnswer": رقم يمثل الفهرس الصحيح للإجابة في مصفوفة الخيارات (يبدأ من 0)`;
+- "correctAnswer": رقم يمثل الفهرس الصحيح للإجابة في مصفوفة الخيارات (يبدأ من 0)
 
-    const userPrompt = `قم بتوليد ${count} أسئلة في موضوع "${topic}" بمستوى صعوبة "${difficulty}".`;
+أعد الإجابة كـ JSON object يحتوي على مفتاح "questions" وقيمته مصفوفة الأسئلة.`;
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      systemInstruction: systemPrompt,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            questions: {
-              type: SchemaType.ARRAY,
-              items: {
-                type: SchemaType.OBJECT,
-                properties: {
-                  text: { type: SchemaType.STRING, description: "نص السؤال" },
-                  options: { 
-                    type: SchemaType.ARRAY, 
-                    items: { type: SchemaType.STRING },
-                    description: "الخيارات الأربعة"
-                  },
-                  correctAnswer: { type: SchemaType.INTEGER, description: "الفهرس الصحيح للإجابة من 0" },
-                },
-                required: ['text', 'options', 'correctAnswer'],
-              }
-            }
-          },
-          required: ['questions']
-        }
-      }
-    });
+    const userPrompt = `قم بتوليد ${count} أسئلة في موضوع "${topic}" بمستوى صعوبة "${difficulty}".
+
+أعد الإجابة بصيغة JSON فقط بالشكل التالي:
+{"questions": [{"text": "...", "options": ["...", "...", "...", "..."], "correctAnswer": 0}]}`;
 
     let attempts = 0;
     while (attempts < 2) {
       attempts++;
       try {
-        const result = await model.generateContent(userPrompt);
-        const text = result.response.text();
-        const tokensUsed = result.response.usageMetadata?.totalTokenCount || 0;
+        const result = await client.chatCompletion({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.5,
+          response_format: { type: 'json_object' },
+        });
 
-        if (!text) throw new Error('No content from Gemini');
+        const text = result.choices?.[0]?.message?.content || '';
+        const tokensUsed = result.usage?.total_tokens || 0;
+
+        if (!text) throw new Error('No content from OpenRouter');
 
         let jsonString = text.trim();
-        // Remove markdown formatting if Gemini wrapped it
-        if (jsonString.startsWith('```json')) {
-          jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        } else if (jsonString.startsWith('```')) {
-          jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        
+        // Remove reasoning block if present
+        if (jsonString.includes('</think>')) {
+          jsonString = jsonString.split('</think>')[1].trim();
+        }
+        
+        // Extract from markdown block if present
+        const jsonMatch = jsonString.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+          jsonString = jsonMatch[1].trim();
+        } else {
+          // Fallback: try to find the outermost braces
+          const braceMatch = jsonString.match(/\{[\s\S]*\}/);
+          if (braceMatch) {
+            jsonString = braceMatch[0];
+          }
         }
 
         const parsed = JSON.parse(jsonString);

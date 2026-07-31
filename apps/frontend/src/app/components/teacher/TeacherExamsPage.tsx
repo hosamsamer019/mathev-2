@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldCheck, BarChart3, Brain, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 import { examApi, courseApi, homeworkApi, questionApi, aiApi } from '../../services/api';
 
@@ -13,8 +14,12 @@ const questionTypes = [
 
 export default function TeacherExamsPage() {
   const { isDark } = useTheme();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'exams' | 'builder' | 'results'>('exams');
   const [showCreate, setShowCreate] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [editingExamId, setEditingExamId] = useState<string | null>(null);
+  const [selectedExamResults, setSelectedExamResults] = useState<any>(null);
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string|null>(null);
@@ -86,9 +91,10 @@ export default function TeacherExamsPage() {
   const fetchCourses = async () => {
     try {
       const res = await courseApi.get('/');
-      setCourses(res.data || []);
-      if (res.data && res.data.length > 0) {
-        setNewCourseId(res.data[0].id);
+      const fetchedCourses = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
+      setCourses(fetchedCourses);
+      if (fetchedCourses.length > 0) {
+        setNewCourseId(fetchedCourses[0].id);
       }
     } catch (err) {
       console.error('Failed to fetch courses', err);
@@ -100,8 +106,9 @@ export default function TeacherExamsPage() {
       setLoading(true);
       setError(null);
       const res = await examApi.get('/');
-      if (Array.isArray(res.data)) {
-        const mapped = res.data.map((e: any) => ({
+      const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
+      if (data.length > 0) {
+        const mapped = data.map((e: any) => ({
           id: e.id,
           title: e.title,
           subject: e.subject || 'عام',
@@ -116,6 +123,8 @@ export default function TeacherExamsPage() {
           avgScore: null,
         }));
         setExams(mapped);
+      } else {
+        setExams([]);
       }
     } catch (err) {
       console.error(err);
@@ -159,13 +168,22 @@ export default function TeacherExamsPage() {
         }))
       };
 
-      if (newType === 'واجب') {
-        await homeworkApi.post('/', payload);
+      if (editingExamId) {
+        if (newType === 'واجب') {
+          await homeworkApi.put(`/${editingExamId}`, payload);
+        } else {
+          await examApi.put(`/${editingExamId}`, payload);
+        }
       } else {
-        await examApi.post('/', payload);
+        if (newType === 'واجب') {
+          await homeworkApi.post('/', payload);
+        } else {
+          await examApi.post('/', payload);
+        }
       }
       
       setShowCreate(false);
+      setEditingExamId(null);
       setNewTitle('');
       setNewDuration('');
       setNewRequiresCamera(false);
@@ -184,6 +202,47 @@ export default function TeacherExamsPage() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEdit = async (id: string) => {
+    try {
+      setLoading(true);
+      const res = await examApi.get(`/${id}`);
+      const exam = res.data;
+      
+      setNewTitle(exam.title);
+      setNewType(exam.type || 'امتحان');
+      setNewDuration(exam.duration?.toString() || '60');
+      setNewCourseId(exam.courseId);
+      setNewRequiresCamera(exam.requiresCamera || false);
+      
+      const examQuestions = Array.isArray(exam.questions) ? exam.questions.map((q: any) => ({
+        text: q.text,
+        options: q.options || [],
+        correct: q.correct
+      })) : [];
+      setQuestions(examQuestions);
+      
+      setEditingExamId(id);
+      setShowCreate(true);
+    } catch (err) {
+      alert('فشل في جلب بيانات الامتحان للتعديل');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewResults = async (id: string) => {
+    try {
+      setLoading(true);
+      const res = await examApi.get(`/${id}`);
+      setSelectedExamResults(res.data);
+      setShowResults(true);
+    } catch (err) {
+      alert('فشل في جلب نتائج الامتحان');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -314,7 +373,14 @@ export default function TeacherExamsPage() {
           <p className={textSecondary}>إنشاء وإدارة الامتحانات مع نظام مكافحة الغش</p>
         </div>
         <button
-          onClick={() => setShowCreate(true)}
+          onClick={() => {
+            setEditingExamId(null);
+            setNewTitle('');
+            setNewDuration('60');
+            setQuestions([]);
+            setFormErrors({});
+            setShowCreate(true);
+          }}
           className="flex items-center gap-2 bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90"
         >
           <Plus className="w-4 h-4" /> إنشاء امتحان
@@ -391,10 +457,10 @@ export default function TeacherExamsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => alert('جاري العرض...')} className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} text-blue-500 transition-colors`}>
+                  <button onClick={() => handleViewResults(exam.id)} className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} text-blue-500 transition-colors`}>
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button onClick={() => alert('جاري التعديل...')} className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${textSecondary} transition-colors`}>
+                  <button onClick={() => handleEdit(exam.id)} className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${textSecondary} transition-colors`}>
                     <Edit className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDelete(exam.id)} className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">
@@ -425,8 +491,8 @@ export default function TeacherExamsPage() {
               </div>
             ))}
           </div>
-          <button onClick={() => alert('ميزة بنك الأسئلة قيد التطوير')} className="bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90">
-            إضافة أسئلة جديدة
+          <button onClick={() => navigate('/teacher/questions')} className="bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90">
+            إدارة بنك الأسئلة والتوليد التلقائي
           </button>
         </div>
       )}
@@ -448,11 +514,11 @@ export default function TeacherExamsPage() {
         </div>
       )}
 
-      {/* Create Exam Modal */}
+      {/* Create/Edit Exam Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowCreate(false)}>
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-3xl shadow-2xl my-8`} onClick={(e) => e.stopPropagation()}>
-            <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>إنشاء امتحان / واجب جديد</h2>
+            <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>{editingExamId ? 'تعديل الامتحان' : 'إنشاء امتحان / واجب جديد'}</h2>
             <div className="space-y-4">
               <div className="space-y-1">
                 <input
@@ -594,11 +660,42 @@ export default function TeacherExamsPage() {
                 disabled={isSubmitting || courses.length === 0}
                 className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
               >
-                {isSubmitting ? 'جاري الإنشاء...' : 'إنشاء الامتحان'}
+                {isSubmitting ? 'جاري الحفظ...' : (editingExamId ? 'حفظ التعديلات' : 'إنشاء الامتحان')}
               </button>
               <button onClick={() => setShowCreate(false)} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
                 إلغاء
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Results Modal */}
+      {showResults && selectedExamResults && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowResults(false)}>
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-2xl shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className={`text-xl font-bold ${textPrimary}`}>نتائج: {selectedExamResults.title}</h2>
+              <button onClick={() => setShowResults(false)} className={`text-gray-500 hover:text-gray-700 dark:hover:text-gray-300`}>✕</button>
+            </div>
+            
+            <div className="max-h-96 overflow-y-auto pr-2 space-y-3">
+              {(!selectedExamResults.attempts || selectedExamResults.attempts.length === 0) ? (
+                <p className={`text-center py-8 ${textSecondary}`}>لم يقم أي طالب بأداء هذا الامتحان بعد.</p>
+              ) : (
+                selectedExamResults.attempts.map((attempt: any) => (
+                  <div key={attempt.id} className={`p-4 rounded-xl border flex justify-between items-center ${isDark ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
+                    <div>
+                      <h4 className={`font-medium ${textPrimary}`}>{attempt.student?.name || 'طالب غير معروف'}</h4>
+                      <p className={`text-xs ${textSecondary}`}>{attempt.student?.email}</p>
+                      <p className={`text-xs mt-1 ${textSecondary}`}>{new Date(attempt.createdAt).toLocaleDateString('ar-EG')} - {new Date(attempt.createdAt).toLocaleTimeString('ar-EG')}</p>
+                    </div>
+                    <div className={`px-4 py-2 rounded-lg font-bold text-lg ${attempt.score >= 85 ? 'bg-green-100 text-green-700' : (attempt.score >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}`}>
+                      {Math.round(attempt.score)}%
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

@@ -46,6 +46,7 @@ model User {
   chatSessions  ChatSession[]
   notifications Notification[]
   questions     Question[]
+  mathSolutions SavedMathSolution[]
 }
 
 model CenterGroup {
@@ -248,4 +249,15 @@ model Question {
   updatedAt     DateTime @updatedAt
 
   teacher       User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+}
+
+model SavedMathSolution {
+  id        String   @id @default(uuid())
+  studentId String
+  problem   String
+  solution  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }

@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "dependencies": {
+  "dependencies": { "@shared/utils": "*",
     "@google/generative-ai": "^0.24.1",
     "@smartmath/database": "file:../../packages/database",
     "@types/jsonwebtoken": "^9.0.10",

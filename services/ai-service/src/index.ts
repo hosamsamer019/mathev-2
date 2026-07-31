@@ -7,8 +7,11 @@ import { SolverService } from './services/solver.service.js';
 import { ChatService } from './services/chat.service.js';
 import { GeneratorService } from './services/generator.service.js';
 import { verifyToken, AuthRequest } from './middlewares/auth.middleware.js';
+import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
 
 dotenv.config();
+validateEnv();
+
 
 const app = express();
 const PORT = process.env.PORT || 4003;
@@ -55,6 +58,35 @@ app.post('/api/ai/solve', verifyToken, async (req: AuthRequest, res: Response) =
   }
 });
 
+app.post('/api/ai/history/save', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    
+    const { problem, solution } = req.body;
+    if (!problem || !solution) return res.status(400).json({ message: 'Missing problem or solution' });
+    
+    const saved = await SolverService.saveSolution(userId, problem, solution);
+    res.json(saved);
+  } catch (error) {
+    logger.error('Failed to save solution', { error });
+    res.status(500).json({ message: 'Failed to save solution' });
+  }
+});
+
+app.get('/api/ai/history', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    
+    const history = await SolverService.getHistory(userId);
+    res.json(history);
+  } catch (error) {
+    logger.error('Failed to get history', { error });
+    res.status(500).json({ message: 'Failed to get history' });
+  }
+});
+
 // Chat endpoints — all require authentication
 app.post('/api/ai/sessions', verifyToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -76,7 +108,7 @@ app.get('/api/ai/sessions', verifyToken, async (req: AuthRequest, res: Response)
     const sessions = await ChatService.getUserSessions(userId);
     res.json(sessions);
   } catch (error: any) {
-    console.error('getSessions error:', error);
+    logger.error('getSessions error', { error: error.message });
     res.status(500).json({ message: 'Error fetching sessions', error: error.message });
   }
 });
@@ -146,14 +178,14 @@ app.post('/api/ai/generate-questions', verifyToken, async (req: AuthRequest, res
     const result = await GeneratorService.generateMCQ(topic, difficulty, count);
     
     // Log token usage for basic cost visibility
-    console.log(`[Smart Generation] User ${userId} generated ${count} questions. Tokens used: ${result.tokensUsed}`);
+    logger.info(`[Smart Generation] User ${userId} generated ${count} questions. Tokens used: ${result.tokensUsed}`);
     
     res.json({ questions: result.data.questions, tokensUsed: result.tokensUsed });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    console.error('generate-questions error:', error);
+    logger.error('generate-questions error', { error: error.message });
     res.status(500).json({ message: 'Failed to generate questions', error: error.message });
   }
 });
@@ -163,9 +195,11 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'OK', service: 'AI Service', timestamp: new Date().toISOString() });
 });
 
+app.use(globalErrorHandler);
+
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`🚀 AI Service running on http://localhost:${PORT}`);
+    logger.info(`🚀 AI Service running on http://localhost:${PORT}`);
   });
 }
 

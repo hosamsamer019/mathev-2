@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { Play, Eye, Clock } from 'lucide-react';
 
 export default function VideosPage() {

@@ -5,10 +5,24 @@ import { AuthRequest } from '../middlewares/auth.middleware.js';
 
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
-    let whereClause = {};
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const skip = (page - 1) * limit;
+    const search = req.query.search as string;
+
+    let whereClause: any = {};
+    
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
     const requesterRole = (req.user?.role || '').toUpperCase();
     if (requesterRole === 'TEACHER') {
       whereClause = {
+        ...whereClause,
         enrollments: {
           some: {
             course: {
@@ -18,20 +32,27 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
         }
       };
     }
-    const users = await db.user.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        parentId: true,
-        centerGroupId: true,
-        attendances: {
-          select: { status: true }
-        }
-      }
-    });
+    
+    const [users, total] = await Promise.all([
+      db.user.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          parentId: true,
+          centerGroupId: true,
+          attendances: {
+            select: { status: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      db.user.count({ where: whereClause })
+    ]);
 
     const mappedUsers = users.map(user => {
       let attendancePercentage = null;
@@ -43,7 +64,13 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
       return { ...rest, attendancePercentage };
     });
 
-    res.json(mappedUsers);
+    res.json({
+      data: mappedUsers,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching users', error: error.message });
   }

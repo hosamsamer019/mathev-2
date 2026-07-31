@@ -3,6 +3,7 @@ import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { z } from 'zod';
 import { checkUserEnrollment } from '../utils/enrollment.js';
+import { io } from '../index.js';
 
 const courseCreateSchema = z.object({
   title: z.string().min(3),
@@ -21,6 +22,10 @@ const lessonCreateSchema = z.object({
 
 export const getCourses = async (req: AuthRequest, res: Response) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const skip = (page - 1) * limit;
+
     let whereClause: any = {};
     const requesterRole = (req.user?.role || '').toUpperCase();
     if (requesterRole === 'TEACHER') {
@@ -28,16 +33,30 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
     } else if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
       whereClause = { enrollments: { some: { studentId: req.user?.userId } } };
     }
-    const courses = await db.course.findMany({
-      where: whereClause,
-      include: {
-        lessons: { include: { quizzes: true } },
-        _count: {
-          select: { enrollments: true, lessons: true, exams: true, homeworks: true }
-        }
-      }
+    
+    const [courses, total] = await Promise.all([
+      db.course.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        include: {
+          lessons: { include: { quizzes: true } },
+          _count: {
+            select: { enrollments: true, lessons: true, exams: true, homeworks: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      db.course.count({ where: whereClause })
+    ]);
+    
+    res.json({
+      data: courses,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     });
-    res.json(courses);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching courses', error: error.message });
   }
@@ -79,7 +98,7 @@ export const getLessonDetails = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getCourseDetails = async (req: Request, res: Response) => {
+export const getCourseDetails = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const course = await db.course.findUnique({
@@ -115,6 +134,7 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
         teacherId
       }
     });
+    io.emit('course_created', course);
     res.status(201).json(course);
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
@@ -133,6 +153,7 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
         courseId: data.courseId
       }
     });
+    io.to(`course:${lesson.courseId}`).emit('lesson_created', lesson);
     res.status(201).json(lesson);
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
@@ -154,6 +175,7 @@ export const deleteCourse = async (req: AuthRequest, res: Response) => {
     }
 
     await db.course.delete({ where: { id } });
+    io.to(`course:${id}`).emit('course_deleted', id);
     res.json({ message: 'Course deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Error deleting course', error: error.message });
@@ -177,6 +199,7 @@ export const deleteLesson = async (req: AuthRequest, res: Response) => {
     }
 
     await db.lesson.delete({ where: { id } });
+    io.to(`course:${lesson.courseId}`).emit('lesson_deleted', id);
     res.json({ message: 'Lesson deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Error deleting lesson', error: error.message });
@@ -236,7 +259,20 @@ export const getVideoAnalytics = async (req: Request, res: Response) => {
 export const submitLessonQuiz = async (req: AuthRequest, res: Response) => {
   try {
     const { id: lessonId, quizId } = req.params;
-    res.json({ score: 100, passed: true });
+    const { answer } = req.body;
+    
+    const quiz = await db.lessonQuiz.findUnique({
+      where: { id: quizId }
+    });
+
+    if (!quiz || quiz.lessonId !== lessonId) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    const passed = quiz.correctAnswer === answer;
+    const score = passed ? 100 : 0;
+
+    res.json({ score, passed });
   } catch (error: any) {
     res.status(500).json({ message: 'Error submitting quiz', error: error.message });
   }

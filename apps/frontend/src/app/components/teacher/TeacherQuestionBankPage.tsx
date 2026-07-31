@@ -37,7 +37,7 @@ export default function TeacherQuestionBankPage() {
       setLoading(true);
       setError(null);
       const res = await questionApi.get('/', { params: { tag: tagFilter } });
-      setQuestions(res.data || []);
+      setQuestions(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
     } catch (err: any) {
       console.error(err);
       setError('فشل في جلب بنك الأسئلة');

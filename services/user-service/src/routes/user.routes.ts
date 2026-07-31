@@ -14,7 +14,10 @@ router.get('/parent/children', verifyToken, getParentChildren);
 router.get('/profile', verifyToken, async (req: AuthRequest, res) => {
   try {
     const { db } = await import('../../../../packages/database/src/index.js');
-    const user = await db.user.findUnique({ where: { id: req.user?.userId } });
+    const user = await db.user.findUnique({ 
+      where: { id: req.user?.userId },
+      include: { centerGroup: true }
+    });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }

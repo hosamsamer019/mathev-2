@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { Lock, Check } from 'lucide-react';
 
 export default function ResetPasswordPage() {

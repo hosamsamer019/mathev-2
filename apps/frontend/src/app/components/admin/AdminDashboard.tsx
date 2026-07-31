@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import {
   Home, Users, BookOpen, Video, ClipboardCheck, FileText,
   MessageCircle, BarChart3, AlertTriangle, CreditCard, Shield, Brain

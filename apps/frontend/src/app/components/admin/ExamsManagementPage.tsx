@@ -27,7 +27,7 @@ export default function ExamsManagementPage() {
     try {
       setLoading(true);
       const res = await examApi.get('/');
-      setExams(Array.isArray(res.data) ? res.data : []);
+      setExams(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch exams', err);
     } finally {

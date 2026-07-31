@@ -5,8 +5,10 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
 import authRoutes from './routes/auth.routes.js';
+import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
 
 dotenv.config();
+validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 4001;
@@ -37,9 +39,11 @@ app.get('/health', (_req: Request, res: Response) => {
 // Routes
 app.use('/api/auth', authRoutes);
 
+app.use(globalErrorHandler);
+
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`🚀 Auth Service running on http://localhost:${PORT}`);
+    logger.info(`🚀 Auth Service running on http://localhost:${PORT}`);
   });
 }
 

@@ -246,13 +246,13 @@ export default function TeacherStudentsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setSelectedStudent(student)} className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <button onClick={() => setSelectedStudent(student)} title="عرض التفاصيل" aria-label="عرض التفاصيل" className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button onClick={() => alert('جاري فتح محادثة...')} className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                        <button onClick={() => alert('جاري فتح محادثة...')} title="محادثة" aria-label="محادثة" className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
                           <MessageCircle className="w-4 h-4" />
                         </button>
-                        <button onClick={(e) => handleDelete(student.id, e)} className={`p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors`}>
+                        <button onClick={(e) => handleDelete(student.id, e)} title="حذف" aria-label="حذف" className={`p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors`}>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>

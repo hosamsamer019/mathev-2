@@ -14,7 +14,7 @@ export default function HomeworkManagementPage() {
   useEffect(() => {
     homeworkApi.get('/')
       .then(res => {
-        const data = Array.isArray(res.data) ? res.data : [];
+        const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if (data.length > 0) {
           const mapped = data.map((hw: any) => ({
             id: hw.id,
@@ -25,6 +25,8 @@ export default function HomeworkManagementPage() {
             status: hw.status === 'active' ? 'نشط' : 'مسودة'
           }));
           setHomeworks(mapped);
+        } else {
+          setHomeworks([]);
         }
       })
       .catch(err => console.error('Error fetching admin homeworks', err));

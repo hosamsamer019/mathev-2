@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { BookOpen, Video, FileText, Lock, CheckCircle } from 'lucide-react';
 import { courseApi } from '../../services/api';
+import { useSocket } from '../../contexts/SocketContext';
 
 // Mocks removed
 
@@ -11,10 +12,10 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string|null>(null);
 
-  useEffect(() => {
+  const fetchCourses = () => {
     courseApi.get('/')
       .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : [];
+        const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if (data.length > 0) {
           const mapped = data.map((c: any) => ({
             id: c.id,
@@ -26,6 +27,8 @@ export default function CoursesPage() {
             locked: false
           }));
           setCourses(mapped);
+        } else {
+          setCourses([]);
         }
       })
       .catch((err) => {
@@ -33,7 +36,26 @@ export default function CoursesPage() {
         setError('فشل تحميل الدورات من الخادم.');
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchCourses();
   }, []);
+
+  const { socket } = useSocket();
+  
+  useEffect(() => {
+    if (!socket) return;
+    const handleSync = () => fetchCourses();
+    socket.on('course_created', handleSync);
+    socket.on('course_updated', handleSync);
+    socket.on('course_deleted', handleSync);
+    return () => {
+      socket.off('course_created', handleSync);
+      socket.off('course_updated', handleSync);
+      socket.off('course_deleted', handleSync);
+    };
+  }, [socket]);
 
 
   return (
@@ -55,7 +77,7 @@ export default function CoursesPage() {
             if (!acc[cat]) acc[cat] = [];
             acc[cat].push(course);
             return acc;
-          }, {} as Record<string, any[]>)).map(([category, categoryCourses]) => (
+          }, {} as Record<string, any[]>)).map(([category, categoryCourses]: [string, any[]]) => (
             <div key={category}>
               <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                 <BookOpen className="w-6 h-6 text-indigo-600" />
