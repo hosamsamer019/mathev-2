@@ -11,9 +11,19 @@
     "declaration": true,
     "baseUrl": ".",
     "paths": {
-      "@smartmath/database": ["../../packages/database/src/index.ts"]
+      "@shared/utils": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@smartmath/database": [
+        "../../packages/database/src/index.ts"
+      ]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

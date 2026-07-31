@@ -140,7 +140,9 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
     if (!teacherId) return res.status(401).json({ message: 'Unauthorized' });
     const course = await db.course.create({
       data: {
-        ...data,
+        title: data.title,
+        description: data.description,
+        category: data.category,
         teacherId
       }
     });

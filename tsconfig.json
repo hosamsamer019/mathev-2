@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "@shared/utils": ["packages/shared/src/index.ts"],
+      "@smartmath/database": ["packages/database/src/index.ts"]
+    }
+  }
+}
