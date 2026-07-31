@@ -62,9 +62,19 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getLessons = async (req: Request, res: Response) => {
+export const getLessons = async (req: AuthRequest, res: Response) => {
   try {
+    let whereClause: any = {};
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    
+    if (requesterRole === 'TEACHER') {
+      whereClause = { course: { teacherId: req.user?.userId } };
+    } else if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
+      whereClause = { course: { enrollments: { some: { studentId: req.user?.userId } } } };
+    }
+
     const lessons = await db.lesson.findMany({
+      where: whereClause,
       include: {
         course: { select: { title: true } },
         quizzes: true
