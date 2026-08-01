@@ -13,7 +13,7 @@
 import { StorageClient } from '@supabase/storage-js';
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { logger } from '@shared/utils';
 
 export type StorageBackend = 'supabase' | 'local';
@@ -51,7 +51,7 @@ export async function uploadFile(
   mimetype: string
 ): Promise<UploadResult> {
   const ext = path.extname(originalName);
-  const filename = `${uuidv4()}${ext}`;
+  const filename = `${randomUUID()}${ext}`;
 
   if (supabaseStorage) {
     // Supabase Storage upload

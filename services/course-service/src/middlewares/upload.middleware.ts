@@ -1,6 +1,6 @@
 import multer from 'multer';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import fs from 'fs';
 
 // Ensure uploads directory exists
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const uniqueFilename = `${uuidv4()}${ext}`;
+    const uniqueFilename = `${randomUUID()}${ext}`;
     cb(null, uniqueFilename);
   }
 });
