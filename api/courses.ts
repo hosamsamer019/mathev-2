@@ -1,6 +1,15 @@
-import app from '../services/course-service/src/index';
+// Import dynamically in handler to catch initialization errors on Vercel
 
-export default function handler(req: any, res: any) {
-  const expressApp = (app as any).default || app;
-  return expressApp(req, res);
+export default async function handler(req: any, res: any) {
+  try {
+    const module = await import('../services/course-service/src/index');
+    const expressApp = module.default || (module as any).app;
+    return expressApp(req, res);
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Vercel Serverless Function Initialization Failed',
+      message: error.message,
+      stack: error.stack
+    });
+  }
 }
