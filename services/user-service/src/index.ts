@@ -28,7 +28,7 @@ app.use('/api/notifications', notificationRoutes);
 
 app.use(globalErrorHandler);
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     logger.info(`🚀 User Service running on http://localhost:${PORT}`);
   });

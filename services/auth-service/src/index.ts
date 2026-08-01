@@ -41,7 +41,7 @@ app.use('/api/auth', authRoutes);
 
 app.use(globalErrorHandler);
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     logger.info(`🚀 Auth Service running on http://localhost:${PORT}`);
   });

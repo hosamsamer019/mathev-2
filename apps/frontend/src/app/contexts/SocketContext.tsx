@@ -22,8 +22,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     // Connect to Course Service which handles courses, homeworks, exams
     const isLocalhost = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
+    const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
     const useProdPaths = import.meta.env.PROD || !isLocalhost;
     const socketUrl = import.meta.env.VITE_COURSE_API_URL || (useProdPaths ? '' : 'http://localhost:4004');
+    
+    if (isVercel && !import.meta.env.VITE_COURSE_API_URL) {
+      console.log('ℹ️ WebSockets are disabled on Vercel serverless environment.');
+      return;
+    }
+
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,

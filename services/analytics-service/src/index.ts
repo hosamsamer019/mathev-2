@@ -24,7 +24,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.use(globalErrorHandler);
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     logger.info(`🚀 Analytics Service running on http://localhost:${PORT}`);
   });

@@ -86,7 +86,7 @@ io.on('connection', (socket) => {
   });
 });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   server.listen(PORT, () => {
     logger.info(`🚀 Course Service (w/ Socket.IO) running on http://localhost:${PORT}`);
   });
