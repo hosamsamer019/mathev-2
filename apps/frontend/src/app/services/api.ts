@@ -1,17 +1,18 @@
 import axios from 'axios';
 
 const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : ((globalThis as any).process?.env || {});
-const isProd = env.PROD || env.NODE_ENV === 'production';
+const isLocalhost = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
+const useProdPaths = env.PROD || env.NODE_ENV === 'production' || !isLocalhost;
 
-const AUTH_URL = env.VITE_AUTH_API_URL || (isProd ? '/api/auth' : 'http://localhost:4001/api/auth');
-const USER_URL = env.VITE_USER_API_URL || (isProd ? '/api/users' : 'http://localhost:4002/api/users');
-const AI_URL = env.VITE_AI_API_URL || (isProd ? '/api/ai' : 'http://localhost:4003/api/ai');
-const COURSE_URL = env.VITE_COURSE_API_URL || (isProd ? '/api/courses' : 'http://localhost:4004/api/courses');
-const EXAM_URL = env.VITE_EXAM_API_URL || (isProd ? '/api/exams' : 'http://localhost:4004/api/exams');
-const HOMEWORK_URL = env.VITE_HOMEWORK_API_URL || (isProd ? '/api/homework' : 'http://localhost:4004/api/homework');
-const ANALYTICS_URL = env.VITE_ANALYTICS_API_URL || (isProd ? '/api/analytics' : 'http://localhost:4005/api/analytics');
-const NOTIFICATION_URL = env.VITE_NOTIFICATION_API_URL || (isProd ? '/api/notifications' : 'http://localhost:4002/api/notifications');
-const QUESTION_URL = env.VITE_QUESTION_API_URL || (isProd ? '/api/questions' : 'http://localhost:4004/api/questions');
+const AUTH_URL = env.VITE_AUTH_API_URL || (useProdPaths ? '/api/auth' : 'http://localhost:4001/api/auth');
+const USER_URL = env.VITE_USER_API_URL || (useProdPaths ? '/api/users' : 'http://localhost:4002/api/users');
+const AI_URL = env.VITE_AI_API_URL || (useProdPaths ? '/api/ai' : 'http://localhost:4003/api/ai');
+const COURSE_URL = env.VITE_COURSE_API_URL || (useProdPaths ? '/api/courses' : 'http://localhost:4004/api/courses');
+const EXAM_URL = env.VITE_EXAM_API_URL || (useProdPaths ? '/api/exams' : 'http://localhost:4004/api/exams');
+const HOMEWORK_URL = env.VITE_HOMEWORK_API_URL || (useProdPaths ? '/api/homework' : 'http://localhost:4004/api/homework');
+const ANALYTICS_URL = env.VITE_ANALYTICS_API_URL || (useProdPaths ? '/api/analytics' : 'http://localhost:4005/api/analytics');
+const NOTIFICATION_URL = env.VITE_NOTIFICATION_API_URL || (useProdPaths ? '/api/notifications' : 'http://localhost:4002/api/notifications');
+const QUESTION_URL = env.VITE_QUESTION_API_URL || (useProdPaths ? '/api/questions' : 'http://localhost:4004/api/questions');
 
 export const authApi = axios.create({
   baseURL: AUTH_URL,

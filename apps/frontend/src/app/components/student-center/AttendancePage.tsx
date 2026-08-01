@@ -18,7 +18,9 @@ export default function AttendancePage() {
       // Since attendance is /api/attendance, we can just use userApi but change baseURL or use a new attendanceApi.
       // Wait, let's use userApi and just change the URL path relative to the domain, or create attendanceApi.
       // To be safe, we'll fetch from standard userApi if it's on the same port, or use fetch.
-      const baseURL = import.meta.env.PROD ? '/api/attendance' : 'http://localhost:4002/api/attendance';
+      const isLocalhost = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
+      const useProdPaths = import.meta.env.PROD || !isLocalhost;
+      const baseURL = useProdPaths ? '/api/attendance' : 'http://localhost:4002/api/attendance';
       const res = await axios.get(`${baseURL}/my-attendance`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });

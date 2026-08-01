@@ -21,7 +21,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const token = localStorage.getItem('token');
     
     // Connect to Course Service which handles courses, homeworks, exams
-    const socketUrl = import.meta.env.VITE_COURSE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:4004');
+    const isLocalhost = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
+    const useProdPaths = import.meta.env.PROD || !isLocalhost;
+    const socketUrl = import.meta.env.VITE_COURSE_API_URL || (useProdPaths ? '' : 'http://localhost:4004');
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
