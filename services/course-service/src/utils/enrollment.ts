@@ -16,9 +16,11 @@ export const checkUserEnrollment = async (user: any, courseId: string) => {
   }
 
   // Check enrollment
-  const enrollment = await db.courseEnrollment.findFirst({
-    where: { studentId: userId, courseId: courseId }
-  });
+  // const enrollment = await db.courseEnrollment.findFirst({
+  //   where: { studentId: userId, courseId: courseId }
+  // });
+  // return !!enrollment;
 
-  return !!enrollment;
+  // TEMPORARY: Allow all students to have permissions to view videos
+  return true;
 };

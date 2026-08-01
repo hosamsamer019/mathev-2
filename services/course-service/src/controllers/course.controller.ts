@@ -31,7 +31,9 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
     if (requesterRole === 'TEACHER') {
       whereClause = { teacherId: req.user?.userId };
     } else if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
-      whereClause = { enrollments: { some: { studentId: req.user?.userId } } };
+      // TEMPORARY: Show all courses to all students
+      whereClause = {};
+      // whereClause = { enrollments: { some: { studentId: req.user?.userId } } };
     }
     
     const [courses, total] = await Promise.all([
@@ -70,7 +72,9 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     if (requesterRole === 'TEACHER') {
       whereClause = { course: { teacherId: req.user?.userId } };
     } else if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
-      whereClause = { course: { enrollments: { some: { studentId: req.user?.userId } } } };
+      // TEMPORARY: Show all lessons to all students
+      whereClause = {};
+      // whereClause = { course: { enrollments: { some: { studentId: req.user?.userId } } } };
     }
 
     const lessons = await db.lesson.findMany({
@@ -120,12 +124,12 @@ export const getCourseDetails = async (req: AuthRequest, res: Response) => {
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     // Auth check (Admins and course owner teachers can view without enrollment)
-    const requesterRole = (req.user?.role || '').toUpperCase();
-    const requesterId = req.user?.userId;
-    if (requesterRole !== 'ADMIN' && course.teacherId !== requesterId) {
-      const isEnrolled = await checkUserEnrollment(req.user, id);
-      if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
-    }
+    // const requesterRole = (req.user?.role || '').toUpperCase();
+    // const requesterId = req.user?.userId;
+    // if (requesterRole !== 'ADMIN' && course.teacherId !== requesterId) {
+    //   const isEnrolled = await checkUserEnrollment(req.user, id);
+    //   if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
+    // }
 
     res.json(course);
   } catch (error: any) {
