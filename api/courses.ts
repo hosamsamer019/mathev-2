@@ -2,7 +2,7 @@
 
 export default async function handler(req: any, res: any) {
   try {
-    const module = await import('../services/course-service/src/index');
+    const module = await import('../services/course-service/src/index.js');
     const expressApp = module.default || (module as any).app;
     return expressApp(req, res);
   } catch (error: any) {
