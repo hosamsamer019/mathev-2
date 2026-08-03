@@ -6,11 +6,19 @@ const getOpenRouterClient = () => {
   return new OpenRouterClient({ timeoutMs: 60000 }); // Longer timeout for streaming
 };
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: 1,
-  retryStrategy: () => null // Stop retrying if connection fails
-});
-redis.on('error', (err) => console.warn('Redis connection failed, using in-memory rate limiter fallback.'));
+let redis: Redis | null = null;
+try {
+  redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    maxRetriesPerRequest: 1,
+    retryStrategy: () => null // Stop retrying if connection fails
+  });
+  redis.on('error', (err) => {
+    console.warn('Redis connection failed, using in-memory rate limiter fallback.');
+    redis = null;
+  });
+} catch (error) {
+  console.error('Failed to initialize Redis in AI service');
+}
 
 const CHAT_SYSTEM_PROMPT = `أنت مساعد رياضيات ذكي ودود يتحدث العربية. أنت تساعد الطلاب في فهم المفاهيم الرياضية وحل المسائل خطوة بخطوة. كن مشجعاً وصبوراً. لا تقدم الإجابة مباشرة، بل ساعد الطالب على التفكير والوصول للحل بنفسه.`;
 
@@ -33,7 +41,7 @@ export class ChatService {
     };
 
     try {
-      if (redis.status !== 'ready') {
+      if (!redis || redis.status !== 'ready') {
         console.error('Redis is not ready, falling back to in-memory rate limiter');
         return handleInMemoryLimit();
       }

@@ -1,5 +1,5 @@
 import { OpenRouterClient } from './openrouter.client.js';
-import { db } from '@smartmath/database';
+import { db } from '../../../../packages/database/src/index.js';
 
 export class SolverService {
   static async solve(problem: string, level?: string): Promise<{ solution: string }> {
