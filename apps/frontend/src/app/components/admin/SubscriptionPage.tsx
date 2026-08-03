@@ -49,7 +49,7 @@ export default function SubscriptionPage() {
       </div>
 
       {/* Revenue KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'إيرادات هذا الشهر', value: '٢٨,٣٠٠ ج.م', change: '+١٠.٥٪', icon: DollarSign, color: 'from-green-500 to-emerald-600' },
           { label: 'إجمالي المشتركين', value: '٢٨٣', change: '+٢٧', icon: Users, color: 'from-blue-500 to-indigo-600' },

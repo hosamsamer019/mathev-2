@@ -91,7 +91,7 @@ export default function RiskDetectionPage() {
       </div>
 
       {/* Risk Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'إجمالي في خطر', value: riskStudents.length, color: 'from-red-500 to-orange-500', icon: AlertTriangle },
           { label: 'حالات حرجة', value: riskStudents.filter(s => s.risk === 'حرج').length, color: 'from-red-600 to-red-700', icon: AlertTriangle },

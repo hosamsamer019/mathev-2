@@ -81,7 +81,7 @@ export default function TeacherAnalyticsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'معدل النجاح', value: '٨٨٪', change: '+٣٪', icon: Award, color: 'from-green-500 to-emerald-600' },
           { label: 'متوسط الدرجات', value: '٧٩٪', change: '+٥٪', icon: TrendingUp, color: 'from-blue-500 to-indigo-600' },

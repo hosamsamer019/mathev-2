@@ -98,7 +98,7 @@ export default function ParentReportsPage() {
           ) : childData && (
             <>
               {/* Overview Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[
                   { label: 'المعدل العام', value: `${childData.overview.overallRate}٪`, icon: TrendingUp, color: 'from-indigo-500 to-purple-600' },
                   { label: 'إجمالي الامتحانات', value: childData.overview.examsCompleted, icon: Award, color: 'from-green-500 to-emerald-600' },

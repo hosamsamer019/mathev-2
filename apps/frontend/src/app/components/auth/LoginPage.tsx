@@ -145,7 +145,7 @@ export default function LoginPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h2 className="text-xl font-bold text-white text-center mb-2">أهلاً بك!</h2>
               <p className="text-indigo-200 text-sm text-center mb-6">اختر دورك للمتابعة</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {roles.map((role) => (
                   <motion.button
                     key={role.role}

@@ -77,7 +77,7 @@ export default function HomeworkPage() {
 
   if (selectedHomework === null) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">الواجبات</h1>
           <p className="text-gray-600">قم بحل الواجبات واحصل على التقييم الفوري</p>
@@ -133,7 +133,7 @@ export default function HomeworkPage() {
 
   if (submitted) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-xl shadow-md p-8 text-center">
             <div className={`w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center ${
@@ -195,7 +195,7 @@ export default function HomeworkPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <button

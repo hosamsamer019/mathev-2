@@ -190,7 +190,7 @@ export default function AdaptiveLearningPage() {
               <Line type="monotone" dataKey="score" stroke="#06b6d4" strokeWidth={3} dot={{ fill: '#06b6d4', r: 5 }} name="الدرجة" />
             </LineChart>
           </ResponsiveContainer>
-          <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {[
               { label: 'أفضل أسبوع', value: '٨٥٪', color: 'text-green-600' },
               { label: 'المتوسط', value: '٧٤٪', color: 'text-blue-600' },

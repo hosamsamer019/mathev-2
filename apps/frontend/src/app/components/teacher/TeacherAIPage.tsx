@@ -116,7 +116,7 @@ export default function TeacherAIPage() {
           {/* AI Stats */}
           <div className={`md:col-span-2 ${cardBg} border rounded-2xl p-6`}>
             <h2 className={`font-bold ${textPrimary} mb-4`}>إحصائيات الذكاء الاصطناعي</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'أسئلة أُجيبت', value: '١٢٧٤', color: 'text-purple-600' },
                 { label: 'واجبات مُولّدة', value: '٥٦', color: 'text-blue-600' },

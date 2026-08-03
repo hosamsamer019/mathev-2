@@ -112,7 +112,7 @@ export default function TeacherStudentsPage() {
       {error && <div className="text-center py-8 text-red-500 bg-red-50 rounded-xl mb-4 border border-red-200">{error}</div>}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'إجمالي الطلاب', value: students.length, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
           { label: 'أونلاين', value: students.filter(s => s.type === 'أونلاين').length, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
@@ -285,7 +285,7 @@ export default function TeacherStudentsPage() {
                 <p className={textSecondary}>{selectedStudent.grade} • {selectedStudent.type}</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {[
                 { label: 'المتوسط العام', value: `${selectedStudent.avg}٪`, color: 'text-indigo-600' },
                 { label: 'الواجبات', value: `${selectedStudent.homework}٪`, color: 'text-green-600' },

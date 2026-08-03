@@ -482,7 +482,7 @@ export default function TeacherExamsPage() {
           <p className={`${textSecondary} mb-6 max-w-md mx-auto`}>
             بنك يضم أكثر من ٢٠٠٠ سؤال في جميع مواضيع الرياضيات، مرتبة حسب الصعوبة والموضوع
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {questionTypes.map((qt, idx) => (
               <div key={idx} className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-4`}>
                 <span className={`text-xs px-2 py-1 rounded-full ${qt.color}`}>{qt.label}</span>

@@ -287,7 +287,7 @@ export default function ExamsPage() {
 
   // Fix #1: Restore completed exam display with scores and question counts
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">الامتحانات</h1>
         <p className="text-gray-600">اختبر معلوماتك من خلال الامتحانات</p>

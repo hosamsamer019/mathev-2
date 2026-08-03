@@ -37,7 +37,7 @@ export default function CourseDetailsPage() {
 
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8">
         <button
           onClick={() => navigate('/student/online/courses')}

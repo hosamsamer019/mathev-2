@@ -260,7 +260,7 @@ export default function TeacherCoursesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'الدورات الكلية', value: courses.length, icon: BookOpen },
           { label: 'الطلاب المسجلين', value: courses.reduce((a, c) => a + c.students, 0), icon: Users },
@@ -513,7 +513,7 @@ export default function TeacherCoursesPage() {
               
               <div className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'} space-y-3`}>
                 <h4 className={`text-sm font-bold ${textPrimary}`}>أسئلة منبثقة تفاعلية داخل الفيديو</h4>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input placeholder="الوقت بالثواني (مثال: 120)" value={newQuiz.timestampSec} onChange={e=>setNewQuiz({...newQuiz, timestampSec: e.target.value})} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
                   <input placeholder="السؤال" value={newQuiz.question} onChange={e=>setNewQuiz({...newQuiz, question: e.target.value})} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
                   <input placeholder="الخيارات (مفصولة بعلامة -)" value={newQuiz.options} onChange={e=>setNewQuiz({...newQuiz, options: e.target.value})} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />

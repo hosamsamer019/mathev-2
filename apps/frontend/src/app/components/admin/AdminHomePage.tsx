@@ -52,7 +52,7 @@ export default function AdminHomePage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, idx) => (
           <div key={idx} className={`${cardBg} border rounded-2xl p-5 relative overflow-hidden group hover:shadow-lg transition-shadow`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`} />

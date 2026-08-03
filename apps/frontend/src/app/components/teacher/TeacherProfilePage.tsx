@@ -76,7 +76,7 @@ export default function TeacherProfilePage() {
         </div>
 
         {/* Achievements */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {achievements.map((ach, idx) => (
             <div key={idx} className={`${cardBg} border rounded-xl p-4 text-center`}>
               <div className={`w-10 h-10 rounded-xl ${ach.color} flex items-center justify-center mx-auto mb-2`}>

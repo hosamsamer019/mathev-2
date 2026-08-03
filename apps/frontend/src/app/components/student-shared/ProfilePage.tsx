@@ -75,7 +75,7 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <div className="p-8">جاري التحميل...</div>;
+    return <div className="p-4 sm:p-6 lg:p-8">جاري التحميل...</div>;
   }
 
   return (

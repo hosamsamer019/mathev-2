@@ -86,7 +86,7 @@ export default function TeacherHomePage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { label: 'إجمالي الطلاب', value: overview?.totalStudents || 0, change: '', icon: Users, color: 'from-blue-500 to-blue-600', trend: 'up' },
           { label: 'إجمالي الدورات', value: overview?.totalCourses || 0, change: '', icon: BookOpen, color: 'from-green-500 to-emerald-600', trend: 'up' },
