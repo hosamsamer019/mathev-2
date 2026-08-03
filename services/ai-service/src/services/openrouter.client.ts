@@ -62,7 +62,7 @@ export class OpenRouterClient {
     }
 
     this.apiKey = apiKey;
-    this.model = process.env.OPENROUTER_MODEL || 'deepseek/deepseek-r1:free';
+    this.model = process.env.OPENROUTER_MODEL || 'openrouter/free';
     this.baseUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
     this.timeoutMs = options?.timeoutMs ?? 30000;
     this.maxRetries = options?.maxRetries ?? 2;
