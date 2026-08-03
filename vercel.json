@@ -9,10 +9,10 @@
     { "source": "/api/users/:match*", "destination": "/api/users" },
     { "source": "/api/ai/:match*", "destination": "/api/ai" },
     { "source": "/api/courses/:match*", "destination": "/api/courses" },
-    { "source": "/api/homework/:match*", "destination": "/api/courses" },
-    { "source": "/api/exams/:match*", "destination": "/api/courses" },
-    { "source": "/api/questions/:match*", "destination": "/api/courses" },
-    { "source": "/api/upload/:match*", "destination": "/api/courses" },
+    { "source": "/api/homework/:match*", "destination": "/api/homework" },
+    { "source": "/api/exams/:match*", "destination": "/api/exams" },
+    { "source": "/api/questions/:match*", "destination": "/api/questions" },
+    { "source": "/api/upload/:match*", "destination": "/api/upload" },
     { "source": "/api/analytics/:match*", "destination": "/api/analytics" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
