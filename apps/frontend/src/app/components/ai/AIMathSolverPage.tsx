@@ -105,7 +105,7 @@ export default function AIMathSolverPage() {
 
 
   return (
-    <div className={`p-6 lg:p-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} min-h-full`}>
+    <div className={`p-4 sm:p-6 lg:p-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} min-h-full`}>
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">

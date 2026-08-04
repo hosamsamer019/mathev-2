@@ -164,7 +164,7 @@ export default function ChatbotPage() {
   };
 
   return (
-    <div className="p-8 h-screen flex flex-col">
+    <div className="p-4 sm:p-6 lg:p-8 h-[calc(100vh-6rem)] flex flex-col">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">المساعد الذكي</h1>
@@ -176,10 +176,10 @@ export default function ChatbotPage() {
         </button>
       </div>
 
-      <div className="flex flex-1 gap-4 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 gap-4 overflow-hidden">
         {/* Sessions sidebar */}
         {sessions.length > 0 && (
-          <div className="w-64 bg-white rounded-xl shadow-md p-4 overflow-y-auto flex-shrink-0">
+          <div className="hidden md:block w-64 bg-white rounded-xl shadow-md p-4 overflow-y-auto flex-shrink-0">
             <h3 className="font-bold text-gray-700 mb-3 text-sm">المحادثات السابقة</h3>
             <div className="space-y-2">
               {(Array.isArray(sessions) ? sessions : []).map(s => (
@@ -261,7 +261,7 @@ export default function ChatbotPage() {
             </div>
           )}
 
-          <div className="p-6 border-t border-gray-200">
+          <div className="p-4 sm:p-6 border-t border-gray-200">
             <div className="flex gap-3">
               <input
                 type="text"
