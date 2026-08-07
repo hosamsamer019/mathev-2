@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, Award, Target, Star, Loader2 } from 'lucide-react';
-import { analyticsApi } from '../../services/api';
+import { analyticsService } from '../../services/analytics.service';
 
 export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
@@ -25,9 +25,9 @@ export default function ResultsPage() {
     try {
       setLoading(true);
       const [overviewRes, chartsRes, recentRes] = await Promise.all([
-        analyticsApi.get('/student/overview'),
-        analyticsApi.get('/student/charts'),
-        analyticsApi.get('/student/recent')
+        analyticsService.getStudentOverview(),
+        analyticsService.getStudentCharts(),
+        analyticsService.getStudentRecent()
       ]);
 
       setOverview(overviewRes.data);

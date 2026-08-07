@@ -1,12 +1,13 @@
 import { Router } from 'express';
-import { login, register, getMe, logout, refreshToken, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
+import { login, register, getMe, logout, refreshToken, forgotPassword, resetPassword, loginSchema, registerSchema } from '../controllers/auth.controller.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
-import { loginRateLimiter } from '../middlewares/rateLimiter.js';
+import { loginRateLimiter, registerRateLimiter } from '../middlewares/rateLimiter.js';
+import { validate } from '@shared/utils';
 
 const router = Router();
 
-router.post('/register', loginRateLimiter, register);
-router.post('/login', loginRateLimiter, login);
+router.post('/register', registerRateLimiter, validate(registerSchema), register);
+router.post('/login', loginRateLimiter, validate(loginSchema), login);
 router.post('/logout', logout);
 router.post('/refresh-token', refreshToken);
 router.get('/me', verifyToken, getMe);

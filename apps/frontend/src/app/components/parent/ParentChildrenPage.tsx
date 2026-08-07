@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Play, FileText, CheckCircle, Clock, TrendingUp, BookOpen, Award, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { userApi, analyticsApi } from '../../services/api';
+import { userService } from '../../services/user.service';
+import { analyticsService } from '../../services/analytics.service';
 
 export default function ParentChildrenPage() {
   const { isDark } = useTheme();
@@ -26,8 +27,8 @@ export default function ParentChildrenPage() {
 
   const fetchChildren = async () => {
     try {
-      const res = await userApi.get('/parent/children');
-      setChildren(Array.isArray(res.data) ? res.data : []);
+      const res = await userService.getChildren();
+      setChildren(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error('Failed to fetch children', err);
     } finally {
@@ -38,7 +39,7 @@ export default function ParentChildrenPage() {
   const fetchChildAnalytics = async (childId: string) => {
     setLoading(true);
     try {
-      const res = await analyticsApi.get(`/parent/child/${childId}/overview`);
+      const res = await analyticsService.getParentChildOverview(childId);
       setChildData(res.data);
     } catch (err) {
       console.error('Failed to fetch child analytics', err);

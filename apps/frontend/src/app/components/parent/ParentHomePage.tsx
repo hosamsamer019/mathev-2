@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Clock, CheckCircle, BookOpen, Bell, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { userApi } from '../../services/api';
+import { userService } from '../../services/user.service';
 import { LoadingState } from '../ui/LoadingState';
 import { EmptyState } from '../ui/EmptyState';
 
@@ -20,8 +20,8 @@ export default function ParentHomePage() {
 
   const fetchChildren = async () => {
     try {
-      const res = await userApi.get('/parent/children');
-      setChildren(Array.isArray(res.data) ? res.data : []);
+      const res = await userService.getChildren();
+      setChildren(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error('Failed to fetch children', err);
     } finally {

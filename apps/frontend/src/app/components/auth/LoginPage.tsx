@@ -22,8 +22,8 @@ const roles: RoleOption[] = [
     label: 'طالب أونلاين',
     description: 'تعلم عن بُعد مع محتوى تفاعلي',
     icon: User,
-    color: 'text-indigo-600',
-    gradient: 'from-blue-500 to-indigo-500',
+    color: 'text-brand-600',
+    gradient: 'from-blue-500 to-brand-500',
     path: '/student/online/home',
   },
   {
@@ -50,7 +50,7 @@ const roles: RoleOption[] = [
     description: 'متابعة أداء وتقدم أبنائك',
     icon: ShieldCheck,
     color: 'text-cyan-600',
-    gradient: 'from-purple-500 to-pink-500',
+    gradient: 'from-brand-accent-500 to-pink-500',
     path: '/parent/home',
   },
   {
@@ -58,7 +58,7 @@ const roles: RoleOption[] = [
     label: 'إدارة',
     description: 'إدارة المنصة بالكامل والتقارير المالية',
     icon: KeyRound,
-    color: 'text-purple-600',
+    color: 'text-brand-accent-600',
     gradient: 'from-slate-700 to-slate-900',
     path: '/admin/dashboard',
   },
@@ -79,28 +79,19 @@ export default function LoginPage() {
     setStep('form');
   };
 
-  const getTestEmail = (role: UserRole) => {
-    switch (role) {
-      case 'ADMIN': return 'admin@edu.com';
-      case 'TEACHER': return 'teacher@edu.com';
-      case 'ONLINE_STUDENT': return 'student@edu.com';
-      case 'CENTER_STUDENT': return 'center@edu.com';
-      case 'PARENT': return 'parent@edu.com';
-      default: return `${role}@edu.com`;
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRole) return;
+    
+    if (!formData.email || !formData.password) {
+      setError('يرجى إدخال البريد الإلكتروني وكلمة المرور.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
-    const loginEmail = formData.email || getTestEmail(selectedRole.role);
-    const loginPassword = formData.password || '123456';
-
-    await new Promise((r) => setTimeout(r, 800));
-    const success = await login(loginEmail, loginPassword, selectedRole.role);
+    const success = await login(formData.email, formData.password, selectedRole.role);
     
     if (success) {
       navigate(selectedRole.path);
@@ -111,15 +102,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 flex items-center justify-center p-4 relative overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-brand-950 via-brand-900 to-brand-accent-900 flex items-center justify-center p-4 relative overflow-hidden" dir="rtl">
       {/* Background Decorations */}
-      <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
-      <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl" />
+      <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand-accent-500/20 rounded-full blur-3xl" />
+      <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-brand-500/20 rounded-full blur-3xl" />
 
       {/* Back to Home Button */}
       <button 
         onClick={() => navigate('/')} 
-        className="absolute top-6 right-6 z-50 flex items-center gap-2 text-white hover:text-indigo-200 transition-colors bg-indigo-600/50 hover:bg-indigo-600 px-4 py-2 rounded-xl backdrop-blur-md shadow-lg"
+        className="absolute top-6 right-6 z-50 flex items-center gap-2 text-white hover:text-brand-200 transition-colors bg-brand-600/50 hover:bg-brand-600 px-4 py-2 rounded-xl backdrop-blur-md shadow-lg"
       >
         <ChevronLeft className="w-5 h-5 rotate-180" />
         <span className="font-medium">الرئيسية</span>
@@ -132,11 +123,11 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 shadow-2xl">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-accent-600 rounded-2xl mb-4 shadow-2xl">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-1">منصة معلم الرياضيات</h1>
-          <p className="text-indigo-300 text-sm">منصة التعلم الذكي المتكاملة</p>
+          <h1 className="text-3xl font-bold text-white mb-1">AL-SADEN</h1>
+          <p className="text-brand-300 text-sm">منصة التعلم الذكي المتكاملة</p>
         </div>
 
         {/* Card */}
@@ -144,7 +135,7 @@ export default function LoginPage() {
           {step === 'role' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h2 className="text-xl font-bold text-white text-center mb-2">أهلاً بك!</h2>
-              <p className="text-indigo-200 text-sm text-center mb-6">اختر دورك للمتابعة</p>
+              <p className="text-brand-200 text-sm text-center mb-6">اختر دورك للمتابعة</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {roles.map((role) => (
                   <motion.button
@@ -159,7 +150,7 @@ export default function LoginPage() {
                     </div>
                     <div>
                       <p className="text-white font-semibold text-sm">{role.label}</p>
-                      <p className="text-indigo-300 text-xs mt-0.5 leading-tight">{role.description}</p>
+                      <p className="text-brand-300 text-xs mt-0.5 leading-tight">{role.description}</p>
                     </div>
                   </motion.button>
                 ))}
@@ -167,11 +158,11 @@ export default function LoginPage() {
               <div className="mt-6 text-center space-y-2">
                 <button
                   onClick={() => navigate('/admin/login')}
-                  className="block w-full text-indigo-300 hover:text-white text-sm transition-colors"
+                  className="block w-full text-brand-300 hover:text-white text-sm transition-colors"
                 >
                   تسجيل دخول المدير العام ←
                 </button>
-                <p className="text-xs text-indigo-400">
+                <p className="text-xs text-brand-400">
                   ليس لديك حساب؟ {' '}
                   <button onClick={() => navigate('/register')} className="text-white hover:underline">إنشاء حساب جديد</button>
                 </p>
@@ -183,7 +174,7 @@ export default function LoginPage() {
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
               <button
                 onClick={() => { setStep('role'); setError(''); }}
-                className="flex items-center gap-1 text-indigo-300 hover:text-white text-sm mb-6 transition-colors"
+                className="flex items-center gap-1 text-brand-300 hover:text-white text-sm mb-6 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4 rotate-180" /> رجوع
               </button>
@@ -194,44 +185,46 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <h2 className="text-white font-bold">{selectedRole.label}</h2>
-                  <p className="text-indigo-300 text-sm">أدخل بيانات الدخول</p>
+                  <p className="text-brand-300 text-sm">أدخل بيانات الدخول</p>
                 </div>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-indigo-200 mb-2">
+                  <label className="block text-sm font-medium text-brand-200 mb-2">
                     البريد الإلكتروني
                   </label>
                   <div className="relative">
-                    <Mail className="absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 text-indigo-400" />
+                    <Mail className="absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 text-brand-400" />
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
-                      placeholder={getTestEmail(selectedRole.role)}
+                      className="w-full pr-10 pl-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                      placeholder="أدخل البريد الإلكتروني"
+                      required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-indigo-200 mb-2">
+                  <label className="block text-sm font-medium text-brand-200 mb-2">
                     كلمة المرور
                   </label>
                   <div className="relative">
-                    <Lock className="absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 text-indigo-400" />
+                    <Lock className="absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 text-brand-400" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full pr-10 pl-10 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                      className="w-full pr-10 pl-10 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
                       placeholder="أدخل كلمة المرور"
+                      required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute top-1/2 -translate-y-1/2 left-3 text-indigo-400 hover:text-white"
+                      className="absolute top-1/2 -translate-y-1/2 left-3 text-brand-400 hover:text-white"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -240,13 +233,13 @@ export default function LoginPage() {
 
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded accent-indigo-400" />
-                    <span className="text-sm text-indigo-200">تذكرني</span>
+                    <input type="checkbox" className="w-4 h-4 rounded accent-brand-400" />
+                    <span className="text-sm text-brand-200">تذكرني</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => navigate('/forgot-password')}
-                    className="text-sm text-indigo-300 hover:text-white"
+                    className="text-sm text-brand-300 hover:text-white"
                   >
                     نسيت كلمة المرور؟
                   </button>
@@ -275,7 +268,7 @@ export default function LoginPage() {
                 </motion.button>
               </form>
 
-              <p className="text-center text-indigo-300 text-xs mt-4">
+              <p className="text-center text-brand-300 text-xs mt-4">
                 يمكنك الدخول بأي بريد إلكتروني لتجربة المنصة
               </p>
             </motion.div>
@@ -283,8 +276,8 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-indigo-400 text-xs mt-6">
-          منصة معلم الرياضيات © ٢٠٢٦ • آمنة ومشفرة
+        <p className="text-center text-brand-400 text-xs mt-6">
+          AL-SADEN © ٢٠٢٦ • آمنة ومشفرة
         </p>
       </motion.div>
     </div>

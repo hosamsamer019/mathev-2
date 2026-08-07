@@ -90,9 +90,7 @@ export default function SharedLayout({
     <div className={`flex flex-col h-full transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
       {/* Logo / Header */}
       <div className={`p-4 ${colors.headerBg} flex items-center gap-3`}>
-        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-lg">م</span>
-        </div>
+        <img src="/logo.jpeg" alt="AL-SADEN Logo" className="w-10 h-10 bg-white rounded-xl object-contain flex-shrink-0" />
         {!collapsed && (
           <div className="overflow-hidden">
             <h1 className="text-white text-sm font-bold leading-tight">{title}</h1>
@@ -119,11 +117,10 @@ export default function SharedLayout({
           </div>
           {user?.subscriptionPlan && (
             <div className="mt-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                user.subscriptionPlan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-                user.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' :
-                'bg-gray-100 text-gray-600'
-              }`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.subscriptionPlan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
+                  user.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-600'
+                }`}>
                 {user.subscriptionPlan === 'enterprise' ? '⭐ مؤسسي' : user.subscriptionPlan === 'pro' ? '🚀 احترافي' : '🔹 أساسي'}
               </span>
             </div>
@@ -140,13 +137,12 @@ export default function SharedLayout({
               key={item.path}
               onClick={() => { navigate(item.path); setMobileOpen(false); }}
               title={collapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative ${
-                active
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative ${active
                   ? `${colors.activeBg} text-white shadow-md`
                   : isDark
                     ? 'text-gray-400 hover:text-white hover:bg-gray-700'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              } ${collapsed ? 'justify-center' : ''}`}
+                } ${collapsed ? 'justify-center' : ''}`}
             >
               <item.icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : ''}`} />
               {!collapsed && <span className="text-sm font-medium flex-1 text-right">{item.label}</span>}
@@ -168,9 +164,8 @@ export default function SharedLayout({
       {/* Bottom Actions */}
       <div className={`p-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} space-y-1`}>
         <button
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-            isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-          } ${collapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            } ${collapsed ? 'justify-center' : ''}`}
         >
           <Settings className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span className="text-sm font-medium">الإعدادات</span>}
@@ -213,9 +208,8 @@ export default function SharedLayout({
 
       {/* Sidebar - Mobile */}
       <aside
-        className={`fixed top-0 start-0 h-full w-72 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-2xl z-50 lg:hidden transition-transform duration-300 ${
-          mobileOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 start-0 h-full w-72 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-2xl z-50 lg:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         <button
           onClick={() => setMobileOpen(false)}

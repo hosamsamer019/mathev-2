@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+coverage
+.next
+.git
+.env
+.env.*
+secrets
+uploads
+*.log
+docker-compose*.yml
+testsprite_tests
+.vercel

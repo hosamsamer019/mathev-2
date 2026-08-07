@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - auth-service
+      - user-service
+      - course-service
+      - ai-service
+      - analytics-service
+    restart: always
+    networks:
+      - platform-network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: auth-service
+    environment:
+      - NODE_ENV=production
+      - PORT=4001
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - CLIENT_URL=${CLIENT_URL}
+    restart: always
+    networks:
+      - platform-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: user-service
+    environment:
+      - NODE_ENV=production
+      - PORT=4002
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    restart: always
+    networks:
+      - platform-network
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: ai-service
+    environment:
+      - NODE_ENV=production
+      - PORT=4003
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: always
+    networks:
+      - platform-network
+
+  course-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: course-service
+    environment:
+      - NODE_ENV=production
+      - PORT=4004
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - CLIENT_URL=${CLIENT_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    restart: always
+    networks:
+      - platform-network
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: analytics-service
+    environment:
+      - NODE_ENV=production
+      - PORT=4005
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    restart: always
+    networks:
+      - platform-network
+
+  video-worker:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: video-worker
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CLOUDFLARE_R2_ENDPOINT=${CLOUDFLARE_R2_ENDPOINT}
+      - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      - CLOUDFLARE_R2_BUCKET_NAME=${CLOUDFLARE_R2_BUCKET_NAME}
+    restart: always
+    networks:
+      - platform-network
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - platform-network
+    volumes:
+      - redis-data:/data
+
+networks:
+  platform-network:
+    driver: bridge
+
+volumes:
+  redis-data:

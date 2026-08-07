@@ -6,7 +6,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 
 import { Trash2 } from 'lucide-react';
-import { userApi } from '../../services/api';
+import { userService } from '../../services/user.service';
 
 const statusConfig: Record<string, { color: string; bg: string; icon: React.ComponentType<{className?: string}> }> = {
   'ممتاز': { color: 'text-green-700', bg: 'bg-green-100', icon: CheckCircle },
@@ -33,7 +33,7 @@ export default function TeacherStudentsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await userApi.get('/users');
+      const res = await userService.getUsers({});
       const allUsers = Array.isArray(res.data) ? res.data : [];
       // Filter for only student roles
       const studentData = allUsers.filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT');
@@ -61,7 +61,7 @@ export default function TeacherStudentsPage() {
 
   const handleAddStudent = async () => {
     try {
-      await userApi.post('/users', { name: 'طالب جديد', email: `student${Date.now()}@edu.com`, password: 'password123', role: 'ONLINE_STUDENT' });
+      await userService.createUser({ name: 'طالب جديد', email: `student${Date.now()}@edu.com`, password: 'password123', role: 'ONLINE_STUDENT' });
       fetchStudents();
     } catch (err) {
       console.error('Add failed', err);
@@ -76,7 +76,7 @@ export default function TeacherStudentsPage() {
     e.stopPropagation();
     if(confirm('هل أنت متأكد من حذف الطالب؟')) {
       try {
-        await userApi.delete(`/users/${id}`);
+        await userService.deleteUser(id);
         setStudents(s => s.filter(x => x.id !== id));
       } catch (err) {
         console.error('Delete failed', err);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
-import { userApi } from '../../services/api';
+import { userService } from '../../services/user.service';
 
 export default function StudentsPage() {
   const [showModal, setShowModal] = useState(false);
@@ -38,7 +38,7 @@ export default function StudentsPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await userApi.get('/users'); 
+      const res = await userService.getUsers({}); 
       setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -74,7 +74,7 @@ export default function StudentsPage() {
   const handleDelete = async (id: string) => {
     if(confirm('هل أنت متأكد من الحذف؟')) {
       try {
-        await userApi.delete(`/users/${id}`);
+        await userService.deleteUser(id);
         setUsers(s => s.filter(x => x.id !== id));
         showToast('تم الحذف بنجاح', 'success');
       } catch (err) {
@@ -89,10 +89,10 @@ export default function StudentsPage() {
       setIsSaving(true);
       setValidationErrors({});
       if (editingUser) {
-        await userApi.put(`/users/${editingUser.id}`, formData);
+        await userService.updateUser(editingUser.id, formData);
         showToast('تم التعديل بنجاح', 'success');
       } else {
-        await userApi.post('/users', formData);
+        await userService.createUser(formData);
         showToast('تمت الإضافة بنجاح', 'success');
       }
       setShowModal(false);

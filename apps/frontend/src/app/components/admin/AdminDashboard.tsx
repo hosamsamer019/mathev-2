@@ -15,8 +15,11 @@ import ReportsPage from './ReportsPage';
 import RiskDetectionPage from './RiskDetectionPage';
 import SubscriptionPage from './SubscriptionPage';
 
+import AdminProfilePage from './AdminProfilePage';
+
 const menuItems: MenuItem[] = [
   { path: '/admin/home', icon: Home, label: 'لوحة التحكم' },
+  { path: '/admin/profile', icon: Users, label: 'الملف الشخصي' },
   { path: '/admin/students', icon: Users, label: 'إدارة الطلاب' },
   { path: '/admin/courses', icon: BookOpen, label: 'إدارة الدورات' },
   { path: '/admin/videos', icon: Video, label: 'إدارة الفيديوهات' },
@@ -42,6 +45,7 @@ export default function AdminDashboard() {
       <Routes>
         <Route path="/" element={<Navigate to="/admin/home" replace />} />
         <Route path="/home" element={<AdminHomePage />} />
+        <Route path="/profile" element={<AdminProfilePage />} />
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/courses" element={<CoursesManagementPage />} />
         <Route path="/videos" element={<VideosManagementPage />} />

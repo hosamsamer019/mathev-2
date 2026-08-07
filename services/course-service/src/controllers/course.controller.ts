@@ -72,19 +72,34 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     if (requesterRole === 'TEACHER') {
       whereClause = { course: { teacherId: req.user?.userId } };
     } else if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
-      // TEMPORARY: Show all lessons to all students
-      whereClause = {};
-      // whereClause = { course: { enrollments: { some: { studentId: req.user?.userId } } } };
+      whereClause = { course: { enrollments: { some: { studentId: req.user?.userId } } } };
     }
 
-    const lessons = await db.lesson.findMany({
-      where: whereClause,
-      include: {
-        course: { select: { title: true } },
-        quizzes: true
-      }
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const skip = (page - 1) * limit;
+
+    const [lessons, total] = await Promise.all([
+      db.lesson.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        include: {
+          course: { select: { title: true } },
+          // Removed deep quizzes include for list view to save memory
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      db.lesson.count({ where: whereClause })
+    ]);
+    
+    res.json({
+      data: lessons,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     });
-    res.json(lessons);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching lessons', error: error.message });
   }
@@ -124,12 +139,12 @@ export const getCourseDetails = async (req: AuthRequest, res: Response) => {
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     // Auth check (Admins and course owner teachers can view without enrollment)
-    // const requesterRole = (req.user?.role || '').toUpperCase();
-    // const requesterId = req.user?.userId;
-    // if (requesterRole !== 'ADMIN' && course.teacherId !== requesterId) {
-    //   const isEnrolled = await checkUserEnrollment(req.user, id);
-    //   if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
-    // }
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+    if (requesterRole !== 'ADMIN' && course.teacherId !== requesterId) {
+      const isEnrolled = await checkUserEnrollment(req.user, id);
+      if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
+    }
 
     res.json(course);
   } catch (error: any) {
@@ -161,6 +176,21 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
 export const createLesson = async (req: AuthRequest, res: Response) => {
   try {
     const data = lessonCreateSchema.parse(req.body);
+    
+    // Authorization Check: Does the teacher own this course?
+    const course = await db.course.findUnique({
+      where: { id: data.courseId }
+    });
+
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && course.teacherId !== req.user?.userId) {
+      return res.status(403).json({ message: 'Forbidden: You do not own this course' });
+    }
+
     const lesson = await db.lesson.create({
       data: {
         title: data.title,
@@ -230,6 +260,13 @@ export const updateVideoProgress = async (req: AuthRequest, res: Response) => {
 
     if (!studentId) return res.status(401).json({ message: 'Unauthorized' });
 
+    // Verify enrollment
+    const lesson = await db.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) return res.status(404).json({ message: 'Lesson not found' });
+    
+    const isEnrolled = await checkUserEnrollment(req.user, lesson.courseId);
+    if (!isEnrolled) return res.status(403).json({ message: 'Forbidden: You are not enrolled in this course' });
+
     const videoProgress = await db.videoProgress.upsert({
       where: {
         studentId_lessonId: {
@@ -257,9 +294,24 @@ export const updateVideoProgress = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getVideoAnalytics = async (req: Request, res: Response) => {
+export const getVideoAnalytics = async (req: AuthRequest, res: Response) => {
   try {
     const { id: lessonId } = req.params;
+
+    const lesson = await db.lesson.findUnique({
+      where: { id: lessonId },
+      include: { course: true }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && lesson.course.teacherId !== req.user?.userId) {
+      return res.status(403).json({ message: 'Forbidden: You do not own this course' });
+    }
+
     const analytics = await db.videoProgress.findMany({
       where: { lessonId },
       include: {

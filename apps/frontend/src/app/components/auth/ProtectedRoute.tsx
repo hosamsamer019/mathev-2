@@ -13,8 +13,8 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (!allowedRoles.includes(user.role)) {
-    // If authenticated but role not allowed, redirect to main landing or logout
-    return <Navigate to="/login" replace />;
+    // If authenticated but role not allowed, redirect to unauthorized page
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <Outlet />;

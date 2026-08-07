@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
-import { courseApi } from '../../services/api';
+import { courseService } from '../../services/course.service';
 
 export default function CoursesManagementPage() {
   const [showModal, setShowModal] = useState(false);
@@ -25,10 +25,13 @@ export default function CoursesManagementPage() {
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await courseApi.get('/');
+      const res = await courseService.getCourses();
       setCourses(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch courses', err);
+      if (err.response?.status === 403) {
+        showToast('غير مصرح لك بعرض الدورات', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -37,12 +40,16 @@ export default function CoursesManagementPage() {
   const handleDelete = async (id: string) => {
     if(confirm('هل أنت متأكد من الحذف؟')) {
       try {
-        await courseApi.delete(`/${id}`);
+        await courseService.deleteCourse(id);
         setCourses(c => c.filter(x => x.id !== id));
         showToast('تم الحذف بنجاح', 'success');
-      } catch (err) {
+      } catch (err: any) {
         console.error('Delete failed', err);
-        showToast('فشل الحذف', 'error');
+        if (err.response?.status === 403) {
+          showToast('غير مصرح لك بحذف هذه الدورة', 'error');
+        } else {
+          showToast('فشل الحذف', 'error');
+        }
       }
     }
   };
@@ -51,7 +58,7 @@ export default function CoursesManagementPage() {
     try {
       setIsSaving(true);
       setValidationErrors({});
-      await courseApi.post('/courses', formData);
+      await courseService.createCourse(formData);
       showToast('تمت الإضافة بنجاح', 'success');
       setShowModal(false);
       setFormData({ title: '', description: '', teacherId: '' });
@@ -113,7 +120,11 @@ export default function CoursesManagementPage() {
             </div>
 
             <div className="flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+              <button 
+                onClick={() => alert('ميزة التعديل غير متاحة حالياً (نقطة اتصال PUT غير موجودة)')}
+                className="flex-1 flex items-center justify-center gap-2 bg-gray-300 text-gray-500 py-2 rounded-lg cursor-not-allowed"
+                title="غير مدعوم من الخادم"
+              >
                 <Edit className="w-4 h-4" />
                 <span>تعديل</span>
               </button>

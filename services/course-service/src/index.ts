@@ -19,8 +19,21 @@ validateEnv();
 const app = express();
 const PORT = process.env.PORT || 4004;
 
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return callback(null, true);
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+    if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+};
+
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Serve static uploads
@@ -42,7 +55,7 @@ app.use(globalErrorHandler);
 
 const server = http.createServer(app);
 export const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }
+  cors: corsOptions
 });
 
 import jwt from 'jsonwebtoken';

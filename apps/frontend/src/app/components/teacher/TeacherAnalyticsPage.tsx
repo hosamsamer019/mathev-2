@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TrendingUp, Brain, Download, Calendar, AlertTriangle, Award, Target } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -6,6 +6,8 @@ import {
   Radar, AreaChart, Area, ScatterChart, Scatter, Cell
 } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { analyticsService } from '../../services/analytics.service';
 
 const monthlyTrend = [
   { month: 'سبتمبر', avg: 68, passed: 75, failed: 25 },
@@ -45,7 +47,30 @@ const predictions = [
 
 export default function TeacherAnalyticsPage() {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [period, setPeriod] = useState('month');
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      analyticsService.getTeacherAnalytics(user.id)
+        .then(res => setAnalyticsData(res.data))
+        .catch(err => console.error('Failed to fetch analytics', err));
+    }
+  }, [user]);
+
+  const displayData = analyticsData || {
+    kpis: [
+      { label: 'معدل النجاح', value: '٨٨٪', change: '+٣٪' },
+      { label: 'متوسط الدرجات', value: '٧٩٪', change: '+٥٪' },
+      { label: 'نسبة إتمام الواجبات', value: '٩١٪', change: '+٢٪' },
+      { label: 'طلاب في خطر', value: '١٥', change: '-٢' },
+    ],
+    monthlyTrend,
+    subjectRadar,
+    homeworkCompletion,
+    predictions
+  };
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -81,12 +106,12 @@ export default function TeacherAnalyticsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'معدل النجاح', value: '٨٨٪', change: '+٣٪', icon: Award, color: 'from-green-500 to-emerald-600' },
-          { label: 'متوسط الدرجات', value: '٧٩٪', change: '+٥٪', icon: TrendingUp, color: 'from-blue-500 to-indigo-600' },
-          { label: 'نسبة إتمام الواجبات', value: '٩١٪', change: '+٢٪', icon: Target, color: 'from-purple-500 to-violet-600' },
-          { label: 'طلاب في خطر', value: '١٥', change: '-٢', icon: AlertTriangle, color: 'from-orange-500 to-red-500' },
+          { label: displayData.kpis[0].label, value: displayData.kpis[0].value, change: displayData.kpis[0].change, icon: Award, color: 'from-green-500 to-emerald-600' },
+          { label: displayData.kpis[1].label, value: displayData.kpis[1].value, change: displayData.kpis[1].change, icon: TrendingUp, color: 'from-blue-500 to-indigo-600' },
+          { label: displayData.kpis[2].label, value: displayData.kpis[2].value, change: displayData.kpis[2].change, icon: Target, color: 'from-purple-500 to-violet-600' },
+          { label: displayData.kpis[3].label, value: displayData.kpis[3].value, change: displayData.kpis[3].change, icon: AlertTriangle, color: 'from-orange-500 to-red-500' },
         ].map((kpi, idx) => (
           <div key={idx} className={`${cardBg} border rounded-2xl p-5`}>
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center mb-3`}>
@@ -108,7 +133,7 @@ export default function TeacherAnalyticsPage() {
         <div className={`${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-6`}>اتجاه الأداء الشهري</h2>
           <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={monthlyTrend}>
+            <AreaChart data={displayData.monthlyTrend}>
               <defs>
                 <linearGradient id="avgGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -129,7 +154,7 @@ export default function TeacherAnalyticsPage() {
         <div className={`${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-6`}>المقارنة بين المواد (رادار)</h2>
           <ResponsiveContainer width="100%" height={250}>
-            <RadarChart data={subjectRadar}>
+            <RadarChart data={displayData.subjectRadar}>
               <PolarGrid stroke={isDark ? '#374151' : '#e5e7eb'} />
               <PolarAngleAxis dataKey="subject" tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 11 }} />
               <Radar name="الفصل الحالي" dataKey="A" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
@@ -144,7 +169,7 @@ export default function TeacherAnalyticsPage() {
       <div className={`${cardBg} border rounded-2xl p-6 mb-6`}>
         <h2 className={`font-bold ${textPrimary} mb-6`}>معدل إنجاز الواجبات الأسبوعي</h2>
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={homeworkCompletion}>
+          <BarChart data={displayData.homeworkCompletion}>
             <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f0f0f0'} />
             <XAxis dataKey="week" tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 11 }} />
             <YAxis tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 11 }} />
@@ -176,7 +201,7 @@ export default function TeacherAnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {predictions.map((p, idx) => (
+              {displayData.predictions.map((p: any, idx: number) => (
                 <tr key={idx} className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-100'} last:border-0`}>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">

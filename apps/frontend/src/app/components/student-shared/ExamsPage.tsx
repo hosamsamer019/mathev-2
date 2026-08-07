@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ClipboardCheck, Clock, CheckCircle, AlertCircle, Camera, AlertTriangle } from 'lucide-react';
-import { courseApi, examApi } from '../../services/api';
+import { examService } from '../../services/exam.service';
 
 export default function ExamsPage() {
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
@@ -31,11 +31,15 @@ export default function ExamsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await examApi.get(`/`);
+      const res = await examService.getExams();
       setExams(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch exams', err);
-      setError('فشل في تحميل الامتحانات');
+      if (err.response?.status === 403) {
+        setError('لا يمكنك عرض الامتحانات لأنك لست مسجلاً في أي دورة.');
+      } else {
+        setError('فشل في تحميل الامتحانات');
+      }
     } finally {
       setLoading(false);
     }
@@ -44,13 +48,17 @@ export default function ExamsPage() {
   const handleSelectExam = async (examId: string) => {
     try {
       setLoading(true);
-      const res = await examApi.get(`/${examId}`);
+      const res = await examService.getExamDetails(examId);
       setCurrentExam(res.data);
       setSelectedExam(examId);
       setExamState('setup');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load exam details', err);
-      alert('فشل تحميل تفاصيل الامتحان');
+      if (err.response?.status === 403) {
+        alert('غير مصرح لك بدخول هذا الامتحان.');
+      } else {
+        alert('فشل تحميل تفاصيل الامتحان');
+      }
       setExamState('list');
     } finally {
       setLoading(false);
@@ -84,7 +92,7 @@ export default function ExamsPage() {
     }
 
     try {
-      const res = await examApi.post(`/${selectedExam}/start`);
+      const res = await examService.startAttempt(selectedExam!);
       const attempt = res.data;
       setExamState('running');
 
@@ -121,9 +129,9 @@ export default function ExamsPage() {
 
   const handleTabSwitch = () => {
     if (document.hidden && selectedExam && examState === 'running') {
-      examApi.post(`/${selectedExam}/violation`, { type: 'TAB_SWITCH' })
+      examService.reportViolation(selectedExam, 'TAB_SWITCH')
         .then(() => alert('تحذير: تم تسجيل خروجك من صفحة الامتحان!'))
-        .catch(err => {
+        .catch((err: any) => {
           if (err.response?.data?.message?.includes('Disqualified')) {
             handleDisqualification();
           }
@@ -137,7 +145,7 @@ export default function ExamsPage() {
       questionId: qId,
       selectedOption: parseInt(val)
     }));
-    examApi.post(`/${selectedExam}/sync`, { answers: formatted }).catch(() => {});
+    examService.syncAttempt(selectedExam, formatted).catch(() => {});
   };
 
   const handleAutoSubmit = () => {
@@ -172,7 +180,7 @@ export default function ExamsPage() {
     }));
 
     try {
-      const res = await examApi.post(`/${selectedExam}/submit`, { answers: formatted });
+      const res = await examService.submitAttempt(selectedExam, formatted);
       setScore(Math.round(res.data.score));
       setExamState('submitted');
     } catch (err) {

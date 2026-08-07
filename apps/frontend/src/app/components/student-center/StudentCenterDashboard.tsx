@@ -10,7 +10,8 @@ import ProfilePage from '../student-shared/ProfilePage';
 import AIMathSolverPage from '../ai/AIMathSolverPage';
 import AdaptiveLearningPage from '../ai/AdaptiveLearningPage';
 import { useState, useEffect } from 'react';
-import { userApi, courseApi, homeworkApi } from '../../services/api';
+import { userService } from '../../services/user.service';
+import { homeworkService } from '../../services/homework.service';
 
 const menuItems: MenuItem[] = [
   { path: '/student/center/home', icon: Home, label: 'الرئيسية' },
@@ -29,11 +30,11 @@ export default function StudentCenterDashboard() {
   const [pendingHomework, setPendingHomework] = useState(0);
 
   useEffect(() => {
-    userApi.get('/profile')
-      .then(res => setProfileName(res.data?.name || (res.data?.firstName ? `${res.data.firstName} ${res.data.lastName || ''}`.trim() : null) || 'طالب سنتر'))
+    userService.getProfile()
+      .then(user => setProfileName(user?.name || 'طالب سنتر'))
       .catch(() => setProfileName('طالب سنتر'));
 
-    homeworkApi.get('/')
+    homeworkService.getHomeworks()
       .then(res => {
         const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if(data.length > 0) {

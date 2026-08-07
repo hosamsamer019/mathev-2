@@ -43,10 +43,10 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 }
 
 /**
- * Upload a buffer to the configured storage backend.
+ * Upload a file to the configured storage backend.
  */
 export async function uploadFile(
-  buffer: Buffer,
+  filePath: string,
   originalName: string,
   mimetype: string
 ): Promise<UploadResult> {
@@ -54,10 +54,10 @@ export async function uploadFile(
   const filename = `${randomUUID()}${ext}`;
 
   if (supabaseStorage) {
-    // Supabase Storage upload
+    const fileStream = fs.createReadStream(filePath);
     const { error } = await supabaseStorage
       .from(SUPABASE_BUCKET)
-      .upload(filename, buffer, { contentType: mimetype, upsert: false });
+      .upload(filename, fileStream, { contentType: mimetype, upsert: false });
 
     if (error) throw new Error(`Supabase upload failed: ${error.message}`);
 
@@ -68,20 +68,23 @@ export async function uploadFile(
       backend: 'supabase',
       filename,
       mimetype,
-      size: buffer.length,
+      size: fs.statSync(filePath).size,
     };
   } else {
-    // Local disk fallback
+    // Local disk fallback: The file is already on disk (uploaded by multer to uploads dir)
+    // We just rename it to the UUID filename.
     const uploadDir = path.join(process.cwd(), 'uploads');
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-    fs.writeFileSync(path.join(uploadDir, filename), buffer);
+    
+    const newPath = path.join(uploadDir, filename);
+    fs.renameSync(filePath, newPath);
 
     return {
       url: `/uploads/${filename}`,
       backend: 'local',
       filename,
       mimetype,
-      size: buffer.length,
+      size: fs.statSync(newPath).size,
     };
   }
 }

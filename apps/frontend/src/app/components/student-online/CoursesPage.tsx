@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Video, FileText, Lock, CheckCircle } from 'lucide-react';
-import { courseApi } from '../../services/api';
+import { courseService } from '../../services/course.service';
 import { useSocket } from '../../contexts/SocketContext';
 
 // Mocks removed
@@ -13,7 +13,7 @@ export default function CoursesPage() {
   const [error, setError] = useState<string|null>(null);
 
   const fetchCourses = () => {
-    courseApi.get('/')
+    courseService.getCourses()
       .then((res) => {
         const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if (data.length > 0) {
@@ -77,7 +77,7 @@ export default function CoursesPage() {
             if (!acc[cat]) acc[cat] = [];
             acc[cat].push(course);
             return acc;
-          }, {} as Record<string, any[]>)).map(([category, categoryCourses]: [string, any[]]) => (
+          }, {} as Record<string, any[]>)).map(([category, categoryCourses]: [string, any]) => (
             <div key={category}>
               <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                 <BookOpen className="w-6 h-6 text-indigo-600" />

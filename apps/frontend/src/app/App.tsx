@@ -17,55 +17,59 @@ const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
 const TeacherDashboard = lazy(() => import('./components/teacher/TeacherDashboard'));
 const ParentDashboard = lazy(() => import('./components/parent/ParentDashboard'));
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import SplashScreen from './components/ui/SplashScreen';
+import PermissionDeniedPage from './components/auth/PermissionDeniedPage';
 
 export default function App() {
   return (
     <ErrorBoundary>
+      <SplashScreen />
       <ThemeProvider>
         <SocketProvider>
           <AuthProvider>
             <BrowserRouter>
-            <div className="size-full" dir="rtl">
-              <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>}>
-                <Routes>
-                  {/* Landing & Auth */}
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/admin/login" element={<AdminLoginPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                  <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <div className="size-full" dir="rtl">
+                <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+                  <Routes>
+                    {/* Landing & Auth */}
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/admin/login" element={<AdminLoginPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-                  {/* Student Online Dashboard */}
-                  <Route element={<ProtectedRoute allowedRoles={['ONLINE_STUDENT']} />}>
-                    <Route path="/student/online/*" element={<StudentOnlineDashboard />} />
-                  </Route>
+                    {/* Student Online Dashboard */}
+                    <Route element={<ProtectedRoute allowedRoles={['ONLINE_STUDENT']} />}>
+                      <Route path="/student/online/*" element={<StudentOnlineDashboard />} />
+                    </Route>
 
-                  {/* Student Center Dashboard */}
-                  <Route element={<ProtectedRoute allowedRoles={['CENTER_STUDENT']} />}>
-                    <Route path="/student/center/*" element={<StudentCenterDashboard />} />
-                  </Route>
+                    {/* Student Center Dashboard */}
+                    <Route element={<ProtectedRoute allowedRoles={['CENTER_STUDENT']} />}>
+                      <Route path="/student/center/*" element={<StudentCenterDashboard />} />
+                    </Route>
 
-                  {/* Teacher Dashboard */}
-                  <Route element={<ProtectedRoute allowedRoles={['TEACHER']} />}>
-                    <Route path="/teacher/*" element={<TeacherDashboard />} />
-                  </Route>
+                    {/* Teacher Dashboard */}
+                    <Route element={<ProtectedRoute allowedRoles={['TEACHER']} />}>
+                      <Route path="/teacher/*" element={<TeacherDashboard />} />
+                    </Route>
 
-                  {/* Parent Dashboard */}
-                  <Route element={<ProtectedRoute allowedRoles={['PARENT']} />}>
-                    <Route path="/parent/*" element={<ParentDashboard />} />
-                  </Route>
+                    {/* Parent Dashboard */}
+                    <Route element={<ProtectedRoute allowedRoles={['PARENT']} />}>
+                      <Route path="/parent/*" element={<ParentDashboard />} />
+                    </Route>
 
-                  {/* Admin Dashboard */}
-                  <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                    <Route path="/admin/*" element={<AdminDashboard />} />
-                  </Route>
+                    {/* Admin Dashboard */}
+                    <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                      <Route path="/admin/*" element={<AdminDashboard />} />
+                    </Route>
 
-                  {/* Fallback */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
-            </div>
+                    {/* Fallback */}
+                    <Route path="/unauthorized" element={<PermissionDeniedPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
+              </div>
             </BrowserRouter>
           </AuthProvider>
         </SocketProvider>

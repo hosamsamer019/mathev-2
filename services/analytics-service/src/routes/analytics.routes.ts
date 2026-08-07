@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { verifyToken, checkRole } from '../middlewares/auth.middleware.js';
 import { 
   getAdminAnalytics, 
   getParentAnalytics,
@@ -17,7 +17,7 @@ const router = Router();
 // Stripe webhook — must use raw body BEFORE express.json() parses it
 router.post('/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 
-router.get('/admin', verifyToken, getAdminAnalytics);
+router.get('/admin', verifyToken, checkRole(['admin']), getAdminAnalytics);
 router.get('/parent', verifyToken, getParentAnalytics);
 router.get('/parent/child/:id/overview', verifyToken, getParentChildOverview);
 router.get('/teacher/:id/overview', verifyToken, getTeacherAnalytics);

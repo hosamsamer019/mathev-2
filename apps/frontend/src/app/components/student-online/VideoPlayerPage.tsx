@@ -4,6 +4,8 @@ import { Play, Pause, Eye, ChevronRight, FileText, CheckCircle, AlertTriangle, X
 import { useAuth } from '../../contexts/AuthContext';
 import confetti from 'canvas-confetti';
 import SupabaseUploader from '../ui/SupabaseUploader';
+import { courseService } from '../../services/course.service';
+import { homeworkService } from '../../services/homework.service';
 
 export default function VideoPlayerPage() {
   const navigate = useNavigate();
@@ -36,13 +38,11 @@ export default function VideoPlayerPage() {
   useEffect(() => {
     const fetchLesson = async () => {
       try {
-        const { courseApi } = await import('../../services/api');
-        const res = await courseApi.get(`/lessons/${videoId}`);
+        const res = await courseService.getLessonDetails(videoId!);
         setLesson(res.data);
         
         if (res.data?.courseId) {
-          const { homeworkApi } = await import('../../services/api');
-          const hwRes = await homeworkApi.get(`/course/${res.data.courseId}`);
+          const hwRes = await homeworkService.getHomeworksByCourse(res.data.courseId);
           setCourseHomeworks(hwRes.data || []);
         }
       } catch (err) {
@@ -113,13 +113,11 @@ export default function VideoPlayerPage() {
 
       // Send progress to backend
       if (Math.round(currentTime) % 10 === 0) { // every 10 seconds
-        import('../../services/api').then(({ courseApi }) => {
-          courseApi.post(`/lessons/${videoId}/progress`, {
-            progress: currentProgress,
-            watched: currentProgress >= 90,
-            lastTimestamp: currentTime
-          }).catch(console.error);
-        });
+        courseService.updateVideoProgress(videoId!, {
+          progress: currentProgress,
+          watched: currentProgress >= 90,
+          lastTimestamp: currentTime
+        }).catch(console.error);
       }
     }, 1000);
 
@@ -220,8 +218,7 @@ export default function VideoPlayerPage() {
   const handleQuizSubmit = async (option: string) => {
     if (!activeQuiz) return;
     try {
-      const { courseApi } = await import('../../services/api');
-      const res = await courseApi.post(`/lessons/${videoId}/quiz/${activeQuiz.id}/submit`, { answer: option });
+      const res = await courseService.submitLessonQuiz(videoId!, activeQuiz.id, option);
       if (res.data.correct) {
         setQuizFeedback('success');
         confetti({

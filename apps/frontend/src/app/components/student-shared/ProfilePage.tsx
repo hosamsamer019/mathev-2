@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save } from 'lucide-react';
-import { userApi } from '../../services/api';
+import { userService } from '../../services/user.service';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function ProfilePage() {
@@ -48,7 +48,7 @@ export default function ProfilePage() {
         payload.password = formData.password;
       }
       
-      await userApi.put(`/users/${user.id}`, payload);
+      await userService.updateProfile(user.id, payload);
       await checkAuth(); // Refresh user data in AuthContext
       
       setToast({ message: 'تم تحديث الملف الشخصي بنجاح', type: 'success' });

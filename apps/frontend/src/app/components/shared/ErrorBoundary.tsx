@@ -22,6 +22,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    // In a production app, we could send this to Sentry or another error tracking service here.
   }
 
   public render() {
@@ -33,7 +34,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-              عذراً، حدث خطأ غير متوقع
+              {this.state.error?.message.includes('Network') ? 'فشل الاتصال بالإنترنت' : 'عذراً، حدث خطأ غير متوقع'}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
               لقد واجهنا مشكلة فنية أثناء تحميل هذه الصفحة. يرجى محاولة تحديث الصفحة أو العودة إلى الصفحة الرئيسية.

@@ -2,8 +2,13 @@ import { Request, Response } from 'express';
 import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 
-export const getAdminAnalytics = async (req: Request, res: Response) => {
+export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
   try {
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
     const totalUsers = await db.user.count();
     const totalCourses = await db.course.count();
     const totalExams = await db.exam.count();

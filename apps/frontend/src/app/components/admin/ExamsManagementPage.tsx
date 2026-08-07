@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
-import { examApi } from '../../services/api';
+import { examService } from '../../services/exam.service';
 
 export default function ExamsManagementPage() {
   const [showModal, setShowModal] = useState(false);
@@ -26,10 +26,13 @@ export default function ExamsManagementPage() {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const res = await examApi.get('/');
+      const res = await examService.getExams();
       setExams(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch exams', err);
+      if (err.response?.status === 403) {
+        showToast('غير مصرح لك بعرض الامتحانات', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -38,12 +41,16 @@ export default function ExamsManagementPage() {
   const handleDelete = async (id: string) => {
     if(confirm('هل أنت متأكد من الحذف؟')) {
       try {
-        await examApi.delete(`/${id}`);
+        await examService.deleteExam(id);
         setExams(c => c.filter(x => x.id !== id));
         showToast('تم الحذف بنجاح', 'success');
-      } catch (err) {
+      } catch (err: any) {
         console.error('Delete failed', err);
-        showToast('فشل الحذف', 'error');
+        if (err.response?.status === 403) {
+          showToast('غير مصرح لك بحذف هذا الامتحان', 'error');
+        } else {
+          showToast('فشل الحذف', 'error');
+        }
       }
     }
   };
@@ -52,7 +59,7 @@ export default function ExamsManagementPage() {
     try {
       setIsSaving(true);
       setValidationErrors({});
-      await examApi.post('/', formData);
+      await examService.createExam(formData);
       showToast('تمت الإضافة بنجاح', 'success');
       setShowModal(false);
       setFormData({ title: '', courseId: '' });
@@ -125,7 +132,11 @@ export default function ExamsManagementPage() {
                     >
                       الأسئلة
                     </button>
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded">
+                    <button 
+                      onClick={() => alert('ميزة التعديل غير مدعومة')}
+                      className="p-2 text-gray-400 cursor-not-allowed rounded"
+                      title="ميزة تعديل الامتحان غير متوفرة"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDelete(exam.id)} className="p-2 text-red-600 hover:bg-red-50 rounded">

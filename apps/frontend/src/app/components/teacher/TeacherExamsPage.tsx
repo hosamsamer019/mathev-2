@@ -3,7 +3,11 @@ import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldChec
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
-import { examApi, courseApi, homeworkApi, questionApi, aiApi } from '../../services/api';
+import { aiApi } from '../../services/api';
+import { examService } from '../../services/exam.service';
+import { courseService } from '../../services/course.service';
+import { homeworkService } from '../../services/homework.service';
+import { questionService } from '../../services/question.service';
 
 const questionTypes = [
   { label: 'اختيار من متعدد (MCQ)', count: 15, color: 'bg-blue-100 text-blue-700' },
@@ -56,7 +60,7 @@ export default function TeacherExamsPage() {
 
   const fetchBankQuestions = async () => {
     try {
-      const res = await questionApi.get('/', { params: { tag: bankTagFilter } });
+      const res = await questionService.getQuestions({ tag: bankTagFilter });
       setBankQuestions(res.data || []);
     } catch (err) {
       console.error('Failed to fetch bank questions', err);
@@ -90,7 +94,7 @@ export default function TeacherExamsPage() {
 
   const fetchCourses = async () => {
     try {
-      const res = await courseApi.get('/');
+      const res = await courseService.getCourses();
       const fetchedCourses = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
       setCourses(fetchedCourses);
       if (fetchedCourses.length > 0) {
@@ -105,7 +109,7 @@ export default function TeacherExamsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await examApi.get('/');
+      const res = await examService.getExams();
       const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
       if (data.length > 0) {
         const mapped = data.map((e: any) => ({
@@ -160,7 +164,7 @@ export default function TeacherExamsPage() {
         duration: parseInt(newDuration) || 60,
         requiresCamera: newRequiresCamera,
         questions: questions.map((q, i) => ({
-          id: i + 1,
+          id: String(i + 1),
           text: q.text,
           type: 'mcq',
           options: q.options,
@@ -170,15 +174,17 @@ export default function TeacherExamsPage() {
 
       if (editingExamId) {
         if (newType === 'واجب') {
-          await homeworkApi.put(`/${editingExamId}`, payload);
+          alert('ميزة تعديل الواجب غير متاحة حالياً لعدم توفر نقطة اتصال (PUT /homework/:id) في الخادم.');
+          setIsSubmitting(false);
+          return;
         } else {
-          await examApi.put(`/${editingExamId}`, payload);
+          await examService.updateExam(editingExamId, payload);
         }
       } else {
         if (newType === 'واجب') {
-          await homeworkApi.post('/', payload);
+          await homeworkService.createHomework(payload);
         } else {
-          await examApi.post('/', payload);
+          await examService.createExam(payload);
         }
       }
       
@@ -208,7 +214,7 @@ export default function TeacherExamsPage() {
   const handleEdit = async (id: string) => {
     try {
       setLoading(true);
-      const res = await examApi.get(`/${id}`);
+      const res = await examService.getExamDetails(id);
       const exam = res.data;
       
       setNewTitle(exam.title);
@@ -236,7 +242,7 @@ export default function TeacherExamsPage() {
   const handleViewResults = async (id: string) => {
     try {
       setLoading(true);
-      const res = await examApi.get(`/${id}`);
+      const res = await examService.getExamDetails(id);
       setSelectedExamResults(res.data);
       setShowResults(true);
     } catch (err) {
@@ -249,7 +255,7 @@ export default function TeacherExamsPage() {
   const handleDelete = async (id: string) => {
     if(confirm('هل أنت متأكد من الحذف؟')) {
       try {
-        await examApi.delete(`/${id}`);
+        await examService.deleteExam(id);
         setExams(e => e.filter(x => x.id !== id));
       } catch (err) {
         console.error('Delete failed', err);
@@ -311,7 +317,7 @@ export default function TeacherExamsPage() {
       
       if (saveToBank) {
         for (const q of generatedQuestions) {
-          await questionApi.post('/', {
+          await questionService.createQuestion({
             text: q.text,
             options: q.options,
             correctAnswer: q.correctAnswer,

@@ -13,8 +13,8 @@ const features = [
     icon: Brain,
     title: 'ذكاء اصطناعي متقدم',
     description: 'حل المسائل الرياضية خطوة بخطوة مع شرح تفصيلي بالعربية',
-    color: 'from-purple-500 to-indigo-600',
-    bg: 'bg-purple-50',
+    color: 'from-brand-accent-500 to-brand-600',
+    bg: 'bg-brand-accent-50',
   },
   {
     icon: Target,
@@ -84,7 +84,7 @@ const plans = [
     price: '٩٩',
     period: 'شهرياً',
     description: 'الأكثر شيوعاً للطلاب الجادين',
-    color: 'from-indigo-600 to-purple-600',
+    color: 'from-brand-600 to-brand-accent-600',
     features: [
       'وصول غير محدود للمحتوى',
       'ذكاء اصطناعي لحل المسائل',
@@ -103,7 +103,7 @@ const plans = [
     price: '٢٩٩',
     period: 'شهرياً',
     description: 'للمدارس والمؤسسات التعليمية',
-    color: 'from-purple-600 to-pink-600',
+    color: 'from-brand-accent-600 to-pink-600',
     features: [
       'كل مميزات الاحترافي',
       'إدارة متعددة المعلمين',
@@ -152,29 +152,27 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-lg">م</span>
-            </div>
+            <img src="/logo.jpeg" alt="AL-SADEN Logo" className="w-10 h-10 rounded-xl object-contain bg-white" />
             <div>
-              <h1 className="font-bold text-gray-900 leading-none">منصة معلم الرياضيات</h1>
-              <p className="text-xs text-gray-500">Smart Math Platform</p>
+              <h1 className="font-bold text-gray-900 leading-none">AL-SADEN</h1>
+              <p className="text-xs text-gray-500">AL-SADEN</p>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm text-gray-600 hover:text-indigo-600 transition-colors">المميزات</a>
-            <a href="#pricing" className="text-sm text-gray-600 hover:text-indigo-600 transition-colors">الأسعار</a>
-            <a href="#testimonials" className="text-sm text-gray-600 hover:text-indigo-600 transition-colors">آراء المستخدمين</a>
+            <a href="#features" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">المميزات</a>
+            <a href="#pricing" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">الأسعار</a>
+            <a href="#testimonials" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">آراء المستخدمين</a>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/login')}
-              className="text-sm text-indigo-600 font-medium hover:text-indigo-700 transition-colors px-4 py-2 rounded-lg hover:bg-indigo-50"
+              className="text-sm text-brand-600 font-medium hover:text-brand-700 transition-colors px-4 py-2 rounded-lg hover:bg-brand-50"
             >
               تسجيل الدخول
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="text-sm bg-gradient-to-l from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity shadow-md"
+              className="text-sm bg-gradient-to-l from-brand-600 to-brand-accent-600 text-white px-5 py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity shadow-md"
             >
               ابدأ مجاناً
             </button>
@@ -183,10 +181,10 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 py-24 lg:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-950 via-brand-900 to-brand-accent-900 py-24 lg:py-32">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl" />
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand-accent-500/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-brand-500/20 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
         </div>
 
@@ -204,7 +202,7 @@ export default function LandingPage() {
               تعلّم الرياضيات
               <span className="text-transparent bg-clip-text bg-gradient-to-l from-yellow-400 to-orange-400"> بذكاء حقيقي</span>
             </h1>
-            <p className="text-xl text-indigo-200 mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-brand-200 mb-10 max-w-2xl mx-auto leading-relaxed">
               منصة ذكاء اصطناعي متكاملة تجمع بين التعليم الشخصي والتحليل المتقدم لضمان تفوق كل طالب
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -236,7 +234,7 @@ export default function LandingPage() {
               <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
                 <stat.icon className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
                 <p className="text-3xl font-bold text-white">{stat.value}</p>
-                <p className="text-indigo-200 text-sm mt-1">{stat.label}</p>
+                <p className="text-brand-200 text-sm mt-1">{stat.label}</p>
               </div>
             ))}
           </motion.div>
@@ -247,7 +245,7 @@ export default function LandingPage() {
       <section id="features" className="py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm mb-4">
+            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-2 rounded-full text-sm mb-4">
               <Cpu className="w-4 h-4" />
               مميزات المنصة
             </div>
@@ -281,7 +279,7 @@ export default function LandingPage() {
       </section>
 
       {/* AI Section */}
-      <section className="py-24 bg-gradient-to-br from-indigo-600 to-purple-700 overflow-hidden">
+      <section className="py-24 bg-gradient-to-br from-brand-600 to-brand-accent-700 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -294,7 +292,7 @@ export default function LandingPage() {
                 <br />
                 أي مسألة رياضية
               </h2>
-              <p className="text-indigo-200 text-lg mb-8 leading-relaxed">
+              <p className="text-brand-200 text-lg mb-8 leading-relaxed">
                 يوفر مساعدنا الذكي شرحاً تفصيلياً خطوة بخطوة لأي مسألة رياضية، مع تحديد مواضع الخطأ وتقديم تمارين مشابهة لتعزيز الفهم.
               </p>
               <div className="space-y-4">
@@ -314,7 +312,7 @@ export default function LandingPage() {
               </div>
               <button
                 onClick={() => navigate('/login')}
-                className="mt-10 flex items-center gap-2 bg-white text-indigo-700 px-7 py-3.5 rounded-xl font-bold hover:bg-indigo-50 transition-colors"
+                className="mt-10 flex items-center gap-2 bg-white text-brand-700 px-7 py-3.5 rounded-xl font-bold hover:bg-brand-50 transition-colors"
               >
                 جرب المساعد الآن
                 <ArrowLeft className="w-5 h-5" />
@@ -323,22 +321,22 @@ export default function LandingPage() {
 
             {/* AI Chat Preview */}
             <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-              <div className="bg-gradient-to-l from-indigo-600 to-purple-600 px-6 py-4 flex items-center gap-3">
+              <div className="bg-gradient-to-l from-brand-600 to-brand-accent-600 px-6 py-4 flex items-center gap-3">
                 <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
                   <Brain className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">مساعد الرياضيات الذكي</p>
-                  <p className="text-indigo-200 text-xs">متاح الآن ●</p>
+                  <p className="text-brand-200 text-xs">متاح الآن ●</p>
                 </div>
               </div>
               <div className="p-6 space-y-4">
                 <div className="bg-gray-100 rounded-2xl rounded-tl-none p-4 max-w-xs">
                   <p className="text-gray-700 text-sm">كيف أحل المعادلة: 2x² + 5x - 3 = 0؟</p>
                 </div>
-                <div className="bg-indigo-50 rounded-2xl rounded-tr-none p-4 mr-auto max-w-sm">
-                  <p className="text-indigo-900 text-sm font-medium mb-2">سأحل هذه المعادلة التربيعية خطوة بخطوة:</p>
-                  <div className="space-y-2 text-sm text-indigo-800">
+                <div className="bg-brand-50 rounded-2xl rounded-tr-none p-4 mr-auto max-w-sm">
+                  <p className="text-brand-900 text-sm font-medium mb-2">سأحل هذه المعادلة التربيعية خطوة بخطوة:</p>
+                  <div className="space-y-2 text-sm text-brand-800">
                     <p>📌 الخطوة ١: نحدد المعاملات</p>
                     <p className="bg-white rounded-lg px-3 py-2 font-mono">a=2, b=5, c=-3</p>
                     <p>📌 الخطوة ٢: نطبق قانون الحل</p>
@@ -392,13 +390,13 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className={`relative rounded-3xl p-8 border-2 transition-all ${
                   plan.popular
-                    ? 'border-indigo-500 shadow-2xl shadow-indigo-100 scale-105'
+                    ? 'border-brand-500 shadow-2xl shadow-brand-100 scale-105'
                     : 'border-gray-200 hover:border-gray-300 hover:shadow-lg'
                 }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="bg-gradient-to-l from-indigo-600 to-purple-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
+                    <span className="bg-gradient-to-l from-brand-600 to-brand-accent-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
                       ⭐ الأكثر شعبية
                     </span>
                   </div>
@@ -471,7 +469,7 @@ export default function LandingPage() {
                 </div>
                 <p className="text-gray-700 leading-relaxed mb-6 text-sm">"{testimonial.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-accent-600 flex items-center justify-center text-white font-bold">
                     {testimonial.avatar}
                   </div>
                   <div>
@@ -486,7 +484,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-indigo-900 to-purple-900">
+      <section className="py-24 bg-gradient-to-br from-brand-900 to-brand-accent-900">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-full text-sm mb-8">
             <TrendingUp className="w-4 h-4" />
@@ -495,7 +493,7 @@ export default function LandingPage() {
           <h2 className="text-4xl font-bold text-white mb-6">
             انضم لأكثر من ٥٠٠٠ طالب يتفوقون بالرياضيات
           </h2>
-          <p className="text-indigo-200 text-lg mb-10">
+          <p className="text-brand-200 text-lg mb-10">
             ١٤ يوماً تجريبية مجانية، بدون بطاقة ائتمان، إلغاء في أي وقت
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -521,10 +519,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold">م</span>
-                </div>
-                <span className="text-white font-bold">منصة معلم الرياضيات</span>
+                <img src="/logo.jpeg" alt="AL-SADEN Logo" className="w-10 h-10 rounded-xl object-contain bg-white" />
+                <span className="text-white font-bold">AL-SADEN</span>
               </div>
               <p className="text-sm leading-relaxed">منصة ذكاء اصطناعي متكاملة لتعليم الرياضيات بأحدث التقنيات.</p>
             </div>
@@ -546,7 +542,7 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm">© ٢٠٢٦ منصة معلم الرياضيات. جميع الحقوق محفوظة.</p>
+            <p className="text-sm">© ٢٠٢٦ AL-SADEN. جميع الحقوق محفوظة.</p>
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-green-500" />
               <span className="text-sm text-green-400">منصة آمنة ومشفرة</span>

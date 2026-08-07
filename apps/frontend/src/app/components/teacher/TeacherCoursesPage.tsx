@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Plus, Play, Edit, Trash2, Eye, Upload, Youtube, Clock, Users, Star, BookOpen } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { courseApi, homeworkApi } from '../../services/api';
+import { courseService } from '../../services/course.service';
+import { homeworkService } from '../../services/homework.service';
 import SupabaseUploader from '../ui/SupabaseUploader';
 
 const videoTypes = [
@@ -39,7 +40,7 @@ export default function TeacherCoursesPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await courseApi.get('/');
+      const res = await courseService.getCourses();
       const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
       if (data && data.length > 0) {
         const mapped = data.map((c: any) => ({
@@ -60,9 +61,13 @@ export default function TeacherCoursesPage() {
       } else {
         setCourses([]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch teacher courses:', err);
-      setError('فشل في جلب الدورات.');
+      if (err.response?.status === 403) {
+        setError('غير مصرح لك بعرض هذه الدورات.');
+      } else {
+        setError('فشل في جلب الدورات.');
+      }
     } finally {
       setLoading(false);
     }
@@ -81,7 +86,7 @@ export default function TeacherCoursesPage() {
     }
     try {
       setIsSubmitting(true);
-      await courseApi.post('/', { title: newCourseTitle, level: newCourseLevel });
+      await courseService.createCourse({ title: newCourseTitle, category: newCourseLevel });
       setShowAddCourse(false);
       setNewCourseTitle('');
       fetchCourses();
@@ -104,7 +109,7 @@ export default function TeacherCoursesPage() {
   const handleDeleteCourse = async (id: string) => {
     if(confirm('هل أنت متأكد من الحذف؟')) {
       try {
-        await courseApi.delete(`/${id}`);
+        await courseService.deleteCourse(id);
         setCourses(c => c.filter(x => x.id !== id));
       } catch(err) {
         console.error('Delete failed', err);
@@ -123,16 +128,17 @@ export default function TeacherCoursesPage() {
     }
     try {
       setIsVideoSubmitting(true);
-      await courseApi.post('/lessons', { 
+      await courseService.createLesson({ 
         title: videoTitle, 
         videoUrl: videoUrl, 
-        pdfUrl: pdfUrl || undefined,
+        fileUrl: pdfUrl || undefined,
         courseId: selectedCourseId,
-        quizzes: quizzes.map(q => ({
-          ...q,
-          timestampSec: parseFloat(q.timestampSec),
-          options: q.options.split('-').map((o:string) => o.trim())
-        }))
+        // Backend doesn't support quizzes array in createLesson endpoint right now
+        // quizzes: quizzes.map(q => ({
+        //   ...q,
+        //   timestampSec: parseFloat(q.timestampSec),
+        //   options: q.options.split('-').map((o:string) => o.trim())
+        // }))
       });
       setShowAddVideo(false);
       setVideoTitle('');
@@ -176,13 +182,13 @@ export default function TeacherCoursesPage() {
     setSelectedCourse(course);
     // Fetch analytics for all lessons in this course
     try {
-      const res = await courseApi.get(`/${course.id}`);
+      const res = await courseService.getCourseDetails(course.id);
       const courseDetails = res.data;
       
       const analyticsObj: Record<string, any[]> = {};
       for (const lesson of courseDetails.lessons || []) {
         try {
-          const analyticsRes = await courseApi.get(`/lessons/${lesson.id}/analytics`);
+          const analyticsRes = await courseService.getVideoAnalytics(lesson.id);
           analyticsObj[lesson.id] = Array.isArray(analyticsRes.data) ? analyticsRes.data : [];
         } catch (err) {
           analyticsObj[lesson.id] = [];
@@ -192,7 +198,7 @@ export default function TeacherCoursesPage() {
 
       // Fetch homeworks for this course
       try {
-        const hwRes = await homeworkApi.get(`/course/${course.id}`);
+        const hwRes = await homeworkService.getHomeworksByCourse(course.id);
         setCourseHomeworks(Array.isArray(hwRes.data) ? hwRes.data : []);
       } catch (err) {
         setCourseHomeworks([]);
@@ -205,7 +211,7 @@ export default function TeacherCoursesPage() {
   const handleDeleteVideo = async (videoId: string) => {
     if (window.confirm('هل أنت متأكد من رغبتك في حذف هذا الفيديو؟')) {
       try {
-        await courseApi.delete(`/lessons/${videoId}`);
+        await courseService.deleteLesson(videoId);
         alert('تم حذف الفيديو بنجاح');
         fetchCourses(); // refresh the list
       } catch (err) {
@@ -335,7 +341,11 @@ export default function TeacherCoursesPage() {
                     <button onClick={() => handleViewCourse(course)} className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-sm font-medium bg-gradient-to-l ${course.color} text-white hover:opacity-90 transition-opacity`}>
                       <Eye className="w-4 h-4" /> تقارير المشاهدة
                     </button>
-                    <button onClick={() => alert('جاري التعديل...')} className={`p-2 rounded-xl border ${isDark ? 'border-gray-600 text-gray-400 hover:bg-gray-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'} transition-colors`}>
+                    <button 
+                      onClick={() => alert('ميزة تعديل الدورة غير متاحة حالياً لعدم توفر نقطة اتصال (PUT /courses/:id) في الخادم.')} 
+                      className={`p-2 rounded-xl border ${isDark ? 'border-gray-600 text-gray-500' : 'border-gray-200 text-gray-400'} opacity-50 cursor-not-allowed`}
+                      title="غير متاح حالياً (لا يوجد Backend Endpoint)"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDeleteCourse(course.id)} className="p-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">

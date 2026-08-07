@@ -31,6 +31,20 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
           }
         }
       };
+    } else if (requesterRole === 'PARENT') {
+      whereClause = {
+        ...whereClause,
+        OR: [
+          { id: req.user?.userId },
+          { parentId: req.user?.userId }
+        ]
+      };
+    } else if (requesterRole !== 'ADMIN') {
+      // Students and others can only see their own record
+      whereClause = {
+        ...whereClause,
+        id: req.user?.userId
+      };
     }
     
     const [users, total] = await Promise.all([
@@ -104,10 +118,26 @@ const sanitizeUser = (user: any) => {
   return rest;
 };
 
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: AuthRequest, res: Response) => {
   try {
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (!requesterRole) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     const validatedData = createUserSchema.parse(req.body);
     const { name, email, password, role, parentId, centerGroupId, parentName, parentEmail, parentPassword } = validatedData;
+    
+    // Authorization Check
+    if (role === 'ADMIN' || role === 'TEACHER') {
+      if (requesterRole !== 'ADMIN') {
+        return res.status(403).json({ message: 'Only admins can create ADMIN or TEACHER accounts' });
+      }
+    } else {
+      if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+        return res.status(403).json({ message: 'Insufficient permissions to create accounts' });
+      }
+    }
     
     const existing = await db.user.findUnique({ where: { email } });
     if (existing) {

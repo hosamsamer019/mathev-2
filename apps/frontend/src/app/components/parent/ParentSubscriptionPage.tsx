@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CreditCard, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { userApi } from '../../services/api';
+
 
 const plans = [
   {

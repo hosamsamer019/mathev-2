@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, BookOpen, Video, ClipboardCheck, TrendingUp, Award, AlertTriangle, Brain, DollarSign, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
-import { analyticsApi } from '../../services/api';
+import { analyticsService } from '../../services/analytics.service';
 
 import { LoadingState } from '../ui/LoadingState';
 
@@ -14,10 +14,10 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    analyticsApi.get('/admin').then(res => {
+    analyticsService.getAdminAnalytics().then((res: any) => {
       setData(res.data);
       setLoading(false);
-    }).catch(err => {
+    }).catch((err: any) => {
       console.error(err);
       setLoading(false);
     });

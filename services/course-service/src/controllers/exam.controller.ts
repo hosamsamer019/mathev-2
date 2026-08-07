@@ -107,10 +107,22 @@ const createExamSchema = z.object({
   })).optional()
 });
 
-export const createExam = async (req: Request, res: Response) => {
+export const createExam = async (req: AuthRequest, res: Response) => {
   try {
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+
     const validatedData = createExamSchema.parse(req.body);
     const { title, courseId, duration, questions, requiresCamera } = validatedData;
+    
+    if (requesterRole !== 'ADMIN') {
+      const course = await db.course.findUnique({ where: { id: courseId } });
+      if (!course) return res.status(404).json({ message: 'Course not found' });
+      if (course.teacherId !== requesterId) {
+        return res.status(403).json({ message: 'Forbidden: You do not own this course' });
+      }
+    }
+
     const exam = await db.exam.create({
       data: {
         title,
@@ -130,15 +142,31 @@ export const createExam = async (req: Request, res: Response) => {
   }
 };
 
-export const updateExam = async (req: Request, res: Response) => {
+export const updateExam = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+
     const validatedData = createExamSchema.parse(req.body);
     const { title, courseId, duration, questions, requiresCamera } = validatedData;
     
     // Ensure the exam exists
-    const existing = await db.exam.findUnique({ where: { id } });
+    const existing = await db.exam.findUnique({ where: { id }, include: { course: true } });
     if (!existing) return res.status(404).json({ message: 'Exam not found' });
+
+    if (requesterRole !== 'ADMIN' && existing.course.teacherId !== requesterId) {
+      return res.status(403).json({ message: 'Forbidden: You do not own this exam' });
+    }
+
+    // If they are changing the courseId, verify they own the new course too
+    if (existing.courseId !== courseId && requesterRole !== 'ADMIN') {
+       const newCourse = await db.course.findUnique({ where: { id: courseId } });
+       if (!newCourse) return res.status(404).json({ message: 'New course not found' });
+       if (newCourse.teacherId !== requesterId) {
+         return res.status(403).json({ message: 'Forbidden: You do not own the target course' });
+       }
+    }
 
     const exam = await db.exam.update({
       where: { id },

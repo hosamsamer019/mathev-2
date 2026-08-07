@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { authApi } from '../services/api';
 
 export type UserRole = 'ONLINE_STUDENT' | 'CENTER_STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT';
@@ -9,16 +9,21 @@ export interface User {
   email: string;
   role: UserRole;
   avatar?: string;
+  phone?: string;
   grade?: string;
   institution?: string;
   subscriptionPlan?: 'basic' | 'pro' | 'enterprise';
   isActive: boolean;
+  parentId?: string;
+  centerGroupId?: string;
+  centerGroup?: any; // extended data from profile
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
-  logout: () => void;
+  register: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
+  logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -31,14 +36,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : null;
   });
 
+  useEffect(() => {
+    const syncAuth = (e: StorageEvent) => {
+      if (e.key === 'edu-user') {
+        setUser(e.newValue ? JSON.parse(e.newValue) : null);
+      }
+      if (e.key === 'token' && !e.newValue) {
+        setUser(null);
+      }
+    };
+    window.addEventListener('storage', syncAuth);
+    return () => window.removeEventListener('storage', syncAuth);
+  }, []);
+
+  const fetchExtendedProfile = async (baseUser: Partial<User>) => {
+    try {
+      const { userService } = await import('../services/user.service');
+      const profile = await userService.getProfile();
+      return { ...baseUser, ...profile };
+    } catch (e) {
+      console.warn('Failed to fetch extended profile, using base user');
+      return baseUser as User;
+    }
+  };
+
   const login = async (email: string, password: string, role: UserRole): Promise<boolean> => {
     try {
       const response = await authApi.post('/login', { email, password, role });
       const { token, user: loggedUser } = response.data;
       
-      setUser(loggedUser);
       localStorage.setItem('token', token);
-      localStorage.setItem('edu-user', JSON.stringify(loggedUser));
+      
+      // Fetch extended profile
+      const fullUser = await fetchExtendedProfile(loggedUser);
+      
+      setUser(fullUser);
+      localStorage.setItem('edu-user', JSON.stringify(fullUser));
       return true;
     } catch (error) {
       console.error('Login failed:', error);
@@ -46,22 +79,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('edu-user');
+  const register = async (data: { name: string; email: string; password: string; role: UserRole }): Promise<void> => {
+    const response = await authApi.post('/register', data);
+    const { token, user: registeredUser } = response.data;
+    
+    localStorage.setItem('token', token);
+    
+    const fullUser = await fetchExtendedProfile(registeredUser);
+    
+    setUser(fullUser);
+    localStorage.setItem('edu-user', JSON.stringify(fullUser));
+  };
+
+  const logout = async () => {
+    try {
+      await authApi.post('/logout');
+    } catch (error) {
+      console.error('Logout API failed:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('edu-user');
+    }
   };
 
   const checkAuth = async () => {
     try {
-      const res = await authApi.get('/me').catch(async () => {
-        // Fallback to user-service profile if auth /me isn't available
-        const { userApi } = await import('../services/api');
-        return await userApi.get('/profile');
-      });
-      if (res.data) {
-        setUser(res.data);
-        localStorage.setItem('edu-user', JSON.stringify(res.data));
+      let baseUser: any = null;
+      try {
+        const res = await authApi.get('/me');
+        baseUser = res.data;
+      } catch (authErr) {
+        // Fallback if /me fails
+        const { userService } = await import('../services/user.service');
+        baseUser = await userService.getProfile();
+      }
+      
+      if (baseUser) {
+        const fullUser = await fetchExtendedProfile(baseUser);
+        setUser(fullUser);
+        localStorage.setItem('edu-user', JSON.stringify(fullUser));
       }
     } catch (err) {
       console.error('checkAuth failed:', err);
@@ -69,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, checkAuth, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, register, logout, checkAuth, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

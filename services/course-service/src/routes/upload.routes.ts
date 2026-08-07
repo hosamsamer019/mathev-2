@@ -5,9 +5,22 @@ import { uploadFile, getActiveBackend } from '../services/storage.adapter.js';
 
 const router = express.Router();
 
-// Use memory storage — the adapter handles writing to disk or cloud
-const memoryUpload = multer({
-  storage: multer.memoryStorage(),
+import fs from 'fs';
+import path from 'path';
+
+const uploadDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+// Use disk storage to prevent OOM errors on large files
+const diskUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+      cb(null, `${Date.now()}-${file.originalname}`);
+    }
+  }),
   fileFilter: (_req, file, cb) => {
     const allowed = [
       'image/jpeg', 'image/png', 'image/webp',
@@ -22,13 +35,21 @@ const memoryUpload = multer({
 
 const handleUpload = (fieldName: string) => [
   verifyToken,
-  memoryUpload.single(fieldName),
+  diskUpload.single(fieldName),
   async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded or file rejected by filter.' });
       }
-      const result = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype);
+      // Note: Future architecture should use Signed URLs or direct cloud streams
+      // For now, diskStorage prevents immediate OOM, and we pass the path to the adapter
+      const result = await uploadFile(req.file.path, req.file.originalname, req.file.mimetype);
+      
+      // Clean up local temp file after upload if backend is cloud
+      if (result.backend !== 'local' && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
       res.status(201).json({
         message: 'File uploaded successfully',
         url: result.url,
