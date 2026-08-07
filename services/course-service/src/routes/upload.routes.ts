@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { verifyToken } from '../middlewares/auth.middleware.js';
 import { uploadFile, getActiveBackend } from '../services/storage.adapter.js';
 
 const router = express.Router();
@@ -12,10 +11,10 @@ const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 import { requestUploadUrl, completeUpload, getUploadStatus } from '../controllers/upload.controller.js';
-import { restrictTo } from '../middlewares/auth.middleware.js';
+import { checkRole, verifyToken } from '../middlewares/auth.middleware.js';
 import { uploadUrlLimiter } from '../middlewares/rateLimiter.js';
 
-router.post('/request-url', uploadUrlLimiter, verifyToken, restrictTo('TEACHER', 'ADMIN'), requestUploadUrl);
+router.post('/request-url', uploadUrlLimiter, verifyToken, checkRole(['TEACHER', 'ADMIN']), requestUploadUrl);
 router.post('/:id/complete', verifyToken, completeUpload);
 router.get('/:id/status', verifyToken, getUploadStatus);
 
