@@ -135,9 +135,8 @@ export const createExam = async (req: AuthRequest, res: Response) => {
     io.to(`course:${courseId}`).emit('exam_created', exam);
     
     // Notify enrolled students and their parents
-    import('../utils/notification.helper.js').then(({ notifyCourseStudents }) => {
-      notifyCourseStudents(courseId, 'امتحان جديد', `تم نشر امتحان جديد: ${title}`);
-    });
+    const { notifyCourseStudents } = await import('../utils/notification.helper.js');
+    await notifyCourseStudents(courseId, 'امتحان جديد', `تم نشر امتحان جديد: ${title}`);
 
     res.status(201).json(exam);
   } catch (error: any) {
@@ -190,9 +189,8 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
     io.to(`course:${updatedExam.courseId}`).emit('exam_updated', updatedExam);
 
     // Notify enrolled students and their parents
-    import('../utils/notification.helper.js').then(({ notifyCourseStudents }) => {
-      notifyCourseStudents(updatedExam.courseId, 'تحديث امتحان', `تم تحديث الامتحان: ${updatedExam.title}`);
-    });
+    const { notifyCourseStudents } = await import('../utils/notification.helper.js');
+    await notifyCourseStudents(updatedExam.courseId, 'تحديث امتحان', `تم تحديث الامتحان: ${updatedExam.title}`);
 
     res.json(updatedExam);
   } catch (error: any) {
@@ -285,9 +283,8 @@ export const submitAttempt = async (req: AuthRequest, res: Response) => {
     }
     
     // Notify teacher of submission
-    import('../utils/notification.helper.js').then(({ notifyTeacher }) => {
-      notifyTeacher(exam.courseId, 'تسليم امتحان', `قام الطالب بتسليم امتحان: ${exam.title}`);
-    });
+    const { notifyTeacher } = await import('../utils/notification.helper.js');
+    await notifyTeacher(exam.courseId, 'تسليم امتحان', `قام الطالب بتسليم امتحان: ${exam.title}`);
 
     res.json({ success: true, score: calculatedScore, attempt });
   } catch (error: any) {

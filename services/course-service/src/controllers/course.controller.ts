@@ -199,9 +199,8 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
     });
     io.to(`course:${lesson.courseId}`).emit('lesson_created', lesson);
     
-    import('../utils/notification.helper.js').then(({ notifyCourseStudents }) => {
-      notifyCourseStudents(lesson.courseId, 'درس جديد', `تمت إضافة درس جديد: ${lesson.title}`);
-    });
+    const { notifyCourseStudents } = await import('../utils/notification.helper.js');
+    await notifyCourseStudents(lesson.courseId, 'درس جديد', `تمت إضافة درس جديد: ${lesson.title}`);
 
     res.status(201).json(lesson);
   } catch (error: any) {
