@@ -31,9 +31,7 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
     if (requesterRole === 'TEACHER') {
       whereClause = { teacherId: req.user?.userId };
     } else if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
-      // TEMPORARY: Show all courses to all students
-      whereClause = {};
-      // whereClause = { enrollments: { some: { studentId: req.user?.userId } } };
+      whereClause = { enrollments: { some: { studentId: req.user?.userId } } };
     }
     
     const [courses, total] = await Promise.all([
