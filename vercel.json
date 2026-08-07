@@ -5,16 +5,16 @@
   "outputDirectory": "apps/frontend/dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/auth/:match*", "destination": "https://api.alsaden.com/api/auth/:match*" },
-    { "source": "/api/users/:match*", "destination": "https://api.alsaden.com/api/users/:match*" },
-    { "source": "/api/ai/:match*", "destination": "https://api.alsaden.com/api/ai/:match*" },
-    { "source": "/api/courses/:match*", "destination": "https://api.alsaden.com/api/courses/:match*" },
-    { "source": "/api/homework/:match*", "destination": "https://api.alsaden.com/api/homework/:match*" },
-    { "source": "/api/exams/:match*", "destination": "https://api.alsaden.com/api/exams/:match*" },
-    { "source": "/api/questions/:match*", "destination": "https://api.alsaden.com/api/questions/:match*" },
-    { "source": "/api/upload/:match*", "destination": "https://api.alsaden.com/api/upload/:match*" },
-    { "source": "/api/payments/:match*", "destination": "https://api.alsaden.com/api/payments/:match*" },
-    { "source": "/api/analytics/:match*", "destination": "https://api.alsaden.com/api/analytics/:match*" },
+    { "source": "/api/auth/:match*", "destination": "/api/auth" },
+    { "source": "/api/users/:match*", "destination": "/api/users" },
+    { "source": "/api/ai/:match*", "destination": "/api/ai" },
+    { "source": "/api/courses/:match*", "destination": "/api/courses" },
+    { "source": "/api/homework/:match*", "destination": "/api/homework" },
+    { "source": "/api/exams/:match*", "destination": "/api/exams" },
+    { "source": "/api/questions/:match*", "destination": "/api/questions" },
+    { "source": "/api/upload/:match*", "destination": "/api/upload" },
+    { "source": "/api/payments/:match*", "destination": "/api/payments" },
+    { "source": "/api/analytics/:match*", "destination": "/api/analytics" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
