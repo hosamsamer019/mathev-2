@@ -3,8 +3,8 @@ import pino from 'pino';
 // Prepare integration for Sentry or Datadog by configuring Pino to parse errors correctly
 const pinoLogger = pino({
   level: process.env.LOG_LEVEL || 'info',
-  // Use pretty print in development, JSON in production
-  transport: process.env.NODE_ENV !== 'production' 
+  // Use pretty print in development, JSON in production or serverless
+  transport: (process.env.NODE_ENV !== 'production' && !process.env.VERCEL)
     ? {
         target: 'pino-pretty',
         options: {
