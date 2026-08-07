@@ -1,25 +1,46 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Check } from 'lucide-react';
+import { authApi } from '../../services/api';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const [formData, setFormData] = useState({ password: '', confirmPassword: '' });
   const [reset, setReset] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password === formData.confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
+      setError('كلمتا المرور غير متطابقتين.');
+      return;
+    }
+    if (!token) {
+      setError('رابط غير صالح أو منتهي الصلاحية.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await authApi.post('/reset-password', { token, password: formData.password });
       setReset(true);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'حدث خطأ أثناء تغيير كلمة المرور. قد يكون الرابط منتهي الصلاحية.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-brand-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-full mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-full mb-4">
               <Lock className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">إعادة تعيين كلمة المرور</h1>
@@ -37,7 +58,7 @@ export default function ResetPasswordPage() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                   placeholder="أدخل كلمة المرور الجديدة"
                 />
               </div>
@@ -51,16 +72,27 @@ export default function ResetPasswordPage() {
                   required
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                   placeholder="أعد إدخال كلمة المرور"
                 />
               </div>
 
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                disabled={loading}
+                className="w-full bg-brand-600 text-white py-3 rounded-lg hover:bg-brand-700 transition-colors font-medium disabled:opacity-70 flex justify-center"
               >
-                تأكيد
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  'تأكيد'
+                )}
               </button>
             </form>
           ) : (
@@ -74,7 +106,7 @@ export default function ResetPasswordPage() {
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium mt-6"
+                className="w-full bg-brand-600 text-white py-3 rounded-lg hover:bg-brand-700 transition-colors font-medium mt-6"
               >
                 تسجيل الدخول
               </button>

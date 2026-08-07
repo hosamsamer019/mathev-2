@@ -12,3 +12,5 @@ testsprite_tests/tmp/config.json
 
 .vercel
 .env*.local
+secrets/
+uploads/

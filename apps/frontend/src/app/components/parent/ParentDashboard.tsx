@@ -5,8 +5,10 @@ import ParentHomePage from './ParentHomePage';
 import ParentChildrenPage from './ParentChildrenPage';
 import ParentReportsPage from './ParentReportsPage';
 import ParentSubscriptionPage from './ParentSubscriptionPage';
+import ProfilePage from '../student-shared/ProfilePage';
 import { useState, useEffect } from 'react';
-import { userApi, notificationApi } from '../../services/api';
+import { userService } from '../../services/user.service';
+import { notificationService } from '../../services/notification.service';
 
 const menuItems: MenuItem[] = [
   { path: '/parent/home', icon: Home, label: 'الرئيسية' },
@@ -22,11 +24,11 @@ export default function ParentDashboard() {
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
-    userApi.get('/profile')
-      .then(res => setProfileName(res.data?.name || (res.data?.firstName ? `${res.data.firstName} ${res.data.lastName || ''}`.trim() : null) || 'ولي أمر'))
+    userService.getProfile()
+      .then(user => setProfileName(user?.name || 'ولي أمر'))
       .catch(() => setProfileName('ولي أمر'));
 
-    notificationApi.get('/')
+    notificationService.getNotifications()
       .then(res => {
         if (Array.isArray(res.data)) {
           setUnreadMessages(res.data.filter((n: any) => !n.read).length);
@@ -56,7 +58,7 @@ export default function ParentDashboard() {
         <Route path="/reports" element={<ParentReportsPage />} />
         <Route path="/messages" element={<ParentHomePage />} />
         <Route path="/subscription" element={<ParentSubscriptionPage />} />
-        <Route path="/profile" element={<ParentHomePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </SharedLayout>
   );

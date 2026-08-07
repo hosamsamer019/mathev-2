@@ -11,7 +11,7 @@ import {
   syncAttempt,
   reportViolation
 } from '../controllers/exam.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { verifyToken, checkRole } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
@@ -19,11 +19,11 @@ const router = Router();
 router.use(verifyToken);
 
 router.get('/', getAllExams);
-router.post('/', createExam);
+router.post('/', checkRole(['teacher', 'admin']), createExam);
 router.get('/course/:courseId', getExamsByCourse);
 router.get('/:id', getExamDetails);
-router.put('/:id', updateExam);
-router.delete('/:id', deleteExam);
+router.put('/:id', checkRole(['teacher', 'admin']), updateExam);
+router.delete('/:id', checkRole(['teacher', 'admin']), deleteExam);
 router.post('/:id/start', startAttempt);
 router.post('/:id/submit', submitAttempt);
 router.post('/:id/sync', syncAttempt);

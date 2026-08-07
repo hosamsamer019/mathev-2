@@ -8,6 +8,7 @@ import homeworkRoutes from './routes/homework.routes.js';
 import examRoutes from './routes/exam.routes.js';
 import questionRoutes from './routes/question.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 import http from 'http';
 import { Server } from 'socket.io';
@@ -19,8 +20,21 @@ validateEnv();
 const app = express();
 const PORT = process.env.PORT || 4004;
 
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return callback(null, true);
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+    if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+};
+
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Serve static uploads
@@ -32,6 +46,7 @@ app.use('/api/homework', homeworkRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {
@@ -42,7 +57,7 @@ app.use(globalErrorHandler);
 
 const server = http.createServer(app);
 export const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }
+  cors: corsOptions
 });
 
 import jwt from 'jsonwebtoken';

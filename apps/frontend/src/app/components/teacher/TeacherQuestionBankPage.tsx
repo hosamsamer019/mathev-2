@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Tag, Search, Save, X, Database, Brain, Loader2 } from 'lucide-react';
-import { questionApi, aiApi } from '../../services/api';
+import { questionService } from '../../services/question.service';
+import { aiService } from '../../services/ai.service';
 
 export default function TeacherQuestionBankPage() {
   const [questions, setQuestions] = useState<any[]>([]);
@@ -36,7 +37,7 @@ export default function TeacherQuestionBankPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await questionApi.get('/', { params: { tag: tagFilter } });
+      const res = await questionService.getQuestions({ tag: tagFilter });
       setQuestions(res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : []);
     } catch (err: any) {
       console.error(err);
@@ -68,7 +69,7 @@ export default function TeacherQuestionBankPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا السؤال؟ لن يؤثر ذلك على الامتحانات السابقة.')) return;
     try {
-      await questionApi.delete(`/${id}`);
+      await questionService.deleteQuestion(id);
       fetchQuestions();
     } catch (err) {
       alert('فشل في الحذف');
@@ -93,9 +94,9 @@ export default function TeacherQuestionBankPage() {
     try {
       setIsSubmitting(true);
       if (editingId) {
-        await questionApi.put(`/${editingId}`, formData);
+        await questionService.updateQuestion(editingId, formData);
       } else {
-        await questionApi.post('/', formData);
+        await questionService.createQuestion(formData);
       }
       setShowForm(false);
       fetchQuestions();
@@ -129,7 +130,7 @@ export default function TeacherQuestionBankPage() {
     try {
       setAiLoading(true);
       setAiError(null);
-      const res = await aiApi.post('/generate-questions', aiForm);
+      const res = await aiService.generateQuestions(aiForm);
       setGeneratedQuestions(res.data.questions);
     } catch (err: any) {
       console.error(err);
@@ -152,7 +153,7 @@ export default function TeacherQuestionBankPage() {
       setAiLoading(true);
       // Save all one by one (or could bulk if endpoint supported it)
       for (const q of generatedQuestions) {
-        await questionApi.post('/', {
+        await questionService.createQuestion({
           text: q.text,
           options: q.options,
           correctAnswer: q.correctAnswer,

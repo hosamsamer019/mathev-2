@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { userService } from '../../services/user.service';
 import { Calendar, CheckCircle, XCircle } from 'lucide-react';
-import { userApi } from '../../services/api';
 
 export default function AttendancePage() {
   const [attendances, setAttendances] = useState<any[]>([]);
@@ -14,17 +13,8 @@ export default function AttendancePage() {
   const fetchAttendance = async () => {
     try {
       setLoading(true);
-      // Assuming userApi handles /api/users
-      // Since attendance is /api/attendance, we can just use userApi but change baseURL or use a new attendanceApi.
-      // Wait, let's use userApi and just change the URL path relative to the domain, or create attendanceApi.
-      // To be safe, we'll fetch from standard userApi if it's on the same port, or use fetch.
-      const isLocalhost = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
-      const useProdPaths = import.meta.env.PROD || !isLocalhost;
-      const baseURL = useProdPaths ? '/api/attendance' : 'http://localhost:4002/api/attendance';
-      const res = await axios.get(`${baseURL}/my-attendance`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setAttendances(Array.isArray(res.data) ? res.data : []);
+      const res = await userService.getAttendance();
+      setAttendances(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error('Failed to fetch attendance', err);
     } finally {

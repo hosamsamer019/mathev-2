@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { homeworkApi } from '../../services/api';
+import { homeworkService } from '../../services/homework.service';
 
 export default function HomeworkPage() {
   const [selectedHomework, setSelectedHomework] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function HomeworkPage() {
   const fetchHomeworks = () => {
     setLoading(true);
     setError(null);
-    homeworkApi.get('/')
+    homeworkService.getHomeworks()
       .then((res) => {
         const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if (data.length > 0) {
@@ -36,22 +36,32 @@ export default function HomeworkPage() {
           setHomeworks([]);
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error('Error fetching homeworks:', err);
-        setError('فشل في جلب الواجبات. تأكد من اتصال الخادم.');
+        if (err.response?.status === 403) {
+          setError('لا توجد واجبات متاحة لأنك لست مسجلاً في أي دورة.');
+        } else {
+          setError('فشل في جلب الواجبات. تأكد من اتصال الخادم.');
+        }
       })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     if (selectedHomework) {
-      homeworkApi.get(`/${selectedHomework}`)
+      homeworkService.getHomeworkDetails(selectedHomework)
         .then((res) => {
           if (res.data && res.data.questions?.length > 0) {
             setQuestions(res.data.questions);
           }
         })
-        .catch((err) => console.error('Error fetching homework details:', err));
+        .catch((err: any) => {
+          console.error('Error fetching homework details:', err);
+          if (err.response?.status === 403) {
+            alert('غير مصرح لك بعرض هذا الواجب.');
+            setSelectedHomework(null);
+          }
+        });
     }
   }, [selectedHomework]);
 
@@ -64,7 +74,7 @@ export default function HomeworkPage() {
       selectedOption: parseInt(val)
     }));
 
-    homeworkApi.post(`/${selectedHomework}/submit`, { answers: formattedAnswers })
+    homeworkService.submitHomework(selectedHomework, { answers: formattedAnswers })
       .then((res) => {
         setScore(Math.round(res.data.score));
         setSubmitted(true);

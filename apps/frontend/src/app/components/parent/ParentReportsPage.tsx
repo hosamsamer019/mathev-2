@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, Award, Target, Star, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { userApi, analyticsApi } from '../../services/api';
+import { userService } from '../../services/user.service';
+import { analyticsService } from '../../services/analytics.service';
 
 export default function ParentReportsPage() {
   const { isDark } = useTheme();
@@ -27,8 +28,8 @@ export default function ParentReportsPage() {
 
   const fetchChildren = async () => {
     try {
-      const res = await userApi.get('/parent/children');
-      setChildren(Array.isArray(res.data) ? res.data : []);
+      const res = await userService.getChildren();
+      setChildren(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error('Failed to fetch children', err);
     } finally {
@@ -39,7 +40,7 @@ export default function ParentReportsPage() {
   const fetchChildAnalytics = async (childId: string) => {
     setLoading(true);
     try {
-      const res = await analyticsApi.get(`/parent/child/${childId}/overview`);
+      const res = await analyticsService.getParentChildOverview(childId);
       setChildData(res.data);
     } catch (err) {
       console.error('Failed to fetch child analytics', err);

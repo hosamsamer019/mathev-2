@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
-import { courseApi, homeworkApi } from '../../services/api';
+import { homeworkService } from '../../services/homework.service';
 
 const DEFAULT_HOMEWORKS = [
   { id: '1', title: 'واجب الجبر - الأسبوع الأول', course: 'الجبر', questions: 10, deadline: '2026-04-25', status: 'نشط' },
@@ -12,7 +12,7 @@ export default function HomeworkManagementPage() {
   const [homeworks, setHomeworks] = useState<any[]>(DEFAULT_HOMEWORKS);
 
   useEffect(() => {
-    homeworkApi.get('/')
+    homeworkService.getHomeworks()
       .then(res => {
         const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if (data.length > 0) {
@@ -74,10 +74,18 @@ export default function HomeworkManagementPage() {
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded">
+                    <button 
+                      onClick={() => alert('ميزة التعديل غير متاحة حالياً (نقطة اتصال PUT غير موجودة)')}
+                      className="p-2 text-gray-400 cursor-not-allowed rounded"
+                      title="غير مدعوم من الخادم"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button className="p-2 text-red-600 hover:bg-red-50 rounded">
+                    <button 
+                      onClick={() => alert('ميزة الحذف غير متاحة حالياً (مسار DELETE غير مفعل)')}
+                      className="p-2 text-gray-400 cursor-not-allowed rounded"
+                      title="غير مدعوم من الخادم"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

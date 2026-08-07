@@ -1,11 +1,29 @@
-export const logger = {
-  info: (message: string, meta?: any) => log('INFO', message, meta),
-  warn: (message: string, meta?: any) => log('WARN', message, meta),
-  error: (message: string, meta?: any) => log('ERROR', message, meta),
-};
+import pino from 'pino';
 
-function log(level: string, message: string, meta?: any) {
-  const timestamp = new Date().toISOString();
-  // Stringify the payload. If production, this keeps logs clean and readable for cloud watch/datadog.
-  console.log(JSON.stringify({ timestamp, level, message, ...meta }));
-}
+// Prepare integration for Sentry or Datadog by configuring Pino to parse errors correctly
+const pinoLogger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  // Use pretty print in development, JSON in production
+  transport: process.env.NODE_ENV !== 'production' 
+    ? {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'SYS:standard',
+        }
+      }
+    : undefined,
+  formatters: {
+    level: (label) => {
+      return { level: label.toUpperCase() };
+    },
+  }
+});
+
+export const logger = {
+  info: (message: string, meta?: any) => meta ? pinoLogger.info(meta, message) : pinoLogger.info(message),
+  warn: (message: string, meta?: any) => meta ? pinoLogger.warn(meta, message) : pinoLogger.warn(message),
+  error: (message: string, meta?: any) => meta ? pinoLogger.error(meta, message) : pinoLogger.error(message),
+  // Direct access to pino instance if needed for advanced usage
+  pino: pinoLogger
+};

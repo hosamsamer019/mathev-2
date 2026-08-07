@@ -1,4 +1,30 @@
-@import 'tailwindcss' source(none);
+@import 'tailwindcss';
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+@theme {
+  --color-brand-50: #fdf4f4;
+  --color-brand-100: #fce7e7;
+  --color-brand-200: #fad0d0;
+  --color-brand-300: #f6a5a5;
+  --color-brand-400: #ef7474;
+  --color-brand-500: #e44444;
+  --color-brand-600: #b62626;
+  --color-brand-700: #a81d1d;
+  --color-brand-800: #8d1b1b;
+  --color-brand-900: #751c1c;
+  --color-brand-950: #400a0a;
+
+  --color-brand-accent-50: #fdf4f4;
+  --color-brand-accent-100: #fce7e7;
+  --color-brand-accent-200: #fad0d0;
+  --color-brand-accent-300: #f6a5a5;
+  --color-brand-accent-400: #ef7474;
+  --color-brand-accent-500: #e44444;
+  --color-brand-accent-600: #a81d1d;
+  --color-brand-accent-700: #8d1b1b;
+  --color-brand-accent-800: #751c1c;
+  --color-brand-accent-900: #5c1414;
+  --color-brand-accent-950: #400a0a;
+}

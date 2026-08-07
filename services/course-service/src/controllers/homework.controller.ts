@@ -100,10 +100,22 @@ const createHomeworkSchema = z.object({
   })).optional()
 });
 
-export const createHomework = async (req: Request, res: Response) => {
+export const createHomework = async (req: AuthRequest, res: Response) => {
   try {
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+
     const validatedData = createHomeworkSchema.parse(req.body);
     const { title, courseId, questions } = validatedData;
+    
+    if (requesterRole !== 'ADMIN') {
+      const course = await db.course.findUnique({ where: { id: courseId } });
+      if (!course) return res.status(404).json({ message: 'Course not found' });
+      if (course.teacherId !== requesterId) {
+        return res.status(403).json({ message: 'Forbidden: You do not own this course' });
+      }
+    }
+
     const homework = await db.homework.create({
       data: {
         title,

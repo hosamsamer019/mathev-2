@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Youtube, BookOpen } from 'lucide-react';
-import { courseApi } from '../../services/api';
+import { courseService } from '../../services/course.service';
 
 export default function LessonsPage() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
@@ -8,7 +8,7 @@ export default function LessonsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    courseApi.get('/lessons')
+    courseService.getLessons()
       .then(res => setLessons(Array.isArray(res.data) ? res.data : []))
       .catch(err => console.error('Failed to fetch lessons', err))
       .finally(() => setLoading(false));

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Download, TrendingUp, Users, Award, BookOpen } from 'lucide-react';
-import { analyticsApi } from '../../services/api';
+import { analyticsService } from '../../services/analytics.service';
 
 export default function ReportsPage() {
   const [data, setData] = useState<any>(null);
@@ -14,10 +14,13 @@ export default function ReportsPage() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const res = await analyticsApi.get('/admin');
+      const res = await analyticsService.getAdminAnalytics();
       setData(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch analytics', err);
+      if (err.response?.status === 403) {
+        // Handle gracefully
+      }
     } finally {
       setLoading(false);
     }

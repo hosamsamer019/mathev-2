@@ -11,9 +11,11 @@ import ChatbotPage from '../student-shared/ChatbotPage';
 import ProfilePage from '../student-shared/ProfilePage';
 import CoursesPage from './CoursesPage';
 import CourseDetailsPage from './CourseDetailsPage';
+import StudentHomePage from './StudentHomePage';
 import AIMathSolverPage from '../ai/AIMathSolverPage';
 import AdaptiveLearningPage from '../ai/AdaptiveLearningPage';
-import { userApi, courseApi, homeworkApi } from '../../services/api';
+import { userService } from '../../services/user.service';
+import { homeworkService } from '../../services/homework.service';
 
 const menuItems: MenuItem[] = [
   { path: '/student/online/home', icon: Home, label: 'الرئيسية' },
@@ -33,11 +35,11 @@ export default function StudentOnlineDashboard() {
   const [pendingHomework, setPendingHomework] = useState(0);
 
   useEffect(() => {
-    userApi.get('/profile')
-      .then(res => setProfileName(res.data?.name || (res.data?.firstName ? `${res.data.firstName} ${res.data.lastName || ''}`.trim() : null) || 'طالب'))
+    userService.getProfile()
+      .then(user => setProfileName(user?.name || 'طالب'))
       .catch(() => setProfileName('طالب أونلاين'));
 
-    homeworkApi.get('/')
+    homeworkService.getHomeworks()
       .then(res => {
         const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
         if(data.length > 0) {
@@ -64,7 +66,7 @@ export default function StudentOnlineDashboard() {
     >
       <Routes>
         <Route path="/" element={<Navigate to="/student/online/home" replace />} />
-        <Route path="/home" element={<CoursesPage />} />
+        <Route path="/home" element={<StudentHomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
         <Route path="/videos" element={<VideosPage />} />

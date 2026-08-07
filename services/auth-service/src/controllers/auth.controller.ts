@@ -6,14 +6,14 @@ import { z } from 'zod';
 import { db } from '../../../../packages/database/src/index.js';
 import { sendEmail, buildPasswordResetEmail } from '../services/email.service.js';
 
-const registerSchema = z.object({
+export const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
   role: z.enum(['ONLINE_STUDENT', 'CENTER_STUDENT', 'TEACHER', 'ADMIN', 'PARENT'])
 });
 
-const loginSchema = z.object({
+export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
   role: z.enum(['ONLINE_STUDENT', 'CENTER_STUDENT', 'TEACHER', 'ADMIN', 'PARENT'])
@@ -21,7 +21,7 @@ const loginSchema = z.object({
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const validatedData = registerSchema.parse(req.body) as any;
+    const validatedData = req.body as any;
     
     const existingUser = await db.user.findUnique({
       where: { email: validatedData.email }
@@ -51,8 +51,9 @@ export const register = async (req: Request, res: Response) => {
       { expiresIn: '1d' }
     );
 
+    const jti = crypto.randomUUID();
     const refreshToken = jwt.sign(
-      { userId: newUser.id },
+      { userId: newUser.id, jti },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: '7d' }
     );
@@ -85,7 +86,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const validatedData = loginSchema.parse(req.body) as any;
+    const validatedData = req.body as any;
 
     const user = await db.user.findFirst({
       where: { 
@@ -115,8 +116,9 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '1d' }
     );
 
+    const jti = crypto.randomUUID();
     const refreshToken = jwt.sign(
-      { userId: user.id },
+      { userId: user.id, jti },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: '7d' }
     );
@@ -182,11 +184,29 @@ export const refreshToken = async (req: Request, res: Response) => {
 
     if (!user) return res.status(401).json({ message: 'User not found' });
 
+    // In a production environment with Redis, we would check if decoded.jti is in the blocklist here.
+    // If it is, we would revoke all tokens for this user.
+    // For now, we prepare the architecture by generating a new JTI and overwriting the cookie (Rotation).
+
     const newToken = jwt.sign(
       { userId: user.id, role: user.role, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '15m' } // Shortened access token lifespan
     );
+
+    const newJti = crypto.randomUUID();
+    const newRefreshToken = jwt.sign(
+      { userId: user.id, jti: newJti },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
     res.json({ token: newToken });
   } catch (error) {

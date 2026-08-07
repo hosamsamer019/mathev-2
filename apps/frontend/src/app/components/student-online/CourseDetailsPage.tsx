@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Lock, CheckCircle, Clock } from 'lucide-react';
-import { courseApi } from '../../services/api';
+import { courseService } from '../../services/course.service';
 
 
 export default function CourseDetailsPage() {
@@ -12,7 +12,7 @@ export default function CourseDetailsPage() {
 
   useEffect(() => {
     if (!courseId) return;
-    courseApi.get(`/${courseId}`)
+    courseService.getCourseDetails(courseId)
       .then((res) => {
         if (res.data) {
           setCourse(res.data);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Eye, Clock } from 'lucide-react';
+import { courseService } from '../../services/course.service';
 
 export default function VideosPage() {
   const navigate = useNavigate();
@@ -9,12 +10,12 @@ export default function VideosPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    import('../../services/api').then(({ courseApi }) => {
-      courseApi.get('/lessons')
-        .then(res => setVideos(Array.isArray(res.data) ? res.data : []))
-        .catch(err => console.error('Failed to fetch videos', err))
-        .finally(() => setLoading(false));
-    });
+    courseService.getLessons()
+      .then((res) => {
+        setVideos(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(err => console.error('Failed to fetch videos', err))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {

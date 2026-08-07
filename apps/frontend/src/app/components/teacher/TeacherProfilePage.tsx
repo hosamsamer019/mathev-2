@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Edit, Save, Camera, Award, Star, BookOpen, Users } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { userService } from '../../services/user.service';
 
 export default function TeacherProfilePage() {
   const { isDark } = useTheme();
-  const { user } = useAuth();
+  const { user, checkAuth } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -20,12 +22,26 @@ export default function TeacherProfilePage() {
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        phone: (user as any).phoneNumber || '',
+        phone: user.phone || '',
         city: (user as any).governorate || '',
         bio: '' // Can be loaded from user if exists
       });
     }
   }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    try {
+      setSaving(true);
+      await userService.updateProfile(user.id, { name: formData.name, email: formData.email });
+      await checkAuth();
+      setEditing(false);
+    } catch (error) {
+      console.error('Failed to update profile', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -64,13 +80,14 @@ export default function TeacherProfilePage() {
               </div>
             </div>
             <button
-              onClick={() => setEditing(!editing)}
+              onClick={editing ? handleSave : () => setEditing(true)}
+              disabled={saving}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 editing ? 'bg-emerald-600 text-white' : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              } ${saving ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {editing ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-              {editing ? 'حفظ' : 'تعديل'}
+              {editing ? (saving ? 'جاري الحفظ...' : 'حفظ') : 'تعديل'}
             </button>
           </div>
         </div>

@@ -13,6 +13,21 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
   try {
     const validatedData = markAttendanceSchema.parse(req.body);
     
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole === 'TEACHER') {
+      const isEnrolled = await db.courseEnrollment.findFirst({
+        where: {
+          studentId: validatedData.studentId,
+          course: { teacherId: req.user?.userId }
+        }
+      });
+      if (!isEnrolled) {
+        return res.status(403).json({ message: 'Forbidden: Student is not enrolled in your courses' });
+      }
+    } else if (requesterRole !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+    }
+
     const attendance = await db.attendance.create({
       data: {
         studentId: validatedData.studentId,
