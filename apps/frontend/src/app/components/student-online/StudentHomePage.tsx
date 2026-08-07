@@ -33,7 +33,7 @@ export default function StudentHomePage() {
           averageScore: overview?.overallRate || 0
         });
 
-        const courses = coursesRes.data.data ? coursesRes.data.data : Array.isArray(coursesRes.data) ? coursesRes.data : [];
+        const courses = coursesRes.data?.data ? coursesRes.data.data : Array.isArray(coursesRes.data) ? coursesRes.data : [];
         setRecentCourses(courses.slice(0, 4));
 
         // Find the last lesson with progress (continue watching)

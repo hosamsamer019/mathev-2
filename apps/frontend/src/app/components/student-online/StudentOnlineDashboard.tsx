@@ -41,8 +41,8 @@ export default function StudentOnlineDashboard() {
 
     homeworkService.getHomeworks()
       .then(res => {
-        const data = res.data.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
-        if(data.length > 0) {
+        const data = res.data?.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
+        if(Array.isArray(data) && data.length > 0) {
           const pending = data.filter((h: any) => h.status === 'draft' || h.status === 'pending');
           setPendingHomework(pending.length);
         }
