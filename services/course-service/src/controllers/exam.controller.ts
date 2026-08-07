@@ -133,6 +133,12 @@ export const createExam = async (req: AuthRequest, res: Response) => {
       }
     });
     io.to(`course:${courseId}`).emit('exam_created', exam);
+    
+    // Notify enrolled students and their parents
+    import('../utils/notification.helper.js').then(({ notifyCourseStudents }) => {
+      notifyCourseStudents(courseId, 'امتحان جديد', `تم نشر امتحان جديد: ${title}`);
+    });
+
     res.status(201).json(exam);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -168,18 +174,27 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
        }
     }
 
-    const exam = await db.exam.update({
+    const updateData = {
+      title,
+      courseId,
+      duration: duration || 60,
+      questions: questions || [],
+      requiresCamera: requiresCamera || false
+    };
+
+    const updatedExam = await db.exam.update({
       where: { id },
-      data: {
-        title,
-        courseId,
-        duration: duration || 60,
-        questions: questions || [],
-        requiresCamera: requiresCamera || false
-      }
+      data: updateData
     });
-    io.to(`course:${exam.courseId}`).emit('exam_updated', exam);
-    res.json(exam);
+
+    io.to(`course:${updatedExam.courseId}`).emit('exam_updated', updatedExam);
+
+    // Notify enrolled students and their parents
+    import('../utils/notification.helper.js').then(({ notifyCourseStudents }) => {
+      notifyCourseStudents(updatedExam.courseId, 'تحديث امتحان', `تم تحديث الامتحان: ${updatedExam.title}`);
+    });
+
+    res.json(updatedExam);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
@@ -269,6 +284,11 @@ export const submitAttempt = async (req: AuthRequest, res: Response) => {
       });
     }
     
+    // Notify teacher of submission
+    import('../utils/notification.helper.js').then(({ notifyTeacher }) => {
+      notifyTeacher(exam.courseId, 'تسليم امتحان', `قام الطالب بتسليم امتحان: ${exam.title}`);
+    });
+
     res.json({ success: true, score: calculatedScore, attempt });
   } catch (error: any) {
     res.status(400).json({ message: 'Error submitting exam', error: error.message });

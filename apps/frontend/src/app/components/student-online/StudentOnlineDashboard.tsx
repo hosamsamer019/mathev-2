@@ -39,15 +39,22 @@ export default function StudentOnlineDashboard() {
       .then(user => setProfileName(user?.name || 'طالب'))
       .catch(() => setProfileName('طالب أونلاين'));
 
-    homeworkService.getHomeworks()
-      .then(res => {
-        const data = res.data?.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
-        if(Array.isArray(data) && data.length > 0) {
-          const pending = data.filter((h: any) => h.status === 'draft' || h.status === 'pending');
-          setPendingHomework(pending.length);
-        }
-      })
-      .catch(() => setPendingHomework(0));
+    const fetchHomeworkCount = () => {
+      homeworkService.getHomeworks()
+        .then(res => {
+          const data = res.data?.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
+          if(Array.isArray(data) && data.length > 0) {
+            const pending = data.filter((h: any) => h.status === 'draft' || h.status === 'pending');
+            setPendingHomework(pending.length);
+          }
+        })
+        .catch(() => setPendingHomework(0));
+    };
+
+    fetchHomeworkCount();
+    const intervalId = setInterval(fetchHomeworkCount, 15000); // 15 seconds
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   const dynamicMenuItems: MenuItem[] = menuItems.map(item => 

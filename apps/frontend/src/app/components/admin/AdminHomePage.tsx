@@ -14,13 +14,19 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    analyticsService.getAdminAnalytics().then((res: any) => {
-      setData(res.data);
-      setLoading(false);
-    }).catch((err: any) => {
-      console.error(err);
-      setLoading(false);
-    });
+    const fetchData = () => {
+      analyticsService.getAdminAnalytics().then((res: any) => {
+        setData(res.data);
+        setLoading(false);
+      }).catch((err: any) => {
+        console.error(err);
+        setLoading(false);
+      });
+    };
+    
+    fetchData();
+    const intervalId = setInterval(fetchData, 15000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';

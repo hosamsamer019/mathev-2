@@ -124,6 +124,12 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
       }
     });
     io.to(`course:${courseId}`).emit('homework_assigned', homework);
+
+    // Notify enrolled students and their parents
+    import('../utils/notification.helper.js').then(({ notifyCourseStudents }) => {
+      notifyCourseStudents(courseId, 'واجب جديد', `تم نشر واجب جديد: ${title}`);
+    });
+
     res.status(201).json(homework);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -174,6 +180,26 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    // Notify teacher of submission
+    import('../utils/notification.helper.js').then(({ notifyTeacher }) => {
+      notifyTeacher(homework.courseId, 'تسليم واجب', `قام الطالب بتسليم واجب: ${homework.title}`);
+    });
+    
+    // The previous implementation sent a notification to the student, we'll keep that but also we could notify parent. 
+    // Wait, the Student sees the score instantly, notifying the Parent of the score is better!
+    const student = await db.user.findUnique({ where: { id: userId } });
+    if (student?.parentId) {
+      await db.notification.create({
+        data: {
+          userId: student.parentId,
+          title: 'إشعار لولي الأمر: تم تصحيح الواجب',
+          message: `تم تقييم أداء طالبك في ${homework.title} وحصل على ${calculatedGrade || clientGrade || 0}%`,
+          type: 'success'
+        }
+      });
+    }
+
+    // Keep student notification
     await db.notification.create({
       data: {
         userId: userId,

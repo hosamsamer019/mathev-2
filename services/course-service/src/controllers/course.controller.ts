@@ -198,6 +198,11 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
       }
     });
     io.to(`course:${lesson.courseId}`).emit('lesson_created', lesson);
+    
+    import('../utils/notification.helper.js').then(({ notifyCourseStudents }) => {
+      notifyCourseStudents(lesson.courseId, 'درس جديد', `تمت إضافة درس جديد: ${lesson.title}`);
+    });
+
     res.status(201).json(lesson);
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });

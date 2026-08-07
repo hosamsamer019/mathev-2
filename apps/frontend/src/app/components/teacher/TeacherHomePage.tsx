@@ -59,6 +59,8 @@ export default function TeacherHomePage() {
 
   useEffect(() => {
     fetchOverview();
+    const intervalId = setInterval(fetchOverview, 15000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchOverview = async () => {

@@ -90,6 +90,13 @@ export default function TeacherExamsPage() {
   useEffect(() => {
     fetchExams();
     fetchCourses();
+    
+    // Polling interval for realtime fallback
+    const intervalId = setInterval(() => {
+      fetchExams();
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchCourses = async () => {

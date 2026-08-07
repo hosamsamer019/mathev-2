@@ -44,20 +44,29 @@ export default function CoursesPage() {
 
   const { socket } = useSocket();
   
+  // Realtime Socket fallback with reliable Vercel-compatible polling
   useEffect(() => {
-    if (!socket) return;
-    const handleSync = () => fetchCourses();
-    socket.on('course_created', handleSync);
-    socket.on('course_updated', handleSync);
-    socket.on('course_deleted', handleSync);
-    return () => {
-      socket.off('course_created', handleSync);
-      socket.off('course_updated', handleSync);
-      socket.off('course_deleted', handleSync);
-    };
+    // 10 second polling interval
+    const intervalId = setInterval(() => {
+      fetchCourses();
+    }, 10000);
+
+    if (socket) {
+      const handleSync = () => fetchCourses();
+      socket.on('course_created', handleSync);
+      socket.on('course_updated', handleSync);
+      socket.on('course_deleted', handleSync);
+      
+      return () => {
+        clearInterval(intervalId);
+        socket.off('course_created', handleSync);
+        socket.off('course_updated', handleSync);
+        socket.off('course_deleted', handleSync);
+      };
+    }
+
+    return () => clearInterval(intervalId);
   }, [socket]);
-
-
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8">

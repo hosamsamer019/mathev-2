@@ -19,26 +19,36 @@ let ids = {};
 let createdEmails = [];
 const log = (msg) => console.log(`[${new Date().toISOString()}] ${msg}`);
 
-async function api(path, method = 'GET', body = null, token = null) {
+async function api(path, method = 'GET', body = null, token = null, retries = 3) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined
-  });
-  
-  const text = await res.text();
-  if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
-    throw new Error(`API ${method} ${path} returned HTML fallback instead of JSON! Status: ${res.status}`);
-  }
-  
-  let json;
-  try {
-    if (text) json = JSON.parse(text);
-  } catch (e) {
-    json = { _raw: text };
+  let res, text, json;
+  for (let i = 0; i < retries; i++) {
+    res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    
+    text = await res.text();
+    if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
+      throw new Error(`API ${method} ${path} returned HTML fallback instead of JSON! Status: ${res.status}`);
+    }
+    
+    try {
+      if (text) json = JSON.parse(text);
+    } catch (e) {
+      json = { _raw: text };
+    }
+    
+    // If we hit Supabase connection pool limits, retry
+    if (res.status === 500 && text.includes('EMAXCONNSESSION') && i < retries - 1) {
+      log(`⚠️ Hit Supabase connection pool limit. Retrying in 3 seconds...`);
+      await new Promise(r => setTimeout(r, 3000));
+      continue;
+    }
+    break;
   }
   
   return { status: res.status, ok: res.ok, json };
@@ -107,6 +117,7 @@ async function runTests() {
     // ==========================================
     log('\n--- COURSE CREATION & ISOLATION ---');
     const courseRes = await api('/courses', 'POST', { title: `${RUN_ID} Math 101`, description: 'Test course', category: 'Math' }, tokens.teacher);
+    if (![200, 201].includes(courseRes.status)) throw new Error(`Course creation failed: ${JSON.stringify(courseRes.json)}`);
     ids.course = courseRes.json.id;
     
     // Enroll ONLY Student A
@@ -114,13 +125,48 @@ async function runTests() {
     
     // Student A Sees Course
     let sCourses = await api('/courses', 'GET', null, tokens.studentA);
+    if (sCourses.status !== 200) throw new Error(`GET /courses failed for Student A: ${JSON.stringify(sCourses.json)}`);
+    if (!sCourses.json.data) throw new Error(`sCourses.json.data is undefined! Payload: ${JSON.stringify(sCourses.json)}`);
     if (!sCourses.json.data.find(c => c.id === ids.course)) throw new Error('Student A cannot see enrolled course');
     log('✅ Student A can see Course');
     
     // Student B Cannot See Course
     let bCourses = await api('/courses', 'GET', null, tokens.studentB);
-    if (bCourses.json.data.find(c => c.id === ids.course)) throw new Error('SECURITY FAILURE: Student B can see Student A course');
+    if (bCourses.json.data.find(c => c.id === ids.course)) {
+       throw new Error(`SECURITY FAILURE: Student B can see Student A course. Data: ${JSON.stringify(bCourses.json.data)}`);
+    }
     log('✅ Security: Student B isolated from Course');
+    
+    // ==========================================
+    // HOMEWORK SYNC & GRADING
+    // ==========================================
+    log('\n--- HOMEWORK CREATION & SYNC ---');
+    const hwRes = await api('/homework', 'POST', {
+      title: `${RUN_ID} Assignment 1`,
+      courseId: ids.course,
+      questions: [{ id: 1, text: '3+3', type: 'MCQ', options: ['5', '6', '7', '8'], correct: 1 }]
+    }, tokens.teacher);
+    ids.homework = hwRes.json.id;
+    
+    // Student A Sees Homework
+    let sHomeworks = await api('/homework', 'GET', null, tokens.studentA);
+    if (sHomeworks.status !== 200) throw new Error(`GET /homework failed: ${JSON.stringify(sHomeworks.json)}`);
+    if (!sHomeworks.json.data.find(h => h.id === ids.homework)) throw new Error('Student A cannot see Homework');
+    log('✅ Student A can see Homework');
+    
+    // Student B Cannot See Homework
+    let bHomeworks = await api('/homework', 'GET', null, tokens.studentB);
+    if (bHomeworks.json.data.find(h => h.id === ids.homework)) throw new Error('SECURITY FAILURE: Student B can see Student A Homework');
+    log('✅ Security: Student B isolated from Student A Homework');
+
+    // Student A Submits Homework
+    const hwSubmit = await api(`/homework/${ids.homework}/submit`, 'POST', { answers: [{ questionId: 1, selectedOption: 1 }] }, tokens.studentA);
+    if (![200, 201].includes(hwSubmit.status)) throw new Error(`Homework submission failed: ${hwSubmit.status}`);
+    
+    // Verify Grading in DB
+    const dbHwSub = await prisma.submission.findFirst({ where: { studentId: ids.studentA, homeworkId: ids.homework } });
+    if (dbHwSub.grade !== 100) throw new Error(`FAIL: Homework grade is wrong. Expected 100, got ${dbHwSub.grade}`);
+    log('✅ Grading: Homework correctly graded on submission');
     
     // ==========================================
     // EXAM SYNC, GRADING, CACHE
@@ -153,6 +199,8 @@ async function runTests() {
     }, tokens.teacher);
     
     let sExams = await api('/exams', 'GET', null, tokens.studentA);
+    if (sExams.status !== 200) throw new Error(`GET /exams failed for Student A: ${JSON.stringify(sExams.json)}`);
+    if (!sExams.json.data) throw new Error(`sExams.json.data is undefined! Payload: ${JSON.stringify(sExams.json)}`);
     let sExam = sExams.json.data.find(e => e.id === ids.exam);
     if (sExam.title !== `${RUN_ID} Final Exam UPDATED`) throw new Error(`Stale Cache: Expected UPDATED title, got ${sExam.title}`);
     log('✅ Cache invalidation works across Teacher -> Student boundaries');
@@ -166,8 +214,10 @@ async function runTests() {
     log('✅ Grading: Exam correctly graded as 100 on submission');
     
     // Parent Verification
+    log('Waiting for Vercel DB connections to clear...');
+    await new Promise(r => setTimeout(r, 2000));
     const pDash = await api(`/analytics/parent`, 'GET', null, tokens.parentA);
-    if (pDash.status !== 200) throw new Error('Parent Dashboard failed');
+    if (pDash.status !== 200) throw new Error(`Parent Dashboard failed: ${pDash.status} - ${JSON.stringify(pDash.json)}`);
     log('✅ Parent A Dashboard accessible');
 
     // Negative Security: Parent B tries to access Parent A's analytics
