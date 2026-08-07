@@ -12,7 +12,9 @@
     "dev:analytics": "npm run dev --prefix services/analytics-service",
     "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:ai\" \"npm run dev:course\" \"npm run dev:analytics\"",
     "install:all": "npm install && npm install --prefix apps/frontend && npm install --prefix services/auth-service && npm install --prefix services/user-service && npm install --prefix services/ai-service && npm install --prefix services/course-service && npm install --prefix services/analytics-service && npm run generate --prefix packages/database",
-    "postinstall": "npm run build --prefix packages/shared && npm run build --prefix packages/database"
+    "postinstall": "npm run build --prefix packages/shared && npm run build --prefix packages/database",
+    "production:validate": "node scripts/production_validate.js",
+    "smoke:production": "node scripts/smoke_production.js"
   },
   "dependencies": {
     "@prisma/client": "^5.9.1",
