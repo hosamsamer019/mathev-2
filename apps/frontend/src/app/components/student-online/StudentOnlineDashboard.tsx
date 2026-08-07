@@ -11,6 +11,7 @@ import ChatbotPage from '../student-shared/ChatbotPage';
 import ProfilePage from '../student-shared/ProfilePage';
 import CoursesPage from './CoursesPage';
 import CourseDetailsPage from './CourseDetailsPage';
+import StudentHomePage from './StudentHomePage';
 import AIMathSolverPage from '../ai/AIMathSolverPage';
 import AdaptiveLearningPage from '../ai/AdaptiveLearningPage';
 import { userService } from '../../services/user.service';
@@ -65,7 +66,7 @@ export default function StudentOnlineDashboard() {
     >
       <Routes>
         <Route path="/" element={<Navigate to="/student/online/home" replace />} />
-        <Route path="/home" element={<CoursesPage />} />
+        <Route path="/home" element={<StudentHomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
         <Route path="/videos" element={<VideosPage />} />
