@@ -7,6 +7,7 @@ import { SolverService } from './services/solver.service.js';
 import { ChatService } from './services/chat.service.js';
 import { GeneratorService } from './services/generator.service.js';
 import { verifyToken, AuthRequest } from './middlewares/auth.middleware.js';
+import { aiRateLimiter } from './middlewares/rateLimiter.js';
 import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
 
 dotenv.config();
@@ -37,7 +38,7 @@ const generateQuestionsSchema = z.object({
 });
 
 // Solve endpoint — now requires authentication
-app.post('/api/ai/solve', verifyToken, async (req: AuthRequest, res: Response) => {
+app.post('/api/ai/solve', aiRateLimiter, verifyToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -88,7 +89,7 @@ app.get('/api/ai/history', verifyToken, async (req: AuthRequest, res: Response) 
 });
 
 // Chat endpoints — all require authentication
-app.post('/api/ai/sessions', verifyToken, async (req: AuthRequest, res: Response) => {
+app.post('/api/ai/sessions', aiRateLimiter, verifyToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -126,7 +127,7 @@ app.get('/api/ai/sessions/:id', verifyToken, async (req: AuthRequest, res: Respo
   }
 });
 
-app.post('/api/ai/chat', verifyToken, async (req: AuthRequest, res: Response) => {
+app.post('/api/ai/chat', aiRateLimiter, verifyToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -158,7 +159,7 @@ app.post('/api/ai/chat', verifyToken, async (req: AuthRequest, res: Response) =>
 });
 
 // Smart Homework Generation endpoint
-app.post('/api/ai/generate-questions', verifyToken, async (req: AuthRequest, res: Response) => {
+app.post('/api/ai/generate-questions', aiRateLimiter, verifyToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const role = req.user?.role;

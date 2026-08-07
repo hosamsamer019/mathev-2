@@ -115,19 +115,42 @@ services:
       - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
       - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
       - CLOUDFLARE_R2_BUCKET_NAME=${CLOUDFLARE_R2_BUCKET_NAME}
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: '4G'
+        reservations:
+          cpus: '0.5'
+          memory: '1G'
     restart: always
     networks:
       - platform-network
 
   redis:
     image: redis:alpine
-    ports:
-      - "6379:6379"
+    # Removed ports: - "6379:6379" to prevent public exposure. Services connect via internal platform-network.
     restart: always
     networks:
       - platform-network
     volumes:
       - redis-data:/data
+
+  pg-backup:
+    image: postgres:15-alpine
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - CLOUDFLARE_R2_ENDPOINT=${CLOUDFLARE_R2_ENDPOINT}
+      - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      - CLOUDFLARE_R2_BUCKET_NAME=${CLOUDFLARE_R2_BUCKET_NAME}
+    volumes:
+      - ./scripts/pg_backup.sh:/pg_backup.sh:ro
+    # Run everyday at 3:00 AM
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache aws-cli && echo '0 3 * * * /pg_backup.sh' | crontab - && crond -f -d 8"]
+    restart: always
+    networks:
+      - platform-network
 
 networks:
   platform-network:

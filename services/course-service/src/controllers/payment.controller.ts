@@ -74,34 +74,36 @@ export const handleWebhook = async (req: Request, res: Response) => {
     const verification = await provider.verifyPayment(payload);
 
     if (verification.success) {
-      // Update payment status
-      const payment = await (db as any).payment.findFirst({
-        where: { providerOrderId: verification.providerOrderId },
-      });
-
-      if (payment) {
-        await (db as any).payment.update({
-          where: { id: payment.id },
-          data: { status: 'COMPLETED' },
+      // Update payment status using a transaction to prevent race conditions
+      await (db as any).$transaction(async (tx: any) => {
+        const payment = await tx.payment.findFirst({
+          where: { providerOrderId: verification.providerOrderId },
         });
 
-        // Auto-enroll student in the course
-        if (payment.courseId) {
-          await (db as any).enrollment.upsert({
-            where: {
-              studentId_courseId: {
+        if (payment && payment.status !== 'COMPLETED') {
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: { status: 'COMPLETED' },
+          });
+
+          // Auto-enroll student in the course
+          if (payment.courseId) {
+            await tx.courseEnrollment.upsert({
+              where: {
+                studentId_courseId: {
+                  studentId: payment.userId,
+                  courseId: payment.courseId,
+                },
+              },
+              update: {},
+              create: {
                 studentId: payment.userId,
                 courseId: payment.courseId,
               },
-            },
-            update: {},
-            create: {
-              studentId: payment.userId,
-              courseId: payment.courseId,
-            },
-          });
+            });
+          }
         }
-      }
+      });
 
       res.status(200).json({ received: true });
     } else {

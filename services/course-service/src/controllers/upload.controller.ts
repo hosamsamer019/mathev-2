@@ -13,6 +13,24 @@ export const requestUploadUrl = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Missing file metadata' });
     }
 
+    // 1. Validate File MIME Type and Extension
+    const allowedMimeTypes = ['video/mp4', 'video/quicktime', 'video/x-matroska', 'video/webm'];
+    const allowedExtensions = ['.mp4', '.mov', '.mkv', '.webm'];
+    
+    if (!allowedMimeTypes.includes(mimetype)) {
+      return res.status(400).json({ message: `Invalid MIME type. Allowed: ${allowedMimeTypes.join(', ')}` });
+    }
+
+    const fileExt = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+    if (!allowedExtensions.includes(fileExt)) {
+      return res.status(400).json({ message: `Invalid file extension. Allowed: ${allowedExtensions.join(', ')}` });
+    }
+
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB limit
+    if (fileSize > MAX_FILE_SIZE) {
+      return res.status(400).json({ message: 'File exceeds 5GB limit' });
+    }
+
     // 1. Generate Cloudflare R2 Signed URL
     const { signedUrl, storagePath, backend } = await generateSignedUploadUrl(
       userId,

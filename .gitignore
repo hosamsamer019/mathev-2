@@ -14,3 +14,6 @@ testsprite_tests/tmp/config.json
 .env*.local
 secrets/
 uploads/
+
+k6.zip
+k6_bin/
