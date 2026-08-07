@@ -8,6 +8,7 @@ import homeworkRoutes from './routes/homework.routes.js';
 import examRoutes from './routes/exam.routes.js';
 import questionRoutes from './routes/question.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 import http from 'http';
 import { Server } from 'socket.io';
@@ -45,6 +46,7 @@ app.use('/api/homework', homeworkRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {
