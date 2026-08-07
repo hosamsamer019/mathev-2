@@ -1,6 +1,14 @@
 import { logger } from './logger';
 
 export function validateEnv() {
+  // Map Vercel Supabase integration variables to standard Prisma variables
+  if (!process.env.DATABASE_URL && process.env.POSTGRES_PRISMA_URL) {
+    process.env.DATABASE_URL = process.env.POSTGRES_PRISMA_URL;
+  }
+  if (!process.env.DIRECT_URL && process.env.POSTGRES_URL_NON_POOLING) {
+    process.env.DIRECT_URL = process.env.POSTGRES_URL_NON_POOLING;
+  }
+
   const required = ['DATABASE_URL', 'JWT_SECRET'];
   const missing = required.filter(key => !process.env[key]);
 
