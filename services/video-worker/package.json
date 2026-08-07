@@ -13,8 +13,8 @@
   "dependencies": {
     "bullmq": "^4.0.0",
     "dotenv": "^16.3.1",
-    "@shared/utils": "workspace:*",
-    "@shared/database": "workspace:*"
+    "@shared/utils": "*",
+    "@smartmath/database": "file:../../packages/database"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
