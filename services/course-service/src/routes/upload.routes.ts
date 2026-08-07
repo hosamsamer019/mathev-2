@@ -8,7 +8,9 @@ import fs from 'fs';
 import path from 'path';
 
 const uploadDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!process.env.VERCEL) {
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 import { requestUploadUrl, completeUpload, getUploadStatus } from '../controllers/upload.controller.js';
 import { checkRole, verifyToken } from '../middlewares/auth.middleware.js';
