@@ -11,7 +11,15 @@ if (!process.env.DIRECT_URL && process.env.POSTGRES_URL_NON_POOLING) {
 }
 
 const prismaClientSingleton = () => {
-  return new PrismaClient();
+  let url = process.env.DATABASE_URL;
+  if (url && process.env.NODE_ENV === 'production') {
+    url = url.includes('?') ? `${url}&connection_limit=1` : `${url}?connection_limit=1`;
+  }
+  return new PrismaClient({
+    datasources: {
+      db: { url }
+    }
+  });
 };
 
 declare global {
@@ -19,5 +27,4 @@ declare global {
 }
 
 export const db = globalThis.prismaGlobal ?? prismaClientSingleton();
-
-if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = db;
+globalThis.prismaGlobal = db;
