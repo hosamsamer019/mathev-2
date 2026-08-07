@@ -85,6 +85,8 @@ model Course {
   enrollments CourseEnrollment[]
   exams       Exam[]
   homeworks   Homework[]
+
+  @@index([teacherId])
 }
 
 model CourseEnrollment {
@@ -204,6 +206,7 @@ model Payment {
 
   @@index([userId])
   @@index([providerOrderId])
+  @@index([createdAt])
 }
 
 enum PaymentStatus {
@@ -315,6 +318,7 @@ model VideoUpload {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([createdAt])
 }
 
 model UserSession {
