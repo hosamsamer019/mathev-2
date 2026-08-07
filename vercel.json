@@ -15,6 +15,7 @@
     { "source": "/api/upload/:match*", "destination": "/api/upload" },
     { "source": "/api/payments/:match*", "destination": "/api/payments" },
     { "source": "/api/analytics/:match*", "destination": "/api/analytics" },
+    { "source": "/api/notifications/:match*", "destination": "/api/notifications" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

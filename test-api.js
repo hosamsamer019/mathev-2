@@ -19,7 +19,7 @@ async function test() {
     res.on('end', () => {
       const token = JSON.parse(data).token;
       
-      const courseReq = https.request('https://mathev-2.vercel.app/api/courses', {
+      const courseReq = https.request('https://mathev-2.vercel.app/api/homework', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
