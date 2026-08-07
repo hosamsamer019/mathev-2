@@ -74,4 +74,14 @@ export const courseService = {
   // ── Lesson Quiz ──────────────────────────────────────────────────
   submitLessonQuiz: (lessonId: string, quizId: string, answer: any) =>
     courseApi.post(`/lessons/${lessonId}/quiz/${quizId}/submit`, { answer }),
+
+  // ── Video Uploads (Phase 10 - Cloudflare R2) ──────────────────
+  requestUploadUrl: (data: { filename: string; mimetype: string; fileSize: number }) =>
+    courseApi.post('/upload/request-url', data),
+
+  completeUpload: (uploadId: string) =>
+    courseApi.post(`/upload/${uploadId}/complete`),
+
+  getUploadStatus: (uploadId: string) =>
+    courseApi.get(`/upload/${uploadId}/status`),
 };

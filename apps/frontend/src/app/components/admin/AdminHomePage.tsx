@@ -37,10 +37,10 @@ export default function AdminHomePage() {
     { label: 'الدورات النشطة', value: data?.overview?.totalCourses ?? '...', change: '', icon: BookOpen, color: 'from-green-500 to-emerald-600' },
     { label: 'إجمالي الامتحانات', value: data?.overview?.totalExams ?? '...', change: '', icon: ClipboardCheck, color: 'from-orange-500 to-red-500' },
     { label: 'تسليمات الواجبات', value: data?.overview?.totalSubmissions ?? '...', change: '', icon: Activity, color: 'from-pink-500 to-rose-600' },
-    { label: 'إيرادات الشهر', value: '٢٨,٣٠٠ج', change: '+١٠٪', icon: DollarSign, color: 'from-cyan-500 to-blue-600' },
-    { label: 'المشتركون النشطون', value: '٢٨٣', change: '+٢٧', icon: Activity, color: 'from-pink-500 to-rose-600' },
-    { label: 'طلاب في خطر', value: '١٥', change: '-٢', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
-    { label: 'دقة الذكاء الاصطناعي', value: '٩٤٪', change: '+١٪', icon: Brain, color: 'from-violet-500 to-purple-600' },
+    { label: 'إيرادات الشهر', value: data?.overview?.monthlyRevenue != null ? `${data.overview.monthlyRevenue.toLocaleString('ar-EG')}ج` : '—', change: '', icon: DollarSign, color: 'from-cyan-500 to-blue-600' },
+    { label: 'المشتركون النشطون', value: data?.overview?.activeUsers ?? '—', change: '', icon: Activity, color: 'from-pink-500 to-rose-600' },
+    { label: 'طلاب في خطر', value: data?.overview?.atRiskStudents ?? '—', change: '', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
+    { label: 'الفيديوهات المرفوعة', value: data?.overview?.totalVideos ?? '—', change: '', icon: Video, color: 'from-violet-500 to-purple-600' },
   ];
 
   return (
