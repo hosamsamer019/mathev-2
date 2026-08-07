@@ -1,11 +1,12 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { generateSignedUploadUrl, getActiveBackend } from '../services/storage.adapter.js';
-import { db } from '@shared/database';
+import { db } from '../../../../packages/database/src/index.js';
+import { AuthRequest } from '../middlewares/auth.middleware.js';
 
-export const requestUploadUrl = async (req: Request, res: Response) => {
+export const requestUploadUrl = async (req: AuthRequest, res: Response) => {
   try {
     const { filename, mimetype, fileSize } = req.body;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     if (!filename || !mimetype || !fileSize) {
@@ -21,7 +22,7 @@ export const requestUploadUrl = async (req: Request, res: Response) => {
     );
 
     // 2. Create VideoUpload record in database with PENDING status
-    const upload = await db.videoUpload.create({
+    const upload = await (db as any).videoUpload.create({
       data: {
         userId,
         filename,
@@ -43,18 +44,18 @@ export const requestUploadUrl = async (req: Request, res: Response) => {
   }
 };
 
-export const completeUpload = async (req: Request, res: Response) => {
+export const completeUpload = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
-    const upload = await db.videoUpload.findUnique({ where: { id } });
+    const upload = await (db as any).videoUpload.findUnique({ where: { id } });
     if (!upload) return res.status(404).json({ message: 'Upload not found' });
     if (upload.userId !== userId) return res.status(403).json({ message: 'Forbidden' });
 
     // Mark as UPLOAD_COMPLETED. The BullMQ worker will pick this up automatically or via event.
     // For now, we update the status.
-    const updated = await db.videoUpload.update({
+    const updated = await (db as any).videoUpload.update({
       where: { id },
       data: { status: 'UPLOAD_COMPLETED' }
     });
@@ -62,7 +63,7 @@ export const completeUpload = async (req: Request, res: Response) => {
     // TODO: Send Job to BullMQ Video Worker Queue
     import('bullmq').then(({ Queue }) => {
       const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-      const videoQueue = new Queue('video-transcode-queue', { connection: { url: REDIS_URL } });
+      const videoQueue = new Queue('video-transcode-queue', { connection: { url: REDIS_URL } as any });
       videoQueue.add('transcode', { uploadId: id, storagePath: upload.storagePath });
     }).catch(err => console.error('Failed to enqueue video processing job', err));
 
@@ -72,12 +73,12 @@ export const completeUpload = async (req: Request, res: Response) => {
   }
 };
 
-export const getUploadStatus = async (req: Request, res: Response) => {
+export const getUploadStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
-    const upload = await db.videoUpload.findUnique({ where: { id } });
+    const upload = await (db as any).videoUpload.findUnique({ where: { id } });
     if (!upload) return res.status(404).json({ message: 'Upload not found' });
     if (upload.userId !== userId) return res.status(403).json({ message: 'Forbidden' });
 

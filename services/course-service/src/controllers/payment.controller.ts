@@ -1,17 +1,18 @@
 import { Request, Response } from 'express';
 import { getPaymentProvider, listAvailableProviders } from '../services/payment/index.js';
-import { db } from '@shared/database';
+import { db } from '../../../../packages/database/src/index.js';
+import { AuthRequest } from '../middlewares/auth.middleware.js';
 
 /**
  * POST /api/payments/create
  * Body: { provider, courseId, amount }
  */
-export const createPayment = async (req: Request, res: Response) => {
+export const createPayment = async (req: AuthRequest, res: Response) => {
   try {
     const { provider: providerName, courseId, amount } = req.body;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const userEmail = req.user?.email || '';
-    const userName = req.user?.name || '';
+    const userName = (req.user as any)?.name || 'Student';
 
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     if (!providerName || !courseId || !amount) {
@@ -31,7 +32,7 @@ export const createPayment = async (req: Request, res: Response) => {
     });
 
     // Record in database
-    const payment = await db.payment.create({
+    const payment = await (db as any).payment.create({
       data: {
         userId,
         amount,
@@ -74,19 +75,19 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
     if (verification.success) {
       // Update payment status
-      const payment = await db.payment.findFirst({
+      const payment = await (db as any).payment.findFirst({
         where: { providerOrderId: verification.providerOrderId },
       });
 
       if (payment) {
-        await db.payment.update({
+        await (db as any).payment.update({
           where: { id: payment.id },
           data: { status: 'COMPLETED' },
         });
 
         // Auto-enroll student in the course
         if (payment.courseId) {
-          await db.enrollment.upsert({
+          await (db as any).enrollment.upsert({
             where: {
               studentId_courseId: {
                 studentId: payment.userId,
@@ -105,11 +106,11 @@ export const handleWebhook = async (req: Request, res: Response) => {
       res.status(200).json({ received: true });
     } else {
       // Mark as failed
-      const payment = await db.payment.findFirst({
+      const payment = await (db as any).payment.findFirst({
         where: { providerOrderId: verification.providerOrderId },
       });
       if (payment) {
-        await db.payment.update({
+        await (db as any).payment.update({
           where: { id: payment.id },
           data: { status: 'FAILED' },
         });
@@ -134,12 +135,12 @@ export const getProviders = (_req: Request, res: Response) => {
  * GET /api/payments/history
  * Returns payment history for the authenticated user
  */
-export const getPaymentHistory = async (req: Request, res: Response) => {
+export const getPaymentHistory = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const payments = await db.payment.findMany({
+    const payments = await (db as any).payment.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 50,

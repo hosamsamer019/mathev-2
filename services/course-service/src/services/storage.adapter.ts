@@ -164,6 +164,3 @@ export async function deleteFile(filename: string): Promise<void> {
   }
 }
 
-export function getActiveBackend(): StorageBackend {
-  return supabaseStorage ? 'supabase' : 'local';
-}
