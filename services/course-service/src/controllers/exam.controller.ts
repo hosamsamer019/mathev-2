@@ -24,19 +24,18 @@ export const getAllExams = async (req: AuthRequest, res: Response) => {
     const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
     const skip = (page - 1) * limit;
 
-    const [exams, total] = await Promise.all([
-      db.exam.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        include: {
-          _count: { select: { attempts: true } },
-          course: { select: { title: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      }),
-      db.exam.count({ where: whereClause })
-    ]);
+    const exams = await db.exam.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      include: {
+        _count: { select: { attempts: true } },
+        course: { select: { title: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    const total = await db.exam.count({ where: whereClause });
     
     res.json({
       data: exams,

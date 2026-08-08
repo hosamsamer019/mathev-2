@@ -24,18 +24,17 @@ export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
     const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
     const skip = (page - 1) * limit;
 
-    const [homeworks, total] = await Promise.all([
-      db.homework.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        include: {
-          _count: { select: { submissions: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      }),
-      db.homework.count({ where: whereClause })
-    ]);
+    const homeworks = await db.homework.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      include: {
+        _count: { select: { submissions: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    const total = await db.homework.count({ where: whereClause });
     
     res.json({
       data: homeworks,

@@ -34,21 +34,20 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
       whereClause = { enrollments: { some: { studentId: req.user?.userId } } };
     }
     
-    const [courses, total] = await Promise.all([
-      db.course.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        include: {
-          lessons: { include: { quizzes: true } },
-          _count: {
-            select: { enrollments: true, lessons: true, exams: true, homeworks: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      }),
-      db.course.count({ where: whereClause })
-    ]);
+    const courses = await db.course.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      include: {
+        lessons: { include: { quizzes: true } },
+        _count: {
+          select: { enrollments: true, lessons: true, exams: true, homeworks: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    const total = await db.course.count({ where: whereClause });
     
     res.json({
       data: courses,
@@ -77,19 +76,18 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
     const skip = (page - 1) * limit;
 
-    const [lessons, total] = await Promise.all([
-      db.lesson.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        include: {
-          course: { select: { title: true } },
-          // Removed deep quizzes include for list view to save memory
-        },
-        orderBy: { createdAt: 'desc' }
-      }),
-      db.lesson.count({ where: whereClause })
-    ]);
+    const lessons = await db.lesson.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      include: {
+        course: { select: { title: true } },
+        // Removed deep quizzes include for list view to save memory
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    const total = await db.lesson.count({ where: whereClause });
     
     res.json({
       data: lessons,

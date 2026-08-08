@@ -1,7 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
-const prismaUrl = process.env.DATABASE_URL.includes('?') 
-  ? `${process.env.DATABASE_URL}&connection_limit=1` 
-  : `${process.env.DATABASE_URL}?connection_limit=1`;
+let baseDbUrl = process.env.DATABASE_URL.replace(':5432/', ':6543/');
+const prismaUrl = baseDbUrl.includes('?') 
+  ? `${baseDbUrl}&connection_limit=1&pgbouncer=true` 
+  : `${baseDbUrl}?connection_limit=1&pgbouncer=true`;
 const prisma = new PrismaClient({
   datasources: { db: { url: prismaUrl } }
 });

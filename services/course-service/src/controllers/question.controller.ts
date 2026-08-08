@@ -60,15 +60,14 @@ export const getQuestions = async (req: AuthRequest, res: Response) => {
     const limit = Math.max(1, parseInt(req.query.limit as string) || 20);
     const skip = (page - 1) * limit;
 
-    const [questions, total] = await Promise.all([
-      db.question.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' }
-      }),
-      db.question.count({ where })
-    ]);
+    const questions = await db.question.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    const total = await db.question.count({ where });
 
     res.json({
       data: questions,
