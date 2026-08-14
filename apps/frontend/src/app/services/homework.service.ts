@@ -1,18 +1,20 @@
 import { homeworkApi } from './api';
 
 // ─── Types ───────────────────────────────────────────────────────────
-export interface CreateHomeworkData {
-  title: string;
-  courseId: string;
-  questions?: HomeworkQuestion[];
-}
-
 export interface HomeworkQuestion {
-  id: string;
+  id: string | number;
   text: string;
   type: string;
   options?: string[];
   correct?: any;
+}
+
+export interface CreateHomeworkData {
+  title: string;
+  courseId: string;
+  questions?: HomeworkQuestion[];
+  lessonId?: string | null;
+  type?: 'NORMAL' | 'VIDEO_DEPENDENT';
 }
 
 export interface SubmitHomeworkData {
@@ -34,6 +36,12 @@ export const homeworkService = {
 
   createHomework: (data: CreateHomeworkData) =>
     homeworkApi.post('/', data),
+
+  updateHomework: (id: string, data: CreateHomeworkData) =>
+    homeworkApi.put(`/${id}`, data),
+
+  deleteHomework: (id: string) =>
+    homeworkApi.delete(`/${id}`),
 
   submitHomework: (id: string, data: SubmitHomeworkData) =>
     homeworkApi.post(`/${id}/submit`, data),

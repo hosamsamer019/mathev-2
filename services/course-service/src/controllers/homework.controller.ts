@@ -29,15 +29,41 @@ export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
       skip,
       take: limit,
       include: {
-        _count: { select: { submissions: true } }
+        _count: { select: { submissions: true } },
+        course: { select: { title: true } },
+        submissions: requesterRole.includes('STUDENT') ? { where: { studentId: req.user?.userId } } : false,
+        Lesson: requesterRole.includes('STUDENT') ? {
+          select: {
+            progress: {
+              where: { studentId: req.user?.userId }
+            }
+          }
+        } : false
       },
       orderBy: { createdAt: 'desc' }
+    });
+    
+    const mappedHomeworks = homeworks.map((hw: any) => {
+      let status = 'available';
+      let score = null;
+      if (hw.submissions && hw.submissions.length > 0) {
+        status = 'completed';
+        score = hw.submissions[0].grade;
+      }
+      let isLocked = false;
+      if (hw.lessonId && hw.Lesson?.progress) {
+        if (hw.Lesson.progress.length === 0 || !hw.Lesson.progress[0].watched) {
+          isLocked = true;
+        }
+      }
+      const { submissions, Lesson, ...rest } = hw as any;
+      return { ...rest, status, score, isLocked };
     });
     
     const total = await db.homework.count({ where: whereClause });
     
     res.json({
-      data: homeworks,
+      data: mappedHomeworks,
       total,
       page,
       limit,
@@ -79,6 +105,21 @@ export const getHomeworkDetails = async (req: AuthRequest, res: Response) => {
     const isEnrolled = await checkUserEnrollment(req.user, homework.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
 
+    if (homework.lessonId && req.user?.role?.toUpperCase().includes('STUDENT')) {
+      const progress = await db.videoProgress.findUnique({
+        where: {
+          studentId_lessonId: {
+            studentId: req.user.userId,
+            lessonId: homework.lessonId
+          }
+        }
+      });
+      
+      if (!progress || !progress.watched) {
+        return res.status(403).json({ message: 'يجب إكمال مشاهدة فيديو الدرس قبل فتح الواجب', locked: true });
+      }
+    }
+
     res.json(homework);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching homework details', error: error.message });
@@ -91,12 +132,14 @@ const createHomeworkSchema = z.object({
   title: z.string().min(2),
   courseId: z.string().uuid(),
   questions: z.array(z.object({
-    id: z.number(),
+    id: z.union([z.number(), z.string()]),
     text: z.string(),
     type: z.string(),
     options: z.array(z.string()).optional(),
     correct: z.any().optional()
-  })).optional()
+  })).optional(),
+  lessonId: z.string().uuid().optional().nullable(),
+  type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional().default('NORMAL')
 });
 
 export const createHomework = async (req: AuthRequest, res: Response) => {
@@ -105,7 +148,7 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
     const requesterId = req.user?.userId;
 
     const validatedData = createHomeworkSchema.parse(req.body);
-    const { title, courseId, questions } = validatedData;
+    const { title, courseId, questions, lessonId, type } = validatedData;
     
     if (requesterRole !== 'ADMIN') {
       const course = await db.course.findUnique({ where: { id: courseId } });
@@ -119,7 +162,9 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
       data: {
         title,
         courseId,
-        questions: questions || []
+        questions: questions || [],
+        lessonId,
+        type: lessonId ? 'VIDEO_DEPENDENT' : type
       }
     });
     io.to(`course:${courseId}`).emit('homework_assigned', homework);
@@ -134,6 +179,58 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ errors: error.errors });
     }
     res.status(500).json({ message: 'Error creating homework', error: error.message });
+  }
+};
+
+const updateHomeworkSchema = z.object({
+  title: z.string().min(2).optional(),
+  questions: z.array(z.object({
+    id: z.union([z.number(), z.string()]),
+    text: z.string(),
+    type: z.string(),
+    options: z.array(z.string()).optional(),
+    correct: z.any().optional()
+  })).optional(),
+  lessonId: z.string().uuid().optional().nullable(),
+  type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional()
+});
+
+export const updateHomework = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+
+    const validatedData = updateHomeworkSchema.parse(req.body);
+    const { title, questions, lessonId, type } = validatedData;
+    
+    const homework = await db.homework.findUnique({ where: { id } });
+    if (!homework) return res.status(404).json({ message: 'Homework not found' });
+
+    if (requesterRole !== 'ADMIN') {
+      const course = await db.course.findUnique({ where: { id: homework.courseId } });
+      if (!course) return res.status(404).json({ message: 'Course not found' });
+      if (course.teacherId !== requesterId) {
+        return res.status(403).json({ message: 'Forbidden: You do not own this course' });
+      }
+    }
+
+    const updatedHomework = await db.homework.update({
+      where: { id },
+      data: {
+        ...(title && { title }),
+        ...(questions && { questions }),
+        ...(lessonId !== undefined && { lessonId }),
+        ...(type !== undefined && { type })
+      }
+    });
+
+    res.json(updatedHomework);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ errors: error.errors });
+    }
+    res.status(500).json({ message: 'Error updating homework', error: error.message });
   }
 };
 
@@ -153,6 +250,13 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
 
     const isEnrolled = await checkUserEnrollment(req.user, homework.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
+
+    const existingSubmission = await db.submission.findFirst({
+      where: { homeworkId, studentId: userId }
+    });
+    if (existingSubmission) {
+      return res.status(400).json({ message: 'لقد قمت بتسليم هذا الواجب مسبقاً' });
+    }
 
     let calculatedGrade = 0;
     const questions = Array.isArray(homework.questions) ? homework.questions : [];

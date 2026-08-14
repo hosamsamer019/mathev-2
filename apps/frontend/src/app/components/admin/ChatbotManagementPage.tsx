@@ -1,23 +1,30 @@
+import { useState, useEffect } from 'react';
 import { Bot, MessageCircle, TrendingUp } from 'lucide-react';
+import { aiService } from '../../services/ai.service';
 
 export default function ChatbotManagementPage() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    aiService.getAnalytics()
+      .then(res => {
+        setData(res.data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch AI analytics', err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
   const stats = [
-    { label: 'إجمالي الرسائل', value: '2,456' },
-    { label: 'الطلاب النشطون', value: '342' },
-    { label: 'معدل الرضا', value: '95%' },
+    { label: 'إجمالي الرسائل', value: data?.totalMessages || 0 },
+    { label: 'الطلاب النشطون', value: data?.activeStudents || 0 },
+    { label: 'معدل الرضا', value: data ? `${data.satisfactionRate}%` : '0%' },
   ];
 
-  const conversations = [
-    { student: 'أحمد محمد', lastMessage: 'ما هو حل المعادلة x + 5 = 10؟', time: 'منذ 5 دقائق', status: 'نشط' },
-    { student: 'فاطمة حسن', lastMessage: 'شكراً على المساعدة', time: 'منذ 15 دقيقة', status: 'مكتمل' },
-    { student: 'محمد علي', lastMessage: 'أحتاج مساعدة في الهندسة', time: 'منذ ساعة', status: 'نشط' },
-  ];
-
-  const commonQuestions = [
-    { question: 'ما هو الجبر؟', count: 45 },
-    { question: 'كيف أحل المعادلات؟', count: 38 },
-    { question: 'ما الفرق بين المعادلة والمتباينة؟', count: 32 },
-  ];
+  const conversations = data?.conversations || [];
+  const commonQuestions = data?.commonQuestions || [];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -26,7 +33,11 @@ export default function ChatbotManagementPage() {
         <p className="text-gray-600">مراقبة وإدارة المحادثات مع المساعد الذكي</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {loading ? (
+        <div className="text-center py-8 text-gray-500">جاري تحميل البيانات...</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {stats.map((stat, idx) => (
           <div key={idx} className="bg-white rounded-xl shadow-md p-6">
             <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
@@ -43,7 +54,7 @@ export default function ChatbotManagementPage() {
           </div>
 
           <div className="space-y-4">
-            {conversations.map((conv, idx) => (
+            {conversations.map((conv: any, idx: number) => (
               <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:border-purple-500 transition-colors">
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-medium text-gray-900">{conv.student}</h3>
@@ -69,7 +80,7 @@ export default function ChatbotManagementPage() {
           </div>
 
           <div className="space-y-4">
-            {commonQuestions.map((q, idx) => (
+            {commonQuestions.map((q: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{q.question}</p>
@@ -87,6 +98,8 @@ export default function ChatbotManagementPage() {
           </button>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

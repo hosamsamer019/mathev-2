@@ -24,7 +24,7 @@ export const userService = {
     return response.data.user;
   },
 
-  getUsers: async (filters: UserFilters): Promise<{ data: User[], total: number }> => {
+  getUsers: async (filters: UserFilters): Promise<{ data: User[], total: number, page: number, limit: number, totalPages: number }> => {
     const response = await userApi.get('/users', { params: filters });
     return response.data;
   },
@@ -51,6 +51,11 @@ export const userService = {
   getAttendance: async (): Promise<any[]> => {
     // Assuming attendance routes are nested under users or we can just use the userApi wrapper for authorized requests
     const response = await userApi.get('/attendance/my-attendance');
+    return response.data;
+  },
+
+  getRisks: async (): Promise<any[]> => {
+    const response = await userApi.get('/risks');
     return response.data;
   }
 };

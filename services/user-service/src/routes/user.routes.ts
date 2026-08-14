@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { verifyToken, AuthRequest } from '../middlewares/auth.middleware.js';
-import { getUsers, createUser, updateUser, deleteUser, getParentChildren } from '../controllers/user.controller.js';
+import { getUsers, createUser, updateUser, deleteUser, getParentChildren, getRisks } from '../controllers/user.controller.js';
 
 const router = Router();
 
 // Admin / User Management Routes
+router.get('/risks', verifyToken, getRisks);
 router.get('/users', verifyToken, getUsers);
 router.post('/users', verifyToken, createUser);
 router.put('/users/:id', verifyToken, updateUser);

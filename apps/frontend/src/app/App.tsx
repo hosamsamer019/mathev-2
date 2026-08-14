@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import LoginPage from './components/auth/LoginPage';
 import RegisterPage from './components/auth/RegisterPage';
 import AdminLoginPage from './components/auth/AdminLoginPage';
@@ -24,11 +25,12 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SplashScreen />
-      <ThemeProvider>
+      <LanguageProvider>
+        <ThemeProvider>
         <SocketProvider>
           <AuthProvider>
             <BrowserRouter>
-              <div className="size-full" dir="rtl">
+              <div className="size-full">
                 <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>}>
                   <Routes>
                     {/* Landing & Auth */}
@@ -73,7 +75,8 @@ export default function App() {
             </BrowserRouter>
           </AuthProvider>
         </SocketProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

@@ -8,7 +8,11 @@ const questionSchema = z.object({
   type: z.string().default('MCQ'),
   options: z.array(z.string()).min(2, 'At least 2 options are required'),
   correctAnswer: z.number().int().min(0),
-  tag: z.string().optional()
+  tag: z.string().optional(),
+  academicLevel: z.enum(['PREP_1', 'PREP_2', 'PREP_3', 'SEC_1', 'SEC_2', 'SEC_3']).optional(),
+  country: z.string().optional(),
+  educationLevel: z.string().optional(),
+  gradeLevel: z.string().optional()
 });
 
 export const createQuestion = async (req: AuthRequest, res: Response) => {
@@ -19,18 +23,25 @@ export const createQuestion = async (req: AuthRequest, res: Response) => {
 
     const data = questionSchema.parse(req.body);
 
-    const question = await db.question.create({
+    const question = await db.questionBank.create({
       data: {
-        teacherId: req.user.userId,
+        creatorId: req.user.userId,
         text: data.text,
         type: data.type,
         options: data.options,
         correctAnswer: data.correctAnswer,
-        tag: data.tag || null
+        topic: data.tag || null,
+        academicLevel: data.academicLevel as any,
+        country: (data.country || null) as any,
+        educationLevel: (data.educationLevel || null) as any,
+        gradeLevel: (data.gradeLevel || null) as any
       }
     });
 
-    res.status(201).json(question);
+    res.status(201).json({
+      ...question,
+      tag: question.topic
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
@@ -49,28 +60,33 @@ export const getQuestions = async (req: AuthRequest, res: Response) => {
     const { tag } = req.query;
     
     const where: any = {
-      teacherId: req.user.userId
+      creatorId: req.user.userId
     };
 
     if (tag && typeof tag === 'string' && tag.trim() !== '') {
-      where.tag = { contains: tag, mode: 'insensitive' };
+      where.topic = { contains: tag, mode: 'insensitive' };
     }
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.max(1, parseInt(req.query.limit as string) || 20);
     const skip = (page - 1) * limit;
 
-    const questions = await db.question.findMany({
+    const questions = await db.questionBank.findMany({
       where,
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' }
     });
     
-    const total = await db.question.count({ where });
+    const mapped = questions.map(q => ({
+      ...q,
+      tag: q.topic
+    }));
+    
+    const total = await db.questionBank.count({ where });
 
     res.json({
-      data: questions,
+      data: mapped,
       total,
       page,
       limit,
@@ -86,28 +102,35 @@ export const updateQuestion = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     
-    const existing = await db.question.findUnique({ where: { id } });
+    const existing = await db.questionBank.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ message: 'Question not found' });
     
     // Ownership check (Teacher only edits own question, admin can edit any)
-    if (existing.teacherId !== req.user?.userId && req.user?.role !== 'ADMIN') {
+    if (existing.creatorId !== req.user?.userId && req.user?.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
     const data = questionSchema.parse(req.body);
 
-    const updated = await db.question.update({
+    const updated = await db.questionBank.update({
       where: { id },
       data: {
         text: data.text,
         type: data.type,
         options: data.options,
         correctAnswer: data.correctAnswer,
-        tag: data.tag || null
+        topic: data.tag || null,
+        academicLevel: data.academicLevel as any,
+        country: data.country !== undefined ? data.country as any : undefined,
+        educationLevel: data.educationLevel !== undefined ? data.educationLevel as any : undefined,
+        gradeLevel: data.gradeLevel !== undefined ? data.gradeLevel as any : undefined
       }
     });
 
-    res.json(updated);
+    res.json({
+      ...updated,
+      tag: updated.topic
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
@@ -121,15 +144,15 @@ export const deleteQuestion = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const existing = await db.question.findUnique({ where: { id } });
+    const existing = await db.questionBank.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ message: 'Question not found' });
     
     // Ownership check
-    if (existing.teacherId !== req.user?.userId && req.user?.role !== 'ADMIN') {
+    if (existing.creatorId !== req.user?.userId && req.user?.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    await db.question.delete({ where: { id } });
+    await db.questionBank.delete({ where: { id } });
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {
     console.error('deleteQuestion error:', error);

@@ -4,6 +4,8 @@ import {
   getHomeworksByCourse,
   getHomeworkDetails,
   createHomework,
+  updateHomework,
+  deleteHomework,
   addQuestion,
   submitHomework,
   getStudentSubmission
@@ -23,6 +25,8 @@ router.get('/:id/submission', verifyToken, getStudentSubmission);
 
 // Admin / Teacher Management routes
 router.post('/', verifyToken, checkRole(['teacher', 'admin']), createHomework);
+router.put('/:id', verifyToken, checkRole(['teacher', 'admin']), updateHomework);
+router.delete('/:id', verifyToken, checkRole(['teacher', 'admin']), deleteHomework);
 router.post('/questions', verifyToken, checkRole(['teacher', 'admin']), addQuestion);
 
 export default router;

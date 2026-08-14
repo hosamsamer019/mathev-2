@@ -7,7 +7,6 @@ import SharedLayout, { MenuItem } from '../shared/SharedLayout';
 import AdminHomePage from './AdminHomePage';
 import StudentsPage from './StudentsPage';
 import CoursesManagementPage from './CoursesManagementPage';
-import VideosManagementPage from './VideosManagementPage';
 import ExamsManagementPage from './ExamsManagementPage';
 import HomeworkManagementPage from './HomeworkManagementPage';
 import ChatbotManagementPage from './ChatbotManagementPage';
@@ -22,12 +21,11 @@ const menuItems: MenuItem[] = [
   { path: '/admin/profile', icon: Users, label: 'الملف الشخصي' },
   { path: '/admin/students', icon: Users, label: 'إدارة الطلاب' },
   { path: '/admin/courses', icon: BookOpen, label: 'إدارة الدورات' },
-  { path: '/admin/videos', icon: Video, label: 'إدارة الفيديوهات' },
   { path: '/admin/exams', icon: ClipboardCheck, label: 'الامتحانات' },
   { path: '/admin/homework', icon: FileText, label: 'الواجبات' },
-  { path: '/admin/chatbot', icon: MessageCircle, label: 'المساعد الذكي', badge: 5 },
+  { path: '/admin/chatbot', icon: MessageCircle, label: 'المساعد الذكي' },
   { path: '/admin/reports', icon: BarChart3, label: 'التقارير' },
-  { path: '/admin/risk', icon: AlertTriangle, label: 'كشف الخطر', badge: 4 },
+  { path: '/admin/risk', icon: AlertTriangle, label: 'كشف الخطر' },
   { path: '/admin/subscriptions', icon: CreditCard, label: 'الاشتراكات' },
 ];
 
@@ -48,7 +46,6 @@ export default function AdminDashboard() {
         <Route path="/profile" element={<AdminProfilePage />} />
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/courses" element={<CoursesManagementPage />} />
-        <Route path="/videos" element={<VideosManagementPage />} />
         <Route path="/exams" element={<ExamsManagementPage />} />
         <Route path="/homework" element={<HomeworkManagementPage />} />
         <Route path="/chatbot" element={<ChatbotManagementPage />} />

@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
+import { ACADEMIC_CONFIG } from '@shared/utils/dist/academicConfig';
 import { userService } from '../../services/user.service';
 
 export default function StudentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
   // Form State
   const [formData, setFormData] = useState({
@@ -16,10 +22,14 @@ export default function StudentsPage() {
     password: '',
     role: 'ONLINE_STUDENT',
     parentId: '',
+    childId: '',
     centerGroupId: '',
     parentName: '',
     parentEmail: '',
-    parentPassword: ''
+    parentPassword: '',
+    country: 'EG',
+    educationLevel: '',
+    gradeLevel: ''
   });
 
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
@@ -27,8 +37,16 @@ export default function StudentsPage() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(1); // Reset page on new search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [page, debouncedSearchTerm]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -38,8 +56,9 @@ export default function StudentsPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await userService.getUsers({}); 
+      const res = await userService.getUsers({ page, limit, search: debouncedSearchTerm }); 
       setUsers(Array.isArray(res.data) ? res.data : []);
+      setTotalPages(res.totalPages || 1);
     } catch (err) {
       console.error('Failed to fetch users', err);
     } finally {
@@ -49,7 +68,7 @@ export default function StudentsPage() {
 
   const handleAdd = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', password: '', role: 'ONLINE_STUDENT', parentId: '', centerGroupId: '', parentName: '', parentEmail: '', parentPassword: '' });
+    setFormData({ name: '', email: '', password: '', role: 'ONLINE_STUDENT', parentId: '', childId: '', centerGroupId: '', parentName: '', parentEmail: '', parentPassword: '', country: 'EG', educationLevel: '', gradeLevel: '' });
     setValidationErrors({});
     setShowModal(true);
   };
@@ -62,10 +81,14 @@ export default function StudentsPage() {
       password: '',
       role: user.role || 'ONLINE_STUDENT',
       parentId: user.parentId || '',
+      childId: '',
       centerGroupId: user.centerGroupId || '',
       parentName: '',
       parentEmail: '',
-      parentPassword: ''
+      parentPassword: '',
+      country: user.country || 'EG',
+      educationLevel: user.educationLevel || '',
+      gradeLevel: user.gradeLevel || ''
     });
     setValidationErrors({});
     setShowModal(true);
@@ -88,11 +111,27 @@ export default function StudentsPage() {
     try {
       setIsSaving(true);
       setValidationErrors({});
+      
+      const payload: any = { ...formData };
+      if (!payload.parentId) payload.parentId = null;
+      if (!payload.childId) payload.childId = null;
+      if (!payload.centerGroupId) payload.centerGroupId = null;
+      if (!payload.parentName) payload.parentName = null;
+      if (!payload.parentEmail) payload.parentEmail = null;
+      if (!payload.parentPassword) payload.parentPassword = null;
+      
+      // Clean up academic fields if not student
+      if (!['ONLINE_STUDENT', 'CENTER_STUDENT'].includes(payload.role)) {
+        payload.country = null;
+        payload.educationLevel = null;
+        payload.gradeLevel = null;
+      }
+
       if (editingUser) {
-        await userService.updateUser(editingUser.id, formData);
+        await userService.updateUser(editingUser.id, payload);
         showToast('تم التعديل بنجاح', 'success');
       } else {
-        await userService.createUser(formData);
+        await userService.createUser(payload);
         showToast('تمت الإضافة بنجاح', 'success');
       }
       setShowModal(false);
@@ -116,7 +155,7 @@ export default function StudentsPage() {
     }
   };
 
-  const filteredUsers = users.filter(s => s.name?.includes(searchTerm) || s.email?.includes(searchTerm));
+  const filteredUsers = users; // Server-side search used instead
 
   return (
     <div className="p-8 relative">
@@ -190,6 +229,35 @@ export default function StudentsPage() {
               ))}
             </tbody>
           </table>
+          
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4 rounded-b-xl">
+            <div className="flex flex-1 items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  الصفحة <span className="font-medium">{page}</span> من <span className="font-medium">{totalPages}</span>
+                </p>
+              </div>
+              <div>
+                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                  >
+                    <span>السابق</span>
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                  >
+                    <span>التالي</span>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -258,6 +326,56 @@ export default function StudentsPage() {
                 {validationErrors.role && <p className="text-red-500 text-xs mt-1">{validationErrors.role}</p>}
               </div>
 
+              {(formData.role === 'ONLINE_STUDENT' || formData.role === 'CENTER_STUDENT') && (
+                <div className="pt-4 border-t border-gray-200 mt-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-3">المستوى الدراسي</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">البلد</label>
+                      <select
+                        value={formData.country}
+                        onChange={(e) => setFormData({...formData, country: e.target.value, educationLevel: '', gradeLevel: ''})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      >
+                        {Object.entries(ACADEMIC_CONFIG).map(([key, config]) => (
+                          <option key={key} value={key}>{config.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {formData.country && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">المرحلة الدراسية</label>
+                        <select
+                          value={formData.educationLevel}
+                          onChange={(e) => setFormData({...formData, educationLevel: e.target.value, gradeLevel: ''})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="">اختر المرحلة</option>
+                          {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels).map(([key, level]: [string, any]) => (
+                            <option key={key} value={key}>{level.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {formData.country && formData.educationLevel && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
+                        <select
+                          value={formData.gradeLevel}
+                          onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="">اختر الصف</option>
+                          {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels[formData.educationLevel].grades).map(([key, label]: [string, any]) => (
+                            <option key={key} value={key}>{label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {(formData.role === 'ONLINE_STUDENT' || formData.role === 'CENTER_STUDENT') && !editingUser && (
                 <div className="pt-4 border-t border-gray-200 mt-4">
                   <h3 className="text-md font-semibold text-gray-800 mb-3">بيانات ولي الأمر (اختياري)</h3>
@@ -299,8 +417,8 @@ export default function StudentsPage() {
                   <input
                     type="text"
                     placeholder="Enter Student ID"
-                    value={formData.parentId}
-                    onChange={(e) => setFormData({...formData, parentId: e.target.value})}
+                    value={formData.childId}
+                    onChange={(e) => setFormData({...formData, childId: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
                 </div>

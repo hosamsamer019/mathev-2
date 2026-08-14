@@ -5,6 +5,11 @@ export interface CreateCourseData {
   title: string;
   description?: string;
   category?: string;
+  price?: number;
+  status?: string;
+  country?: string;
+  educationLevel?: string;
+  gradeLevel?: string;
 }
 
 export interface CreateLessonData {
@@ -36,6 +41,12 @@ export const courseService = {
   getCourses: (params?: { page?: number; limit?: number }) =>
     courseApi.get<PaginatedResponse<any>>('/', { params }),
 
+  getAvailableCourses: (params?: { page?: number; limit?: number }) =>
+    courseApi.get<PaginatedResponse<any>>('/available', { params }),
+
+  enrollCourse: (id: string) =>
+    courseApi.post(`/${id}/enroll`),
+
   getCourseDetails: (id: string) =>
     courseApi.get(`/${id}`),
 
@@ -45,8 +56,8 @@ export const courseService = {
   deleteCourse: (id: string) =>
     courseApi.delete(`/${id}`),
 
-  // NOTE: PUT /courses/:id does NOT exist in the backend.
-  // updateCourse is intentionally omitted.
+  updateCourse: (id: string, data: Partial<CreateCourseData>) =>
+    courseApi.put(`/${id}`, data),
 
   // ── Lessons ──────────────────────────────────────────────────────
   getLessons: (params?: Record<string, any>) =>
@@ -84,4 +95,7 @@ export const courseService = {
 
   getUploadStatus: (uploadId: string) =>
     courseApi.get(`/upload/${uploadId}/status`),
+
+  getUploads: () =>
+    courseApi.get('/uploads'),
 };

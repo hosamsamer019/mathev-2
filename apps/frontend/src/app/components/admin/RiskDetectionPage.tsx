@@ -3,65 +3,31 @@ import { AlertTriangle, Brain, TrendingDown, Phone, MessageCircle, Eye, Filter }
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const riskStudents = [
-  {
-    name: 'محمود عبدالرحمن',
-    grade: 'ثانوي ٢',
-    type: 'أونلاين',
-    avg: 42,
-    risk: 'حرج',
-    riskScore: 92,
-    reasons: ['غياب متكرر عن المنصة', 'أقل من ٥٠٪ في ٣ امتحانات', 'لم يسلم ٦ واجبات'],
-    lastActivity: 'منذ ٥ أيام',
-    trend: -12,
-  },
-  {
-    name: 'كريم حسن',
-    grade: 'ثانوي ١',
-    type: 'أونلاين',
-    avg: 48,
-    risk: 'عالي',
-    riskScore: 78,
-    reasons: ['انخفاض مستمر في الدرجات', 'وقت دراسة أقل من المتوسط'],
-    lastActivity: 'منذ يومين',
-    trend: -8,
-  },
-  {
-    name: 'نور محمد',
-    grade: 'ثانوي ١',
-    type: 'سنتر',
-    avg: 55,
-    risk: 'متوسط',
-    riskScore: 58,
-    reasons: ['تأخر في تسليم الواجبات', 'أداء ضعيف في مادة الهندسة'],
-    lastActivity: 'أمس',
-    trend: -3,
-  },
-  {
-    name: 'لمياء أحمد',
-    grade: 'ثانوي ٣',
-    type: 'أونلاين',
-    avg: 59,
-    risk: 'متوسط',
-    riskScore: 52,
-    reasons: ['درجات متأرجحة', 'مشكلات في التفاضل'],
-    lastActivity: 'اليوم',
-    trend: -2,
-  },
-];
-
-const riskBySubject = [
-  { subject: 'التفاضل', count: 18 },
-  { subject: 'الهندسة', count: 12 },
-  { subject: 'الجبر', count: 8 },
-  { subject: 'الإحصاء', count: 6 },
-  { subject: 'المثلثات', count: 4 },
-];
+import { useEffect } from 'react';
+import { analyticsApi } from '../../services/api';
 
 export default function RiskDetectionPage() {
   const { isDark } = useTheme();
   const [filter, setFilter] = useState('all');
-  const [selectedStudent, setSelectedStudent] = useState<typeof riskStudents[0] | null>(null);
+  const [riskStudents, setRiskStudents] = useState<any[]>([]);
+  const [riskBySubject, setRiskBySubject] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRiskData();
+  }, []);
+
+  const fetchRiskData = async () => {
+    try {
+      const res = await analyticsApi.get('/risk');
+      setRiskStudents(res.data.riskStudents || []);
+      setRiskBySubject(res.data.riskBySubject || []);
+    } catch (err) {
+      console.error('Failed to fetch risk data', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -103,7 +69,11 @@ export default function RiskDetectionPage() {
               <stat.icon className="w-5 h-5 text-white" />
             </div>
             <p className={`text-sm ${textSecondary}`}>{stat.label}</p>
-            <p className={`text-2xl font-bold ${textPrimary} mt-1`}>{stat.value}</p>
+            {loading ? (
+               <div className="h-8 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1 w-1/2"></div>
+            ) : (
+               <p className={`text-2xl font-bold ${textPrimary} mt-1`}>{stat.value}</p>
+            )}
           </div>
         ))}
       </div>
@@ -175,8 +145,12 @@ export default function RiskDetectionPage() {
 
       {/* Risk Students List */}
       <div className="space-y-4">
-        {filtered.map((student, idx) => {
-          const riskStyle = riskColors[student.risk as keyof typeof riskColors];
+        {loading ? (
+           <div className="text-center py-8">جاري تحميل البيانات...</div>
+        ) : filtered.length === 0 ? (
+           <div className="text-center py-8 text-gray-500">لا توجد حالات خطرة مسجلة</div>
+        ) : filtered.map((student, idx) => {
+          const riskStyle = riskColors[student.risk as keyof typeof riskColors] || riskColors['متوسط'];
           return (
             <div key={idx} className={`${cardBg} border rounded-2xl p-5`}>
               <div className="flex items-start justify-between gap-4">
@@ -209,7 +183,7 @@ export default function RiskDetectionPage() {
 
                     {/* Reasons */}
                     <div className="flex flex-wrap gap-2">
-                      {student.reasons.map((reason, rIdx) => (
+                      {student.reasons.map((reason: string, rIdx: number) => (
                         <span key={rIdx} className={`text-xs px-2 py-1 rounded-lg ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                           ⚠️ {reason}
                         </span>

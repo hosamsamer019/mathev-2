@@ -29,7 +29,8 @@ export default function HomeworkPage() {
             title: hw.title,
             status: hw.status === 'draft' ? 'pending' : hw.status,
             score: hw.score || null,
-            deadline: new Date(hw.deadline || Date.now()).toLocaleDateString()
+            deadline: new Date(hw.deadline || Date.now()).toLocaleDateString(),
+            isLocked: hw.isLocked || false
           }));
           setHomeworks(mapped);
         } else {
@@ -102,14 +103,24 @@ export default function HomeworkPage() {
           {homeworks.map((hw) => (
             <div
               key={hw.id}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow cursor-pointer"
-              onClick={() => hw.status === 'pending' && setSelectedHomework(hw.id)}
+              className={`bg-white rounded-xl shadow-md p-6 transition-shadow ${hw.isLocked ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-xl cursor-pointer'}`}
+              onClick={() => {
+                if (hw.isLocked) {
+                  alert('يجب إكمال مشاهدة فيديو الدرس قبل فتح الواجب');
+                  return;
+                }
+                if (hw.status === 'pending' || hw.status === 'available') {
+                  setSelectedHomework(hw.id);
+                }
+              }}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  hw.status === 'completed' ? 'bg-green-100' : 'bg-yellow-100'
+                  hw.isLocked ? 'bg-gray-200' : hw.status === 'completed' ? 'bg-green-100' : 'bg-yellow-100'
                 }`}>
-                  {hw.status === 'completed' ? (
+                  {hw.isLocked ? (
+                    <XCircle className="w-6 h-6 text-gray-500" />
+                  ) : hw.status === 'completed' ? (
                     <CheckCircle className="w-6 h-6 text-green-600" />
                   ) : (
                     <Clock className="w-6 h-6 text-yellow-600" />
@@ -127,11 +138,13 @@ export default function HomeworkPage() {
               </div>
 
               <div className={`px-3 py-1 rounded-full text-sm inline-block ${
-                hw.status === 'completed'
+                hw.isLocked
+                  ? 'bg-gray-200 text-gray-700'
+                  : hw.status === 'completed'
                   ? 'bg-green-100 text-green-800'
                   : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {hw.status === 'completed' ? 'مكتمل' : 'قيد الانتظار'}
+                {hw.isLocked ? 'مقفل (شاهد الدرس)' : hw.status === 'completed' ? 'مكتمل' : 'قيد الانتظار'}
               </div>
             </div>
           ))}
@@ -165,7 +178,7 @@ export default function HomeworkPage() {
             <div className="space-y-4 mb-8">
               {questions.map((q, idx) => (
                 <div key={q.id} className="text-right p-4 bg-gray-50 rounded-lg">
-                  <p className="font-medium text-gray-900 mb-2">{q.question}</p>
+                  <p className="font-medium text-gray-900 mb-2">{q.text || q.question}</p>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">إجابتك:</span>
                     <span className={`font-medium ${
@@ -223,7 +236,7 @@ export default function HomeworkPage() {
             {questions.map((q, idx) => (
               <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
                 <h3 className="font-bold text-gray-900 mb-4">
-                  السؤال {idx + 1}: {q.question}
+                  السؤال {idx + 1}: {q.text || q.question}
                 </h3>
                 <div className="space-y-3">
                   {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? q.options.split('-') : [])).map((option: string, optIdx: number) => (

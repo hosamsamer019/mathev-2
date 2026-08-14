@@ -1,11 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Download, TrendingUp, Users, Award, BookOpen } from 'lucide-react';
+import { Download, TrendingUp, Users, Award, BookOpen, Loader2 } from 'lucide-react';
 import { analyticsService } from '../../services/analytics.service';
 
 export default function ReportsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     fetchAnalytics();
@@ -18,11 +26,28 @@ export default function ReportsPage() {
       setData(res.data);
     } catch (err: any) {
       console.error('Failed to fetch analytics', err);
-      if (err.response?.status === 403) {
-        // Handle gracefully
-      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    setExporting(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`تقرير_المنصة_${new Date().toLocaleDateString('ar-EG')}.pdf`);
+    } catch (err) {
+      showToast('فشل تصدير PDF', 'error');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -50,15 +75,25 @@ export default function ReportsPage() {
   })) || [];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-8 relative" ref={reportRef}>
+      {toast && (
+        <div className={`fixed top-4 right-4 p-4 rounded shadow-lg text-white ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'} z-50`}>
+          {toast.message}
+        </div>
+      )}
+      
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">التقارير والإحصائيات</h1>
           <p className="text-gray-600">تحليل شامل لأداء المنصة</p>
         </div>
-        <button className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700">
-          <Download className="w-5 h-5" />
-          <span>تصدير التقرير</span>
+        <button 
+          onClick={handleExportPDF}
+          disabled={exporting}
+          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-60"
+        >
+          {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+          <span>{exporting ? 'جاري التصدير...' : 'تصدير PDF'}</span>
         </button>
       </div>
 
@@ -138,10 +173,22 @@ export default function ReportsPage() {
         </div>
         
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">احصائيات أخرى ستضاف لاحقاً</h2>
-          <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-             <p className="text-gray-500">المزيد من الرسوم البيانية ستضاف هنا</p>
-          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">أداء الدورات</h2>
+          {data.performanceData && data.performanceData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={data.performanceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="course" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="average" fill="#10b981" name="متوسط الدرجات" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+               <p className="text-gray-500">لا يوجد بيانات كافية لعرض الأداء</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

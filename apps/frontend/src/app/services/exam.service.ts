@@ -1,26 +1,31 @@
 import { examApi } from './api';
 
 // ─── Types ───────────────────────────────────────────────────────────
-export interface CreateExamData {
-  title: string;
-  courseId: string;
-  duration?: number;
-  requiresCamera?: boolean;
-  questions?: ExamQuestion[];
-}
-
 export interface ExamQuestion {
-  id: string;
+  id: string | number;
   text: string;
   type: string;
   options?: string[];
   correct?: any;
 }
 
+export interface CreateExamData {
+  title: string;
+  courseId: string;
+  duration?: number;
+  requiresCamera?: boolean;
+  startTime?: string;
+  endTime?: string;
+  randomization?: boolean;
+  passingScore?: number;
+  questions?: ExamQuestion[];
+}
+
 export interface SubmitAnswerData {
   questionId: string;
   selectedOption: any;
 }
+
 
 // ─── Service ─────────────────────────────────────────────────────────
 export const examService = {

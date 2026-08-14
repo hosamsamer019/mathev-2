@@ -16,4 +16,7 @@ export const aiService = {
 
   generateQuestions: (params: any) =>
     aiApi.post('/generate-questions', params),
+
+  getAnalytics: () =>
+    aiApi.get('/analytics'),
 };

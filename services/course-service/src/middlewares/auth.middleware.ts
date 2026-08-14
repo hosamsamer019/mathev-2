@@ -30,9 +30,9 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
 
 export const checkRole = (roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    const userRole = req.user?.role?.toLowerCase();
+    const userRole = (req.user?.role || '').toLowerCase();
     const allowedRoles = roles.map(r => r.toLowerCase());
-    console.log('checkRole => user:', req.user, 'userRole:', userRole, 'allowedRoles:', allowedRoles);
+    
     if (!req.user || !userRole || !allowedRoles.includes(userRole)) {
       return res.status(403).json({ message: 'Permission denied. Insufficient role.' });
     }

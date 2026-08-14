@@ -5,12 +5,16 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { db } from '../../../../packages/database/src/index.js';
 import { sendEmail, buildPasswordResetEmail } from '../services/email.service.js';
+import { isValidAcademicProfile } from '@shared/utils';
 
 export const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(['ONLINE_STUDENT', 'CENTER_STUDENT', 'TEACHER', 'ADMIN', 'PARENT'])
+  role: z.enum(['ONLINE_STUDENT', 'CENTER_STUDENT', 'TEACHER', 'ADMIN', 'PARENT']),
+  country: z.string().optional(),
+  educationLevel: z.string().optional(),
+  gradeLevel: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -23,6 +27,13 @@ export const register = async (req: Request, res: Response) => {
   try {
     const validatedData = req.body as any;
     
+    // Enforce academic profile for students
+    if (['ONLINE_STUDENT', 'CENTER_STUDENT'].includes(validatedData.role)) {
+      if (!isValidAcademicProfile(validatedData.country, validatedData.educationLevel, validatedData.gradeLevel)) {
+        return res.status(400).json({ message: 'Invalid or incomplete academic profile for student.' });
+      }
+    }
+
     const existingUser = await db.user.findUnique({
       where: { email: validatedData.email }
     });
@@ -37,7 +48,10 @@ export const register = async (req: Request, res: Response) => {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
-        role: validatedData.role as any
+        role: validatedData.role as any,
+        country: validatedData.country,
+        educationLevel: validatedData.educationLevel,
+        gradeLevel: validatedData.gradeLevel,
       }
     });
 
@@ -72,7 +86,12 @@ export const register = async (req: Request, res: Response) => {
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role
+        role: newUser.role,
+        academicLevel: newUser.academicLevel,
+        country: newUser.country,
+        educationLevel: newUser.educationLevel,
+        gradeLevel: newUser.gradeLevel,
+        language: newUser.language
       }
     });
   } catch (error) {
@@ -136,7 +155,12 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        academicLevel: user.academicLevel,
+        country: user.country,
+        educationLevel: user.educationLevel,
+        gradeLevel: user.gradeLevel,
+        language: user.language
       }
     });
   } catch (error: any) {
@@ -148,8 +172,8 @@ export const login = async (req: Request, res: Response) => {
 export const getMe = async (req: any, res: Response) => {
   try {
     const user = await db.user.findUnique({
-      where: { id: req.user.userId },
-      select: { id: true, name: true, email: true, role: true }
+      where: { id: req.user?.userId },
+      select: { id: true, name: true, email: true, role: true, academicLevel: true, country: true, educationLevel: true, gradeLevel: true, language: true, phone: true }
     });
     
     if (!user) {

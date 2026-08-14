@@ -10,6 +10,9 @@ export const analyticsService = {
   getTeacherAnalytics: (teacherId: string) =>
     analyticsApi.get(`/teacher/${teacherId}/overview`),
 
+  getStudentReport: (studentId: string) =>
+    analyticsApi.get(`/report/${studentId}`),
+
   // ── Student ──────────────────────────────────────────────────────
   getStudentOverview: () =>
     analyticsApi.get('/student/overview'),

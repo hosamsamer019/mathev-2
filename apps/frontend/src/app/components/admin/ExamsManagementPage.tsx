@@ -1,15 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
 import { examService } from '../../services/exam.service';
+import { MathContent } from '../ui/MathContent';
 
 export default function ExamsManagementPage() {
   const [showModal, setShowModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [showAttemptsModal, setShowAttemptsModal] = useState(false);
+  const [editingExam, setEditingExam] = useState<any>(null);
+  const [selectedExamDetails, setSelectedExamDetails] = useState<any>(null);
+  
+  // Question Management State
+  const [examQuestions, setExamQuestions] = useState<any[]>([]);
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [questionForm, setQuestionForm] = useState<{ text: string, type: string, options: string[], correct: any }>({ text: '', type: 'multiple_choice', options: ['', '', '', ''], correct: 0 });
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
-  const [formData, setFormData] = useState({ title: '', courseId: '' });
+  const [formData, setFormData] = useState<any>({ 
+    title: '', courseId: '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: ''
+  });
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -55,14 +66,35 @@ export default function ExamsManagementPage() {
     }
   };
 
+  const handleEdit = (exam: any) => {
+    setEditingExam(exam);
+    setFormData({
+      title: exam.title || '',
+      courseId: exam.courseId || '',
+      duration: exam.duration || 60,
+      passingScore: exam.passingScore || 50,
+      randomization: exam.randomization || false,
+      startTime: exam.startTime ? new Date(exam.startTime).toISOString().slice(0, 16) : '',
+      endTime: exam.endTime ? new Date(exam.endTime).toISOString().slice(0, 16) : ''
+    });
+    setValidationErrors({});
+    setShowModal(true);
+  };
+
   const handleSave = async () => {
     try {
       setIsSaving(true);
       setValidationErrors({});
-      await examService.createExam(formData);
-      showToast('تمت الإضافة بنجاح', 'success');
+      if (editingExam) {
+        await examService.updateExam(editingExam.id, formData);
+        showToast('تم التعديل بنجاح', 'success');
+      } else {
+        await examService.createExam(formData);
+        showToast('تمت الإضافة بنجاح', 'success');
+      }
       setShowModal(false);
-      setFormData({ title: '', courseId: '' });
+      setEditingExam(null);
+      setFormData({ title: '', courseId: '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: '' });
       fetchExams();
     } catch (err: any) {
       console.error(err);
@@ -83,6 +115,107 @@ export default function ExamsManagementPage() {
     }
   };
 
+  const handleViewAttempts = async (id: string) => {
+    try {
+      setLoading(true);
+      const res = await examService.getExamDetails(id);
+      setSelectedExamDetails(res.data);
+      setShowAttemptsModal(true);
+    } catch (err: any) {
+      showToast('فشل في جلب تفاصيل الامتحان', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenQuestions = async (exam: any) => {
+    setSelectedExamDetails(exam);
+    try {
+      setLoading(true);
+      const res = await examService.getExamDetails(exam.id);
+      // Prisma JSON field may return as array, object, or null – normalize to array
+      const rawQuestions = res.data?.questions;
+      const normalized: any[] = Array.isArray(rawQuestions)
+        ? rawQuestions
+        : rawQuestions && typeof rawQuestions === 'object'
+        ? Object.values(rawQuestions)
+        : [];
+      setExamQuestions(normalized);
+      setShowQuestionModal(true);
+    } catch (err: any) {
+      showToast('فشل في جلب الأسئلة', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleSaveQuestion = async () => {
+    if (!questionForm.text) {
+      showToast('نص السؤال مطلوب', 'error');
+      return;
+    }
+    const newQ = {
+      id: editingQuestion ? editingQuestion.id : Date.now().toString(),
+      text: questionForm.text,
+      type: questionForm.type,
+      options: questionForm.type === 'multiple_choice' ? questionForm.options.filter(o => o) : undefined,
+      correct: questionForm.type === 'multiple_choice' ? questionForm.options[questionForm.correct] : questionForm.correct
+    };
+
+    const updatedQuestions = editingQuestion 
+      ? examQuestions.map(q => q.id === editingQuestion.id ? newQ : q)
+      : [...examQuestions, newQ];
+
+    try {
+      setIsSaving(true);
+      // Backend updateExam Zod schema requires title and courseId along with questions
+      const updatePayload = {
+        title: selectedExamDetails.title,
+        courseId: selectedExamDetails.courseId,
+        duration: selectedExamDetails.duration || 60,
+        requiresCamera: selectedExamDetails.requiresCamera || false,
+        randomization: selectedExamDetails.randomization || false,
+        passingScore: selectedExamDetails.passingScore || 50,
+        questions: updatedQuestions
+      };
+      await examService.updateExam(selectedExamDetails.id, updatePayload);
+      setExamQuestions(updatedQuestions);
+      setEditingQuestion(null);
+      setQuestionForm({ text: '', type: 'multiple_choice', options: ['', '', '', ''], correct: 0 });
+
+      showToast('تم حفظ السؤال بنجاح', 'success');
+    } catch (err) {
+      showToast('فشل في حفظ السؤال', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteQuestion = async (qId: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا السؤال؟')) return;
+    const updatedQuestions = examQuestions.filter(q => q.id !== qId);
+    try {
+      setIsSaving(true);
+      const deletePayload = {
+        title: selectedExamDetails.title,
+        courseId: selectedExamDetails.courseId,
+        duration: selectedExamDetails.duration || 60,
+        requiresCamera: selectedExamDetails.requiresCamera || false,
+        randomization: selectedExamDetails.randomization || false,
+        passingScore: selectedExamDetails.passingScore || 50,
+        questions: updatedQuestions
+      };
+      await examService.updateExam(selectedExamDetails.id, deletePayload);
+      setExamQuestions(updatedQuestions);
+      showToast('تم حذف السؤال بنجاح', 'success');
+    } catch (err) {
+      showToast('فشل في حذف السؤال', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="p-8 relative">
       {toast && (
@@ -97,7 +230,11 @@ export default function ExamsManagementPage() {
           <p className="text-gray-600">إنشاء وإدارة الامتحانات</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditingExam(null);
+            setFormData({ title: '', courseId: '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: '' });
+            setShowModal(true);
+          }}
           className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
         >
           <Plus className="w-5 h-5" />
@@ -127,15 +264,21 @@ export default function ExamsManagementPage() {
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setShowQuestionModal(true)}
+                      onClick={() => handleViewAttempts(exam.id)}
+                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                    >
+                      عرض المحاولات
+                    </button>
+                    <button
+                      onClick={() => handleOpenQuestions(exam)}
                       className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                     >
                       الأسئلة
                     </button>
                     <button 
-                      onClick={() => alert('ميزة التعديل غير مدعومة')}
-                      className="p-2 text-gray-400 cursor-not-allowed rounded"
-                      title="ميزة تعديل الامتحان غير متوفرة"
+                      onClick={() => handleEdit(exam)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      title="تعديل الامتحان"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
@@ -154,7 +297,7 @@ export default function ExamsManagementPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">إضافة امتحان جديد</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{editingExam ? 'تعديل امتحان' : 'إضافة امتحان جديد'}</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
@@ -184,6 +327,59 @@ export default function ExamsManagementPage() {
                 {validationErrors.courseId && <p className="text-red-500 text-xs mt-1">{validationErrors.courseId}</p>}
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">مدة الامتحان (دقائق)</label>
+                  <input
+                    type="number"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({...formData, duration: parseInt(e.target.value) || 60})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">درجة النجاح (%)</label>
+                  <input
+                    type="number"
+                    value={formData.passingScore}
+                    onChange={(e) => setFormData({...formData, passingScore: parseInt(e.target.value) || 50})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">وقت البدء (اختياري)</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">وقت الانتهاء (اختياري)</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="randomization"
+                  checked={formData.randomization}
+                  onChange={(e) => setFormData({...formData, randomization: e.target.checked})}
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                />
+                <label htmlFor="randomization" className="text-sm font-medium text-gray-700">ترتيب أسئلة عشوائي</label>
+              </div>
+
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleSave}
@@ -205,15 +401,169 @@ export default function ExamsManagementPage() {
         </div>
       )}
 
-      {showQuestionModal && (
+      {showQuestionModal && selectedExamDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">إدارة الأسئلة (سيتم الربط لاحقاً)</h2>
-              <button onClick={() => setShowQuestionModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-2xl font-bold text-gray-900">إدارة أسئلة امتحان: {selectedExamDetails.title}</h2>
+              <button onClick={() => { setShowQuestionModal(false); setEditingQuestion(null); }} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-lg font-bold mb-4">{editingQuestion ? 'تعديل سؤال' : 'إضافة سؤال جديد'}</h3>
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">نص السؤال</label>
+                    <textarea 
+                      value={questionForm.text} 
+                      onChange={e => setQuestionForm({...questionForm, text: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">نوع السؤال</label>
+                    <select 
+                      value={questionForm.type}
+                      onChange={e => setQuestionForm({...questionForm, type: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500"
+                    >
+                      <option value="multiple_choice">اختيار من متعدد</option>
+                      <option value="true_false">صح أو خطأ</option>
+                      <option value="text">مقال قصير</option>
+                    </select>
+                  </div>
+                  {questionForm.type === 'multiple_choice' && (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium mb-1">الخيارات (اختر الإجابة الصحيحة)</label>
+                      {questionForm.options.map((opt, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                          <input 
+                            type="radio" 
+                            name="correctOption" 
+                            checked={questionForm.correct === i} 
+                            onChange={() => setQuestionForm({...questionForm, correct: i})} 
+                          />
+                          <input 
+                            type="text" 
+                            value={opt} 
+                            onChange={e => {
+                              const newOpts = [...questionForm.options];
+                              newOpts[i] = e.target.value;
+                              setQuestionForm({...questionForm, options: newOpts});
+                            }}
+                            placeholder={`خيار ${i+1}`}
+                            className="flex-1 px-3 py-1 border border-gray-300 rounded"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {questionForm.type === 'true_false' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">الإجابة الصحيحة</label>
+                      <select 
+                        value={questionForm.correct as any} 
+                        onChange={e => setQuestionForm({...questionForm, correct: e.target.value === 'true' ? true : false})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded"
+                      >
+                        <option value="true">صح</option>
+                        <option value="false">خطأ</option>
+                      </select>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveQuestion} disabled={isSaving} className="flex-1 bg-purple-600 text-white py-2 rounded">
+                      {isSaving ? 'جاري الحفظ...' : 'حفظ السؤال'}
+                    </button>
+                    {editingQuestion && (
+                       <button onClick={() => { setEditingQuestion(null); setQuestionForm({ text: '', type: 'multiple_choice', options: ['', '', '', ''], correct: 0 }); }} className="bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                         إلغاء التعديل
+                       </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold mb-4">الأسئلة الحالية ({examQuestions.length})</h3>
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                  {examQuestions.length === 0 && <p className="text-gray-500">لا يوجد أسئلة مضافة</p>}
+                  {examQuestions.map((q, idx) => (
+                    <div key={q.id} className="p-3 bg-white border border-gray-200 rounded shadow-sm relative group">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-sm text-gray-500">سؤال {idx + 1}</span>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                          <button onClick={() => { 
+                            setEditingQuestion(q);
+                            setQuestionForm({
+                              text: q.text,
+                              type: q.type || 'multiple_choice',
+                              options: q.options || ['', '', '', ''],
+                              correct: q.type === 'multiple_choice' ? (q.options ? q.options.indexOf(q.correct) : 0) : q.correct
+                            });
+                          }} className="text-blue-500 hover:text-blue-700">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:text-red-700">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-gray-900 font-medium">
+                        <MathContent content={q.text || ''} />
+                      </p>
+                      <span className="text-xs text-gray-500 mt-1 inline-block">النوع: {q.type === 'multiple_choice' ? 'اختيارات' : q.type === 'true_false' ? 'صح/خطأ' : 'نصي'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAttemptsModal && selectedExamDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">محاولات الطلاب: {selectedExamDetails.title}</h2>
+              <button onClick={() => setShowAttemptsModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            {selectedExamDetails.attempts?.length === 0 ? (
+               <p className="text-gray-500 text-center py-4">لا توجد محاولات حتى الآن.</p>
+            ) : (
+               <table className="w-full">
+                 <thead>
+                   <tr className="border-b bg-gray-50">
+                     <th className="py-2 px-4 text-right">الطالب</th>
+                     <th className="py-2 px-4 text-right">الدرجة</th>
+                     <th className="py-2 px-4 text-right">التاريخ</th>
+                     <th className="py-2 px-4 text-right">المخالفات</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {selectedExamDetails.attempts?.map((attempt: any) => (
+                     <tr key={attempt.id} className="border-b hover:bg-gray-50">
+                       <td className="py-2 px-4">{attempt.student?.name || 'غير معروف'}</td>
+                       <td className="py-2 px-4 font-bold text-indigo-600">{Math.round(attempt.score)}%</td>
+                       <td className="py-2 px-4 text-sm text-gray-600">{new Date(attempt.createdAt).toLocaleString('ar')}</td>
+                       <td className="py-2 px-4 text-sm">
+                          {attempt.violations && attempt.violations.length > 0 ? (
+                            <span className="text-red-600 font-bold">{attempt.violations.length} مخالفات</span>
+                          ) : (
+                            <span className="text-green-600">لا يوجد</span>
+                          )}
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+            )}
           </div>
         </div>
       )}

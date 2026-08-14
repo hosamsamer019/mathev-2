@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { TrendingUp, Award, Target, Star, Loader2 } from 'lucide-react';
+import { TrendingUp, Award, Target, Star, Loader2, Download } from 'lucide-react';
 import { analyticsService } from '../../services/analytics.service';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,22 @@ export default function ResultsPage() {
     }
   };
 
+  const handleExportPDF = () => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        body * { visibility: hidden; }
+        #report-content, #report-content * { visibility: visible; }
+        #report-content { position: absolute; left: 0; top: 0; width: 100%; }
+        /* Prevent charts from being cut off */
+        .recharts-wrapper { max-width: 100% !important; }
+      }
+    `;
+    document.head.appendChild(style);
+    window.print();
+    setTimeout(() => document.head.removeChild(style), 1000);
+  };
+
   if (loading) {
     return (
       <div className="p-8 flex justify-center items-center h-full">
@@ -50,12 +68,22 @@ export default function ResultsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">النتائج والتقارير</h1>
-        <p className="text-gray-600">تابع أداءك وتقدمك الدراسي</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">النتائج والتقارير</h1>
+          <p className="text-gray-600">تابع أداءك وتقدمك الدراسي</p>
+        </div>
+        <button 
+          onClick={handleExportPDF}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          <span>تصدير تقرير PDF</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div id="report-content" className="bg-gray-50 p-4 rounded-xl">
+        <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-xl p-6 shadow-md">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -187,6 +215,7 @@ export default function ResultsPage() {
         ) : (
           <div className="text-center text-gray-500 py-8">لا توجد أنشطة مسجلة بعد</div>
         )}
+      </div>
       </div>
     </div>
   );

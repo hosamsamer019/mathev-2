@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ClipboardCheck, Clock, CheckCircle, AlertCircle, Camera, AlertTriangle } from 'lucide-react';
 import { examService } from '../../services/exam.service';
+import { MathContent } from '../ui/MathContent';
 
 export default function ExamsPage() {
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
@@ -96,21 +97,28 @@ export default function ExamsPage() {
       const attempt = res.data;
       setExamState('running');
 
-      // Fix #4: Calculate remaining time from server startedAt
-      const startedAt = new Date(attempt.startedAt).getTime();
-      const durationSec = currentExam.duration * 60;
-      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-      const remaining = Math.max(0, durationSec - elapsed);
+      // Calculate remaining time from attempt creation time (server-side createdAt)
+      // Note: backend returns createdAt, not startedAt
+      const startedAt = attempt?.createdAt ? new Date(attempt.createdAt).getTime() : Date.now();
+      const durationMinutes = currentExam.duration || 60; // duration is stored in minutes
+      const durationMs = durationMinutes * 60 * 1000;
+      const endTime = startedAt + durationMs;
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
       setTimeLeft(remaining);
+
+      // Store endTime in a ref to prevent drift
+      const targetEndTimeRef = endTime;
 
       // Start timer
       timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
+        setTimeLeft(() => {
+          const newRemaining = Math.max(0, Math.floor((targetEndTimeRef - Date.now()) / 1000));
+          if (newRemaining <= 1) {
             handleAutoSubmit();
+            if (timerRef.current) clearInterval(timerRef.current);
             return 0;
           }
-          return prev - 1;
+          return newRemaining;
         });
       }, 1000);
 
@@ -246,19 +254,38 @@ export default function ExamsPage() {
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-8 space-y-8">
-          {(Array.isArray(currentExam.questions) ? currentExam.questions : []).map((q: any, idx: number) => (
-            <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
-              <h3 className="font-bold text-gray-900 mb-4">السؤال {idx + 1}: {q.questionText}</h3>
-              <div className="space-y-3">
-                {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? q.options.split('-') : [])).map((option: string, optIdx: number) => (
-                  <label key={optIdx} className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors">
-                    <input type="radio" name={`question-${q.id}`} value={optIdx} checked={answers[q.id] === optIdx.toString()} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-5 h-5 text-indigo-600" />
-                    <span className="text-gray-900">{option}</span>
-                  </label>
-                ))}
+          {(Array.isArray(currentExam.questions) ? currentExam.questions : []).map((q: any, idx: number) => {
+            const originalOptions = Array.isArray(q.options) ? q.options : [];
+            let displayOptions = originalOptions.map((opt: string, i: number) => ({ text: opt, originalIndex: i }));
+            
+            // Randomize options if exam requires it (frontend-only display shuffle)
+            if (currentExam.randomization) {
+              // We use a simple hash of question id to ensure stable shuffle during re-renders
+              const seed = q.id.toString().split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+              displayOptions.sort((a: { text: string; originalIndex: number }, b: { text: string; originalIndex: number }) => {
+                const randomA = Math.sin(seed + a.originalIndex) * 10000;
+                const randomB = Math.sin(seed + b.originalIndex) * 10000;
+                return (randomA - Math.floor(randomA)) - (randomB - Math.floor(randomB));
+              });
+            }
+
+            return (
+              <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
+                <div className="font-bold text-gray-900 mb-4">
+                  <span className="text-indigo-600 ml-2">السؤال {idx + 1}:</span>
+                  <MathContent content={q.text || ''} className="leading-relaxed" />
+                </div>
+                <div className="space-y-3">
+                  {displayOptions.map((optionObj: { text: string, originalIndex: number }, renderIdx: number) => (
+                    <label key={renderIdx} className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors">
+                      <input type="radio" name={`question-${q.id}`} value={optionObj.originalIndex} checked={answers[q.id] === optionObj.originalIndex.toString()} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-5 h-5 text-indigo-600" />
+                      <MathContent content={optionObj.text} className="text-gray-900" />
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -277,16 +304,17 @@ export default function ExamsPage() {
     );
   }
 
-  if (examState === 'submitted') {
+  if (examState === 'submitted' && currentExam) {
+    const passed = score >= (currentExam.passingScore || 50);
     return (
       <div className="p-8 max-w-2xl mx-auto text-center">
         <div className="bg-white rounded-xl shadow-md p-8">
-          <div className={`w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center ${score >= 60 ? 'bg-green-100' : 'bg-red-100'}`}>
-            {score >= 60 ? <CheckCircle className="w-12 h-12 text-green-600" /> : <AlertCircle className="w-12 h-12 text-red-600" />}
+          <div className={`w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center ${passed ? 'bg-green-100' : 'bg-red-100'}`}>
+            {passed ? <CheckCircle className="w-12 h-12 text-green-600" /> : <AlertCircle className="w-12 h-12 text-red-600" />}
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">انتهى الامتحان!</h2>
           <div className="text-6xl font-bold text-indigo-600 mb-4">{score}%</div>
-          <p className="text-gray-600 mb-8">{score >= 60 ? 'مبروك! لقد نجحت' : 'للأسف، لم تنجح'}</p>
+          <p className="text-gray-600 mb-8">{passed ? 'مبروك! لقد نجحت' : 'للأسف، لم تنجح'}</p>
           <button onClick={() => { setExamState('list'); setAnswers({}); fetchExams(); }} className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700">العودة للامتحانات</button>
         </div>
       </div>
@@ -307,34 +335,57 @@ export default function ExamsPage() {
       {!loading && !error && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {exams.length === 0 && <p className="text-gray-500 col-span-3 text-center py-8">لا توجد امتحانات متاحة حالياً.</p>}
-        {(Array.isArray(exams) ? exams : []).map((exam) => (
-          <div key={exam.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${exam.status === 'completed' ? 'bg-green-100' : 'bg-indigo-100'}`}>
-                {exam.status === 'completed' ? <CheckCircle className="w-6 h-6 text-green-600" /> : <ClipboardCheck className="w-6 h-6 text-indigo-600" />}
+        {(Array.isArray(exams) ? exams : []).map((exam) => {
+          const now = new Date().getTime();
+          const isTooEarly = exam.startTime && now < new Date(exam.startTime).getTime();
+          const isTooLate = exam.endTime && now > new Date(exam.endTime).getTime();
+          const isLocked = isTooEarly || isTooLate;
+          
+          return (
+          <div key={exam.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${exam.status === 'completed' ? 'bg-green-100' : 'bg-indigo-100'}`}>
+                  {exam.status === 'completed' ? <CheckCircle className="w-6 h-6 text-green-600" /> : <ClipboardCheck className="w-6 h-6 text-indigo-600" />}
+                </div>
+                {exam.score != null && (
+                  <div className="text-2xl font-bold text-green-600">{Math.round(exam.score)}%</div>
+                )}
               </div>
-              {exam.score != null && (
-                <div className="text-2xl font-bold text-green-600">{Math.round(exam.score)}%</div>
-              )}
+              <h3 className="font-bold text-gray-900 mb-3">{exam.title}</h3>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Clock className="w-4 h-4" />
+                  <span>{exam.duration} دقيقة</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <ClipboardCheck className="w-4 h-4" />
+                  <span>{exam.questions?.length || 0} سؤال</span>
+                </div>
+                {exam.startTime && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>يبدأ: {new Date(exam.startTime).toLocaleString('ar')}</span>
+                  </div>
+                )}
+                {exam.endTime && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>ينتهي: {new Date(exam.endTime).toLocaleString('ar')}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <h3 className="font-bold text-gray-900 mb-3">{exam.title}</h3>
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock className="w-4 h-4" />
-                <span>{exam.duration} دقيقة</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <ClipboardCheck className="w-4 h-4" />
-                <span>{exam.questions?.length || 0} سؤال</span>
-              </div>
-            </div>
+            
             {exam.status === 'completed' ? (
               <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm text-center">مكتمل - {Math.round(exam.score)}%</div>
+            ) : isLocked ? (
+              <div className="bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm text-center">غير متاح حالياً</div>
             ) : (
               <button onClick={() => handleSelectExam(exam.id)} className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">ابدأ الامتحان</button>
             )}
           </div>
-        ))}
+        )})}
       </div>
       )}
     </div>

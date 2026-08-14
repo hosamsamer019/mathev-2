@@ -15,19 +15,19 @@ const PORT = process.env.PORT || 4001;
 
 // Middlewares
 app.use(helmet());
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) return callback(null, true);
-    if (origin.startsWith('http://localhost:')) {
+    if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
       return callback(null, true);
     }
-    const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+    const allowedOrigin = process.env.CLIENT_URL || 'https://your-production-domain.com';
     if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
-}));
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 

@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import { Brain, Sparkles, BookOpen, Target, MessageSquare, Zap, ChevronLeft, Send } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Brain, Sparkles, BookOpen, Target, MessageSquare, Zap, ChevronLeft, Send, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { aiService } from '../../services/ai.service';
+import { questionService } from '../../services/question.service';
+import { analyticsApi } from '../../services/api';
 
 const aiTools = [
   {
@@ -47,21 +50,68 @@ export default function TeacherAIPage() {
   const [questionCount, setQuestionCount] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState<{ role: string; text: string }[]>([
     { role: 'ai', text: 'مرحباً أستاذ! كيف يمكنني مساعدتك في إنشاء المحتوى التعليمي؟' },
   ]);
 
+  const [aiStats, setAiStats] = useState<any>(null);
+
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
 
-  const handleGenerate = () => {
+  useEffect(() => {
+    fetchAiStats();
+  }, []);
+
+  const fetchAiStats = async () => {
+    try {
+      const res = await analyticsApi.get('/ai-stats');
+      setAiStats(res.data);
+    } catch {
+      // AI stats are optional — fail silently for teachers
+    }
+  };
+
+  const handleGenerate = async () => {
     setGenerating(true);
-    setTimeout(() => {
-      setGenerating(false);
+    try {
+      const res = await aiService.generateQuestions({
+        topic: selectedTopics.join('، '),
+        difficulty,
+        count: questionCount
+      });
+      setGeneratedQuestions(res.data.questions);
       setGenerated(true);
-    }, 2000);
+    } catch (err) {
+      console.error(err);
+      alert('فشل في التوليد');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSaveToBank = async () => {
+    try {
+      setGenerating(true);
+      for (const q of generatedQuestions) {
+        await questionService.createQuestion({
+          text: q.text,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          tag: selectedTopics.join('، ')
+        });
+      }
+      alert('تم حفظ الأسئلة في بنك الأسئلة بنجاح!');
+      setGenerated(false);
+    } catch (err) {
+      console.error(err);
+      alert('فشل في حفظ الأسئلة');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleSendChat = () => {
@@ -116,19 +166,42 @@ export default function TeacherAIPage() {
           {/* AI Stats */}
           <div className={`md:col-span-2 ${cardBg} border rounded-2xl p-6`}>
             <h2 className={`font-bold ${textPrimary} mb-4`}>إحصائيات الذكاء الاصطناعي</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'أسئلة أُجيبت', value: '١٢٧٤', color: 'text-purple-600' },
-                { label: 'واجبات مُولّدة', value: '٥٦', color: 'text-blue-600' },
-                { label: 'مسارات مخصصة', value: '٩٨', color: 'text-green-600' },
-                { label: 'دقة الإجابات', value: '٩٤٪', color: 'text-indigo-600' },
-              ].map((stat, idx) => (
-                <div key={idx} className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-4 text-center`}>
-                  <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-                  <p className={`text-sm ${textSecondary} mt-1`}>{stat.label}</p>
-                </div>
-              ))}
-            </div>
+            {aiStats ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  { label: 'إجمالي الرسائل', value: aiStats.totalMessages ?? 0, color: 'text-purple-600' },
+                  { label: 'إجمالي الجلسات', value: aiStats.totalSessions ?? 0, color: 'text-blue-600' },
+                  { label: 'الطلاب النشطين', value: aiStats.activeStudents ?? 0, color: 'text-green-600' },
+                ].map((stat, idx) => (
+                  <div key={idx} className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-4 text-center`}>
+                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                    <p className={`text-sm ${textSecondary} mt-1`}>{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              </div>
+            )}
+            
+            <h2 className={`font-bold ${textPrimary} mt-8 mb-4`}>أحدث محادثات الطلاب مع المساعد</h2>
+            {aiStats && aiStats.conversations && aiStats.conversations.length > 0 ? (
+              <div className="space-y-4">
+                {aiStats.conversations.map((conv: any, idx: number) => (
+                  <div key={idx} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-100 bg-white'}`}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className={`font-bold ${textPrimary}`}>{conv.student}</span>
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{conv.status}</span>
+                    </div>
+                    <p className={`text-sm ${textSecondary}`}>{conv.lastMessage}</p>
+                    <p className={`text-xs ${textSecondary} mt-2`}>{new Date(conv.time).toLocaleString('ar-EG')}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={`text-sm ${textSecondary} text-center py-4`}>لا توجد محادثات مسجلة</p>
+            )}
           </div>
         </div>
       ) : activeTool === 'solver' ? (
@@ -213,23 +286,18 @@ export default function TeacherAIPage() {
                 <Zap className="w-5 h-5" />
                 <span className="font-medium">تم توليد الواجب بنجاح! ({questionCount} سؤال في {selectedTopics.join('، ')})</span>
               </div>
-              {[
-                { q: 'حل المعادلة: 3x² - 7x + 2 = 0', type: 'مسألة', points: 5 },
-                { q: 'في مثلث ABC، إذا كان AB = 5 وBC = 12، جد AC', type: 'مسألة', points: 5 },
-                { q: 'احسب: ∫(2x + 3)dx', type: 'تكامل', points: 10 },
-                { q: 'ما هي الصيغة العامة لحل المعادلة التربيعية؟', type: 'اختيار', points: 3 },
-              ].map((q, idx) => (
+              {generatedQuestions.map((q, idx) => (
                 <div key={idx} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-700/50' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{q.type}</span>
-                    <span className={`text-xs ${textSecondary}`}>{q.points} نقطة</span>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">توليد الذكاء الاصطناعي</span>
+                    <span className={`text-xs ${textSecondary}`}>{q.options.length} خيارات</span>
                   </div>
-                  <p className={textPrimary}>{idx + 1}. {q.q}</p>
+                  <p className={textPrimary}>{idx + 1}. {q.text}</p>
                 </div>
               ))}
               <div className="flex gap-3">
-                <button className="bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90">
-                  نشر الواجب
+                <button onClick={handleSaveToBank} disabled={generating} className="bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90">
+                  حفظ في بنك الأسئلة
                 </button>
                 <button onClick={() => setGenerated(false)} className={`px-6 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
                   إعادة التوليد

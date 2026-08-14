@@ -39,7 +39,13 @@ export default function VideoPlayerPage() {
     const fetchLesson = async () => {
       try {
         const res = await courseService.getLessonDetails(videoId!);
-        setLesson(res.data);
+        if (res.data) {
+          setLesson(res.data);
+          if (res.data.progress && res.data.progress.length > 0) {
+            maxTimeRef.current = res.data.progress[0].lastTimestamp || 0;
+            lastTimeRef.current = maxTimeRef.current;
+          }
+        }
         
         if (res.data?.courseId) {
           const hwRes = await homeworkService.getHomeworksByCourse(res.data.courseId);
@@ -69,7 +75,13 @@ export default function VideoPlayerPage() {
         playsinline: 1
       },
       events: {
-        onStateChange: (event: any) => setPlayerState(event.data)
+        onStateChange: (event: any) => {
+          setPlayerState(event.data);
+          // Resume from last timestamp when video starts playing (State 1 = playing)
+          if (event.data === 1 && maxTimeRef.current > 0 && playerRef.current.getCurrentTime() < 2) {
+             playerRef.current.seekTo(maxTimeRef.current, true);
+          }
+        }
       }
     });
   };
@@ -92,7 +104,18 @@ export default function VideoPlayerPage() {
       
       if (!duration) return;
 
-      // Allow free seeking
+      // Restrict fast-forwarding if not previously watched fully
+      const isWatched = lesson?.progress && lesson.progress.length > 0 && lesson.progress[0].watched;
+      
+      if (!isWatched && currentTime > maxTimeRef.current + 2) {
+        // Fast forward detected, snap back to maxTime
+        playerRef.current.seekTo(maxTimeRef.current, true);
+        return;
+      }
+      
+      if (currentTime > maxTimeRef.current) {
+        maxTimeRef.current = currentTime;
+      }
       lastTimeRef.current = currentTime;
       
       const currentProgress = Math.min((currentTime / duration) * 100, 100);
@@ -206,12 +229,18 @@ export default function VideoPlayerPage() {
     const rect = e.currentTarget.getBoundingClientRect();
     
     const clickX = e.clientX - rect.left;
-    
     const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-    
     const duration = playerRef.current.getDuration();
     if (duration) {
-      playerRef.current.seekTo(duration * percentage, true);
+      const targetTime = duration * percentage;
+      const isWatched = lesson?.progress && lesson.progress.length > 0 && lesson.progress[0].watched;
+      
+      if (!isWatched && targetTime > maxTimeRef.current) {
+        alert('لا يمكنك تخطي الفيديو إلا بعد مشاهدته كاملاً للمرة الأولى.');
+        playerRef.current.seekTo(maxTimeRef.current, true);
+      } else {
+        playerRef.current.seekTo(targetTime, true);
+      }
     }
   };
 
@@ -318,8 +347,8 @@ export default function VideoPlayerPage() {
                 <div 
                   className="absolute pointer-events-none opacity-30 text-white font-bold text-xl md:text-3xl rotate-45 select-none"
                   style={{
-                    top: `${Math.random() * 80}%`,
-                    left: `${Math.random() * 80}%`,
+                    top: '40%',
+                    left: '40%',
                     animation: 'moveWatermark 20s linear infinite alternate'
                   }}
                 >

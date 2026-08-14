@@ -59,18 +59,31 @@ export default function TeacherAnalyticsPage() {
     }
   }, [user]);
 
-  const displayData = analyticsData || {
+  const defaultData = {
     kpis: [
-      { label: 'معدل النجاح', value: '٨٨٪', change: '+٣٪' },
-      { label: 'متوسط الدرجات', value: '٧٩٪', change: '+٥٪' },
-      { label: 'نسبة إتمام الواجبات', value: '٩١٪', change: '+٢٪' },
-      { label: 'طلاب في خطر', value: '١٥', change: '-٢' },
+      { label: 'إجمالي الطلاب', value: '٠', change: '+٠' },
+      { label: 'متوسط الدرجات', value: '٠٪', change: '+٠' },
+      { label: 'الدورات النشطة', value: '٠', change: '+٠' },
+      { label: 'طلاب في خطر', value: '٠', change: '٠' },
     ],
     monthlyTrend,
     subjectRadar,
     homeworkCompletion,
     predictions
   };
+
+  const displayData = analyticsData ? {
+    kpis: [
+      { label: 'إجمالي الطلاب', value: analyticsData.totalStudents?.toString() || '٠', change: '+٠' },
+      { label: 'متوسط الدرجات', value: `${analyticsData.averageScore || 0}٪`, change: '+٠' },
+      { label: 'الدورات النشطة', value: analyticsData.totalCourses?.toString() || '٠', change: '+٠' },
+      { label: 'طلاب في خطر', value: analyticsData.strugglingStudents?.toString() || '٠', change: '٠' },
+    ],
+    monthlyTrend,
+    subjectRadar, // Should ideally map subjectPerformance here, but keeping default layout
+    homeworkCompletion,
+    predictions
+  } : defaultData;
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';

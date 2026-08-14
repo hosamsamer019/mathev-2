@@ -105,10 +105,10 @@ export default function AdminHomePage() {
           <h2 className={`font-bold ${textPrimary} mb-4`}>الإحصائيات السريعة</h2>
           <div className="space-y-4">
             {[
-              { label: 'معدل الإنجاز', value: '٧٨٪', icon: TrendingUp, color: 'bg-green-100 text-green-600 dark:bg-green-900/30' },
-              { label: 'معدل النجاح', value: '٨٨٪', icon: Award, color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30' },
-              { label: 'الطلاب النشطون', value: '٩٨٥', icon: Users, color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30' },
-              { label: 'إيرادات السنة', value: '٢٤٦K', icon: DollarSign, color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' },
+              { label: 'معدل الإنجاز', value: data?.overview?.completionRate != null ? `${data.overview.completionRate}٪` : '—', icon: TrendingUp, color: 'bg-green-100 text-green-600 dark:bg-green-900/30' },
+              { label: 'معدل النجاح', value: data?.overview?.passRate != null ? `${data.overview.passRate}٪` : '—', icon: Award, color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30' },
+              { label: 'الطلاب النشطون', value: data?.overview?.activeUsers ?? '—', icon: Users, color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30' },
+              { label: 'إيرادات السنة', value: data?.overview?.yearlyRevenue != null ? (data.overview.yearlyRevenue > 0 ? `${data.overview.yearlyRevenue.toLocaleString('ar-EG')}ج` : 'لا توجد بيانات مالية متاحة حاليًا') : '—', icon: DollarSign, color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' },
             ].map((item, idx) => (
               <div key={idx} className={`flex items-center justify-between p-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
                 <div className="flex items-center gap-3">

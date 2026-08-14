@@ -16,7 +16,8 @@ export default function TeacherQuestionBankPage() {
     text: '',
     options: ['', '', '', ''],
     correctAnswer: 0,
-    tag: ''
+    tag: '',
+    academicLevel: 'PREP_1'
   });
   
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -26,7 +27,7 @@ export default function TeacherQuestionBankPage() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'متوسط', count: 5 });
+  const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'متوسط', count: 5, academicLevel: 'PREP_1' });
   const [generatedQuestions, setGeneratedQuestions] = useState<any[] | null>(null);
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function TeacherQuestionBankPage() {
 
   const handleAddNew = () => {
     setEditingId(null);
-    setFormData({ text: '', options: ['', '', '', ''], correctAnswer: 0, tag: '' });
+    setFormData({ text: '', options: ['', '', '', ''], correctAnswer: 0, tag: '', academicLevel: 'PREP_1' });
     setFormErrors({});
     setShowForm(true);
   };
@@ -60,7 +61,8 @@ export default function TeacherQuestionBankPage() {
       text: q.text,
       options: q.options || ['', '', '', ''],
       correctAnswer: q.correctAnswer || 0,
-      tag: q.tag || ''
+      tag: q.tag || '',
+      academicLevel: q.academicLevel || 'PREP_1'
     });
     setFormErrors({});
     setShowForm(true);
@@ -157,7 +159,7 @@ export default function TeacherQuestionBankPage() {
           text: q.text,
           options: q.options,
           correctAnswer: q.correctAnswer,
-          tag: aiForm.topic // Automatically tag with the topic used for generation
+          tag: aiForm.topic
         });
       }
       setShowAiModal(false);
@@ -183,7 +185,7 @@ export default function TeacherQuestionBankPage() {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              setAiForm({ topic: '', difficulty: 'متوسط', count: 5 });
+              setAiForm({ topic: '', difficulty: 'متوسط', count: 5, academicLevel: 'PREP_1' });
               setGeneratedQuestions(null);
               setAiError(null);
               setShowAiModal(true);
@@ -243,19 +245,33 @@ export default function TeacherQuestionBankPage() {
                 {formErrors.text && <p className="text-red-500 text-xs mt-1">{formErrors.text}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الوسم (Tag) - اختياري</label>
-                <div className="relative">
-                  <Tag className="absolute right-3 top-3 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.tag}
-                    onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
-                    className="w-full pr-10 pl-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                    placeholder="مثال: جبر، هندسة، الباب الأول..."
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
+                      <select
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        value={formData.academicLevel}
+                        onChange={(e) => setFormData({ ...formData, academicLevel: e.target.value })}
+                      >
+                        <option value="PREP_1">الصف الأول الإعدادي</option>
+                        <option value="PREP_2">الصف الثاني الإعدادي</option>
+                        <option value="PREP_3">الصف الثالث الإعدادي</option>
+                        <option value="SEC_1">الصف الأول الثانوي</option>
+                        <option value="SEC_2">الصف الثاني الثانوي</option>
+                        <option value="SEC_3">الصف الثالث الثانوي</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">التصنيف / الموضوع</label>
+                      <input
+                        type="text"
+                        placeholder="مثال: الجبر، الهندسة، الوحدة الأولى..."
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        value={formData.tag}
+                        onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+                      />
+                    </div>
+                  </div>
 
               <div className="space-y-4">
                 <label className="block text-sm font-medium text-gray-700">الخيارات والإجابة الصحيحة</label>
@@ -329,8 +345,24 @@ export default function TeacherQuestionBankPage() {
                   <div className="bg-purple-50 text-purple-800 p-4 rounded-xl text-sm mb-6 border border-purple-100">
                     أدخل موضوع الدرس ومستوى الصعوبة، وسيقوم المساعد الذكي بتوليد أسئلة اختيار من متعدد لك.
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">الموضوع / الدرس</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
+                      <select
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500"
+                        value={aiForm.academicLevel}
+                        onChange={(e) => setAiForm({ ...aiForm, academicLevel: e.target.value })}
+                      >
+                        <option value="PREP_1">الصف الأول الإعدادي</option>
+                        <option value="PREP_2">الصف الثاني الإعدادي</option>
+                        <option value="PREP_3">الصف الثالث الإعدادي</option>
+                        <option value="SEC_1">الصف الأول الثانوي</option>
+                        <option value="SEC_2">الصف الثاني الثانوي</option>
+                        <option value="SEC_3">الصف الثالث الثانوي</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">الموضوع / الدرس</label>
                     <input
                       type="text"
                       value={aiForm.topic}
@@ -338,6 +370,7 @@ export default function TeacherQuestionBankPage() {
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500"
                       placeholder="مثال: المعادلات التربيعية، نظرية فيثاغورس..."
                     />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -480,12 +513,17 @@ export default function TeacherQuestionBankPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
-                    {q.tag && (
-                      <span className="bg-indigo-50 text-indigo-700 text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1">
-                        <Tag className="w-3 h-3" />
-                        {q.tag}
-                      </span>
-                    )}
+                          {q.academicLevel && (
+                            <span className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md font-medium">
+                              {q.academicLevel}
+                            </span>
+                          )}
+                          {q.tag && (
+                            <span className="flex items-center gap-1 text-xs px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">
+                              <Tag className="w-3 h-3" />
+                              {q.tag}
+                            </span>
+                          )}
                     <span className="text-gray-400 text-sm">أضيف في {new Date(q.createdAt).toLocaleDateString('ar-EG')}</span>
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-4 leading-relaxed">{q.text}</h3>

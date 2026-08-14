@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
 import { logger, initSentry } from '@shared/utils';
-import { db } from '@shared/database';
+import { db } from '@smartmath/database';
 import ffmpeg from 'fluent-ffmpeg';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'fs';
@@ -162,7 +162,10 @@ const processVideo = async (job: Job<VideoTranscodeJob>) => {
 
 const videoWorker = new Worker('video-transcode-queue', processVideo, {
   connection: {
-    url: REDIS_URL
+    host: new URL(REDIS_URL).hostname,
+    port: parseInt(new URL(REDIS_URL).port || '6379', 10),
+    username: new URL(REDIS_URL).username || undefined,
+    password: new URL(REDIS_URL).password || undefined
   },
   concurrency: 2, 
 });

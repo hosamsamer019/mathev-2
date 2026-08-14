@@ -8,6 +8,8 @@ import { examService } from '../../services/exam.service';
 import { courseService } from '../../services/course.service';
 import { homeworkService } from '../../services/homework.service';
 import { questionService } from '../../services/question.service';
+import { MathContent } from '../ui/MathContent';
+
 
 const questionTypes = [
   { label: 'اختيار من متعدد (MCQ)', count: 15, color: 'bg-blue-100 text-blue-700' },
@@ -61,11 +63,15 @@ export default function TeacherExamsPage() {
   const fetchBankQuestions = async () => {
     try {
       const res = await questionService.getQuestions({ tag: bankTagFilter });
-      setBankQuestions(res.data || []);
+      // Backend returns { data: [...], total, page, limit, totalPages }
+      const fetched = res.data?.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
+      setBankQuestions(fetched);
     } catch (err) {
       console.error('Failed to fetch bank questions', err);
+      setBankQuestions([]);
     }
   };
+
 
   const handleAddFromBank = () => {
     const toAdd = bankQuestions
@@ -164,20 +170,14 @@ export default function TeacherExamsPage() {
     }
     try {
       setIsSubmitting(true);
-      const payload = { 
-        title: newTitle,
-        type: newType,
-        courseId: newCourseId,
-        duration: parseInt(newDuration) || 60,
-        requiresCamera: newRequiresCamera,
-        questions: questions.map((q, i) => ({
-          id: String(i + 1),
-          text: q.text,
-          type: 'mcq',
-          options: q.options,
-          correct: q.correct
-        }))
-      };
+      
+      const mappedQuestions = questions.map((q, i) => ({
+        id: String(i + 1),
+        text: q.text,
+        type: 'mcq',
+        options: q.options,
+        correct: q.correct
+      }));
 
       if (editingExamId) {
         if (newType === 'واجب') {
@@ -185,15 +185,37 @@ export default function TeacherExamsPage() {
           setIsSubmitting(false);
           return;
         } else {
-          await examService.updateExam(editingExamId, payload);
+          const examPayload = {
+            title: newTitle,
+            courseId: newCourseId,
+            duration: parseInt(newDuration) || 60,
+            requiresCamera: newRequiresCamera,
+            questions: mappedQuestions
+          };
+          await examService.updateExam(editingExamId, examPayload);
         }
       } else {
         if (newType === 'واجب') {
-          await homeworkService.createHomework(payload);
+          // Homework backend schema: title, courseId, questions, type ('NORMAL'|'VIDEO_DEPENDENT')
+          const homeworkPayload = {
+            title: newTitle,
+            courseId: newCourseId,
+            questions: mappedQuestions,
+            type: 'NORMAL' as const
+          };
+          await homeworkService.createHomework(homeworkPayload);
         } else {
-          await examService.createExam(payload);
+          const examPayload = {
+            title: newTitle,
+            courseId: newCourseId,
+            duration: parseInt(newDuration) || 60,
+            requiresCamera: newRequiresCamera,
+            questions: mappedQuestions
+          };
+          await examService.createExam(examPayload);
         }
       }
+
       
       setShowCreate(false);
       setEditingExamId(null);
@@ -748,13 +770,15 @@ export default function TeacherExamsPage() {
                     />
                     <div className="flex-1">
                       <div className="flex justify-between items-start mb-2">
-                        <p className={`font-semibold ${textPrimary}`}>{q.text}</p>
+                        <p className={`font-semibold ${textPrimary}`}>
+                          <MathContent content={q.text || ''} />
+                        </p>
                         {q.tag && <span className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg">{q.tag}</span>}
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        {q.options.map((opt: string, i: number) => (
+                        {(Array.isArray(q.options) ? q.options : []).map((opt: string, i: number) => (
                           <span key={i} className={i === q.correctAnswer ? 'text-emerald-600 font-medium' : textSecondary}>
-                            {i + 1}. {opt} {i === q.correctAnswer && '✓'}
+                            {i + 1}. <MathContent content={opt} /> {i === q.correctAnswer && '✓'}
                           </span>
                         ))}
                       </div>

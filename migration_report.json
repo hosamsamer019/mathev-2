@@ -1,0 +1,361 @@
+{
+  "totalLegacy": 44,
+  "migrated": 44,
+  "skipped": 0,
+  "failed": 0,
+  "duplicates": 0,
+  "details": [
+    {
+      "legacyId": "b8908cb9-922e-4c07-a56f-fa8824a39bb6",
+      "newId": "b8908cb9-922e-4c07-a56f-fa8824a39bb6",
+      "creatorId": "732991df-6f45-41fe-8d57-167fa2d4505d",
+      "topic": "جبر",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "23674f55-acbd-44b2-add2-968c9c2d01c4",
+      "newId": "23674f55-acbd-44b2-add2-968c9c2d01c4",
+      "creatorId": "732991df-6f45-41fe-8d57-167fa2d4505d",
+      "topic": "جبر",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "56bd90cd-b28a-42a6-8a95-3cd218d73fe3",
+      "newId": "56bd90cd-b28a-42a6-8a95-3cd218d73fe3",
+      "creatorId": "732991df-6f45-41fe-8d57-167fa2d4505d",
+      "topic": "هندسة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "e661f62a-54f0-44ee-8632-f836207c5255",
+      "newId": "e661f62a-54f0-44ee-8632-f836207c5255",
+      "creatorId": "0518a689-7262-4f0c-8e88-8b04d9a16142",
+      "topic": "جبر",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "0c345e07-51f9-47a5-9d5f-e40f51b877a8",
+      "newId": "0c345e07-51f9-47a5-9d5f-e40f51b877a8",
+      "creatorId": "0518a689-7262-4f0c-8e88-8b04d9a16142",
+      "topic": "جبر",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "23eb575e-5caf-4e99-a765-cd4e37878cbc",
+      "newId": "23eb575e-5caf-4e99-a765-cd4e37878cbc",
+      "creatorId": "0518a689-7262-4f0c-8e88-8b04d9a16142",
+      "topic": "هندسة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "c6ba0317-ca1f-495f-b2b4-5d446d433137",
+      "newId": "c6ba0317-ca1f-495f-b2b4-5d446d433137",
+      "creatorId": "9f588791-9986-4f3c-af52-9ad12845a460",
+      "topic": "جبر",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "8dca7d1e-d9d2-42ef-b23d-1739fbe5f232",
+      "newId": "8dca7d1e-d9d2-42ef-b23d-1739fbe5f232",
+      "creatorId": "9f588791-9986-4f3c-af52-9ad12845a460",
+      "topic": "جبر",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "de18d630-9e6d-4b29-8bad-3db6aaa04d40",
+      "newId": "de18d630-9e6d-4b29-8bad-3db6aaa04d40",
+      "creatorId": "9f588791-9986-4f3c-af52-9ad12845a460",
+      "topic": "هندسة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "98619e28-a3c8-4949-8fae-2d860c92b2c3",
+      "newId": "98619e28-a3c8-4949-8fae-2d860c92b2c3",
+      "creatorId": "08325383-a4c6-48fc-aea7-3fd887243be7",
+      "topic": "الكسور",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "8e5dacbf-f7a7-47cf-950a-15a27b1f4c5d",
+      "newId": "8e5dacbf-f7a7-47cf-950a-15a27b1f4c5d",
+      "creatorId": "08325383-a4c6-48fc-aea7-3fd887243be7",
+      "topic": "الكسور",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "c0a6a9e2-35c4-4920-b67f-2164b1b92514",
+      "newId": "c0a6a9e2-35c4-4920-b67f-2164b1b92514",
+      "creatorId": "08325383-a4c6-48fc-aea7-3fd887243be7",
+      "topic": "الكسور",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "56866987-4758-439f-8ce2-d4bc92484585",
+      "newId": "56866987-4758-439f-8ce2-d4bc92484585",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "اختبار 1",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "b2e24ac5-64ee-4444-ba2d-94f7b96a86e7",
+      "newId": "b2e24ac5-64ee-4444-ba2d-94f7b96a86e7",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "ب",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "1e49bc1b-e37a-41b6-94f3-1762e53e7024",
+      "newId": "1e49bc1b-e37a-41b6-94f3-1762e53e7024",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "526b167a-d9cb-41c1-8ee8-19c7a182f565",
+      "newId": "526b167a-d9cb-41c1-8ee8-19c7a182f565",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "a4dbb6b2-8345-4caf-9a50-7231cd1bb9da",
+      "newId": "a4dbb6b2-8345-4caf-9a50-7231cd1bb9da",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "6ce5b84c-fd2e-4a39-b64d-4ca2af836d78",
+      "newId": "6ce5b84c-fd2e-4a39-b64d-4ca2af836d78",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "17076bae-f141-47e9-ba7f-36e8570dacaf",
+      "newId": "17076bae-f141-47e9-ba7f-36e8570dacaf",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعة",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "e7b71953-5137-4c95-a2a7-575b60de03af",
+      "newId": "e7b71953-5137-4c95-a2a7-575b60de03af",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "04efef71-1363-4ec7-bbf3-c579c44875fe",
+      "newId": "04efef71-1363-4ec7-bbf3-c579c44875fe",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "22fdc536-d2e7-4c10-a58f-a435bb8c9240",
+      "newId": "22fdc536-d2e7-4c10-a58f-a435bb8c9240",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "266bb2ed-7bc4-4a16-a389-be0c6bdaf50d",
+      "newId": "266bb2ed-7bc4-4a16-a389-be0c6bdaf50d",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "663156ec-cf97-45fe-b3cb-45beeb53fc10",
+      "newId": "663156ec-cf97-45fe-b3cb-45beeb53fc10",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "0093724e-43f5-4c0a-b06f-3486fc0d1a44",
+      "newId": "0093724e-43f5-4c0a-b06f-3486fc0d1a44",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "2de0af95-d57c-4879-afd1-fd8472508681",
+      "newId": "2de0af95-d57c-4879-afd1-fd8472508681",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "7bd0605e-f41a-4d60-ad00-6e16b9a9ce43",
+      "newId": "7bd0605e-f41a-4d60-ad00-6e16b9a9ce43",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "41e071e0-6b11-4428-a86f-8750a4b815b5",
+      "newId": "41e071e0-6b11-4428-a86f-8750a4b815b5",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "feca40bc-ec97-4b1a-b427-b4dd7f47ddb1",
+      "newId": "feca40bc-ec97-4b1a-b427-b4dd7f47ddb1",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "107348c2-469e-4aea-81ca-d8ffd40ffd9b",
+      "newId": "107348c2-469e-4aea-81ca-d8ffd40ffd9b",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "cafa8da0-f123-40b8-a56a-124c1c913edf",
+      "newId": "cafa8da0-f123-40b8-a56a-124c1c913edf",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "a444021c-fce7-46a2-bad2-d72100a621cf",
+      "newId": "a444021c-fce7-46a2-bad2-d72100a621cf",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "68a9c60e-ead1-4f7b-b805-264a426782fd",
+      "newId": "68a9c60e-ead1-4f7b-b805-264a426782fd",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "f69352fb-d8a9-4a20-b31e-73a8b06427fa",
+      "newId": "f69352fb-d8a9-4a20-b31e-73a8b06427fa",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلة التربيعية",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "65c7fd8d-38c2-43f7-be58-a4623895381e",
+      "newId": "65c7fd8d-38c2-43f7-be58-a4623895381e",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "فيثاغورس",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "382a2a07-9573-478f-8e30-570a7145c932",
+      "newId": "382a2a07-9573-478f-8e30-570a7145c932",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "فيثاغورس",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "436df228-c489-4467-a4aa-7aabf00f1c19",
+      "newId": "436df228-c489-4467-a4aa-7aabf00f1c19",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "فيثاغورس",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "505f4251-f8a9-422b-8f14-91d7fadc2c68",
+      "newId": "505f4251-f8a9-422b-8f14-91d7fadc2c68",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "فيثاغورس",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "99f9c255-56fb-4752-b8ef-c9b01e9180ea",
+      "newId": "99f9c255-56fb-4752-b8ef-c9b01e9180ea",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "فيثاغورس",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "9de55ba8-7d3d-4b47-b7b6-b1531bd0de2d",
+      "newId": "9de55ba8-7d3d-4b47-b7b6-b1531bd0de2d",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلات",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "883ed80e-e602-4337-8fde-419e2d88b625",
+      "newId": "883ed80e-e602-4337-8fde-419e2d88b625",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلات",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "9357ff87-4443-4e0d-8552-6bf742fd6692",
+      "newId": "9357ff87-4443-4e0d-8552-6bf742fd6692",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلات",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "e22964a7-7f78-46d3-8a33-38e6ffd9405c",
+      "newId": "e22964a7-7f78-46d3-8a33-38e6ffd9405c",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلات",
+      "status": "SUCCESS",
+      "reason": ""
+    },
+    {
+      "legacyId": "55024098-e98b-426e-a63a-ed550fd467a0",
+      "newId": "55024098-e98b-426e-a63a-ed550fd467a0",
+      "creatorId": "394666e4-8b16-422f-9323-a84f6225c130",
+      "topic": "المعادلات",
+      "status": "SUCCESS",
+      "reason": ""
+    }
+  ]
+}

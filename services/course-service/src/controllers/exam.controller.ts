@@ -3,6 +3,7 @@ import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
 import { io } from '../index.js';
+import { normalizeExamQuestions } from '../utils/question.helper.js';
 
 export const getAllExams = async (req: AuthRequest, res: Response) => {
   try {
@@ -30,15 +31,27 @@ export const getAllExams = async (req: AuthRequest, res: Response) => {
       take: limit,
       include: {
         _count: { select: { attempts: true } },
-        course: { select: { title: true } }
+        course: { select: { title: true } },
+        attempts: requesterRole.includes('STUDENT') ? { where: { studentId: req.user?.userId } } : false
       },
       orderBy: { createdAt: 'desc' }
+    });
+    
+    const mappedExams = exams.map(exam => {
+      let status = 'available';
+      let score = null;
+      if (exam.attempts && exam.attempts.length > 0) {
+        status = 'completed';
+        score = exam.attempts[0].score;
+      }
+      const { attempts, ...rest } = exam as any;
+      return { ...rest, status, score };
     });
     
     const total = await db.exam.count({ where: whereClause });
     
     res.json({
-      data: exams,
+      data: mappedExams,
       total,
       page,
       limit,
@@ -75,14 +88,53 @@ export const getExamDetails = async (req: AuthRequest, res: Response) => {
       where: { id },
       include: { 
         attempts: {
-          include: { student: { select: { name: true, email: true } } }
+          include: { 
+            student: { select: { name: true, email: true } },
+            ExamViolation: true
+          }
         }
       }
     });
     if (!exam) return res.status(404).json({ message: 'Exam not found' });
 
+    if (exam.attempts) {
+      exam.attempts = exam.attempts.map((attempt: any) => {
+        const { ExamViolation, ...rest } = attempt;
+        return {
+          ...rest,
+          violations: ExamViolation || []
+        };
+      }) as any;
+    }
+
     const isEnrolled = await checkUserEnrollment(req.user, exam.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
+
+    // Normalize questions before processing
+    try {
+      exam.questions = normalizeExamQuestions(exam.questions, exam.id) as any;
+    } catch (normErr: any) {
+      console.error(`[EXAM DATA ERROR]`, normErr.message);
+      // Return 500 so it doesn't fail silently
+      return res.status(500).json({ message: 'Exam data is corrupted', error: normErr.message });
+    }
+
+    // Randomize and secure questions for students
+    if (req.user?.role?.toUpperCase().includes('STUDENT')) {
+      if (exam.randomization) {
+        const crypto = await import('crypto');
+        const questionsCopy = [...(exam.questions as any[])];
+        for (let i = questionsCopy.length - 1; i > 0; i--) {
+          const j = crypto.randomInt(0, i + 1);
+          [questionsCopy[i], questionsCopy[j]] = [questionsCopy[j], questionsCopy[i]];
+        }
+        exam.questions = questionsCopy as any;
+      }
+      exam.questions = (exam.questions as any[]).map((q: any) => {
+        const { correctAnswer, ...rest } = q;
+        return rest;
+      }) as any;
+    }
 
     res.json(exam);
   } catch (error: any) {
@@ -97,8 +149,12 @@ const createExamSchema = z.object({
   courseId: z.string().uuid(),
   duration: z.number().min(5).optional(),
   requiresCamera: z.boolean().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  randomization: z.boolean().optional(),
+  passingScore: z.number().optional(),
   questions: z.array(z.object({
-    id: z.number(),
+    id: z.union([z.number(), z.string()]),
     text: z.string(),
     type: z.string(),
     options: z.array(z.string()).optional(),
@@ -112,7 +168,7 @@ export const createExam = async (req: AuthRequest, res: Response) => {
     const requesterId = req.user?.userId;
 
     const validatedData = createExamSchema.parse(req.body);
-    const { title, courseId, duration, questions, requiresCamera } = validatedData;
+    const { title, courseId, duration, questions, requiresCamera, startTime, endTime, randomization, passingScore } = validatedData;
     
     if (requesterRole !== 'ADMIN') {
       const course = await db.course.findUnique({ where: { id: courseId } });
@@ -128,7 +184,11 @@ export const createExam = async (req: AuthRequest, res: Response) => {
         courseId,
         duration: duration || 60,
         questions: questions || [],
-        requiresCamera: requiresCamera || false
+        requiresCamera: requiresCamera || false,
+        startTime: startTime ? new Date(startTime) : null,
+        endTime: endTime ? new Date(endTime) : null,
+        randomization: randomization || false,
+        passingScore: passingScore || 50
       }
     });
     io.to(`course:${courseId}`).emit('exam_created', exam);
@@ -153,7 +213,7 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
     const requesterId = req.user?.userId;
 
     const validatedData = createExamSchema.parse(req.body);
-    const { title, courseId, duration, questions, requiresCamera } = validatedData;
+    const { title, courseId, duration, questions, requiresCamera, startTime, endTime, randomization, passingScore } = validatedData;
     
     // Ensure the exam exists
     const existing = await db.exam.findUnique({ where: { id }, include: { course: true } });
@@ -177,7 +237,11 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
       courseId,
       duration: duration || 60,
       questions: questions || [],
-      requiresCamera: requiresCamera || false
+      requiresCamera: requiresCamera || false,
+      startTime: startTime ? new Date(startTime) : null,
+      endTime: endTime ? new Date(endTime) : null,
+      randomization: randomization || false,
+      passingScore: passingScore || 50
     };
 
     const updatedExam = await db.exam.update({
@@ -209,6 +273,14 @@ export const startAttempt = async (req: AuthRequest, res: Response) => {
     const exam = await db.exam.findUnique({ where: { id: examId } });
     if (!exam) return res.status(404).json({ message: 'Exam not found' });
 
+    const now = new Date();
+    if (exam.startTime && now < exam.startTime) {
+      return res.status(400).json({ message: 'Exam has not started yet' });
+    }
+    if (exam.endTime && now > exam.endTime) {
+      return res.status(400).json({ message: 'Exam has already ended' });
+    }
+
     const isEnrolled = await checkUserEnrollment(req.user, exam.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
 
@@ -237,6 +309,14 @@ export const submitAttempt = async (req: AuthRequest, res: Response) => {
     const exam = await db.exam.findUnique({ where: { id: examId } });
     if (!exam) return res.status(404).json({ message: 'Exam not found' });
 
+    const now = new Date();
+    if (exam.endTime && now > exam.endTime) {
+       // Allow a small grace period for network latency (e.g., 2 minutes)
+       if (now.getTime() - exam.endTime.getTime() > 120000) {
+         return res.status(400).json({ message: 'Exam window has closed' });
+       }
+    }
+
     const isEnrolled = await checkUserEnrollment(req.user, exam.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
 
@@ -260,6 +340,15 @@ export const submitAttempt = async (req: AuthRequest, res: Response) => {
       where: { studentId: userId, examId },
       orderBy: { createdAt: 'desc' }
     });
+
+    if (existingAttempt) {
+      const startedAt = existingAttempt.createdAt;
+      const elapsedMinutes = (now.getTime() - startedAt.getTime()) / 60000;
+      // If they exceeded duration + 5 minutes grace period, cap score or reject
+      if (elapsedMinutes > exam.duration + 5) {
+         return res.status(400).json({ message: 'Time limit exceeded' });
+      }
+    }
 
     let attempt;
     if (existingAttempt) {
@@ -325,11 +414,33 @@ export const reportViolation = async (req: AuthRequest, res: Response) => {
     
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    // In a real app, this might log to a violations table or update the attempt
-    // For now, we'll create a notification for the teacher or log it
-    console.log(`[Exam Violation] User ${userId} committed ${type} on exam ${examId}`);
+    const attempt = await db.examAttempt.findFirst({
+      where: { studentId: userId, examId },
+      orderBy: { createdAt: 'desc' },
+      include: { ExamViolation: true }
+    });
 
-    res.json({ success: true });
+    if (!attempt) return res.status(404).json({ message: 'No active attempt found' });
+
+    const crypto = await import('crypto');
+    await db.examViolation.create({
+      data: {
+        id: crypto.randomUUID(),
+        attemptId: attempt.id,
+        type: type || 'UNKNOWN'
+      }
+    });
+
+    // If 2 or more violations, disqualify
+    if (attempt.ExamViolation.length >= 1) { // They just got their 2nd violation (1 + 1 new)
+      await db.examAttempt.update({
+        where: { id: attempt.id },
+        data: { score: 0 }
+      });
+      return res.status(403).json({ message: 'Disqualified due to multiple violations' });
+    }
+
+    res.json({ success: true, message: 'Violation recorded' });
   } catch (error: any) {
     res.status(400).json({ message: 'Error reporting violation', error: error.message });
   }

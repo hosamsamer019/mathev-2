@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   Users, BookOpen, ClipboardCheck, TrendingUp, AlertTriangle,
-  CheckCircle, Clock, Star, BarChart3, ArrowUpRight, Brain, Eye, Loader2
+  CheckCircle, Clock, Star, BarChart3, ArrowUpRight, Brain, Eye, Loader2, Activity
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
+  Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LoadingState } from '../ui/LoadingState';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,37 +20,13 @@ analyticsApi.interceptors.request.use((config) => {
   return config;
 });
 
-// Minimal placeholder data for charts during Phase 3 rollout
-const weeklyProgress = [
-  { day: 'السبت', online: 45, center: 32 },
-  { day: 'الأحد', online: 52, center: 38 },
-  { day: 'الاثنين', online: 38, center: 42 },
-];
-const distributionData = [
-  { name: 'ممتاز', value: 28, color: '#10b981' },
-  { name: 'جيد جداً', value: 45, color: '#3b82f6' },
-];
-
-const subjectPerformance = [
-  { subject: 'الجبر', avg: 85 },
-  { subject: 'الهندسة', avg: 78 },
-  { subject: 'التفاضل', avg: 92 },
-];
-
-const recentActivities = [
-  { text: 'أحمد قام بتسليم الواجب', time: 'منذ 5 دقائق', icon: ClipboardCheck, color: 'text-emerald-600' },
-  { text: 'طالب جديد سجل في الدورة', time: 'منذ ساعة', icon: Users, color: 'text-blue-600' },
-];
-
-const atRiskStudents = [
-  { name: 'محمود خالد', grade: 'الصف الأول', risk: 'عالي', subject: 'الجبر', score: 45 },
-  { name: 'عمر سيد', grade: 'الصف الثاني', risk: 'متوسط', subject: 'الهندسة', score: 60 },
-];
 
 export default function TeacherHomePage() {
   const { isDark } = useTheme();
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const [overview, setOverview] = useState<any>(null);
+  const [atRiskStudents, setAtRiskStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week');
 
@@ -69,6 +46,9 @@ export default function TeacherHomePage() {
       setLoading(true);
       const res = await analyticsApi.get(`/teacher/${user.id}/overview`);
       setOverview(res.data);
+      
+      const riskRes = await analyticsApi.get('/risk');
+      setAtRiskStudents(riskRes.data.riskStudents || []);
     } catch (err) {
       console.error('Failed to fetch teacher overview', err);
     } finally {
@@ -77,29 +57,31 @@ export default function TeacherHomePage() {
   };
 
   if (loading) {
-    return <LoadingState message="جاري تحميل لوحة التحكم للمعلم..." />;
+    return <LoadingState message={t('loading')} />;
   }
+
+  const summaryStats = overview || { totalStudents: 0, activeStudents: 0, totalCourses: 0, avgExamScore: 0 };
 
   return (
     <div className={`p-6 lg:p-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} min-h-full`}>
       <div className="mb-8">
-        <h1 className={`text-2xl font-bold ${textPrimary}`}>مرحباً أ. محمد! 👋</h1>
-        <p className={textSecondary}>الأربعاء، ٢٩ أبريل ٢٠٢٦ - هذا ملخص أداء طلابك اليوم</p>
+        <h1 className={`text-2xl font-bold ${textPrimary}`}>{t('welcome')} أ. {user?.name}! 👋</h1>
+        <p className={textSecondary}>{new Intl.DateTimeFormat(language === 'ARABIC' ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date())} - {t('summary')}</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'إجمالي الطلاب', value: overview?.totalStudents || 0, change: '', icon: Users, color: 'from-blue-500 to-blue-600', trend: 'up' },
-          { label: 'إجمالي الدورات', value: overview?.totalCourses || 0, change: '', icon: BookOpen, color: 'from-green-500 to-emerald-600', trend: 'up' },
-          { label: 'متوسط الأداء', value: `${overview?.averageScore || 0}٪`, change: '', icon: BarChart3, color: 'from-purple-500 to-indigo-600', trend: 'up' },
-          { label: 'طلاب متعثرين', value: overview?.strugglingStudents || 0, change: '', icon: AlertTriangle, color: 'from-red-500 to-orange-500', trend: 'down' },
+          { label: t('students'), value: summaryStats.totalStudents, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: t('activeStudents'), value: summaryStats.activeStudents, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: t('courses'), value: summaryStats.totalCourses, icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: t('exams'), value: summaryStats.avgExamScore + '%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
         ].map((stat, idx) => (
           <div key={idx} className={`${cardBg} border rounded-2xl p-5 relative overflow-hidden`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`} />
             <div className="relative">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>
-                <stat.icon className="w-5 h-5 text-white" />
+              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center mb-3`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
               <p className={`text-sm ${textSecondary} mb-1`}>{stat.label}</p>
               <div className="flex items-end gap-2">
@@ -132,7 +114,7 @@ export default function TeacherHomePage() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={weeklyProgress}>
+            <AreaChart data={overview?.weeklyProgress || []}>
               <defs>
                 <linearGradient id="onlineGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -146,7 +128,7 @@ export default function TeacherHomePage() {
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f0f0f0'} />
               <XAxis dataKey="day" tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }} />
               <YAxis tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }} />
-              <Tooltip contentStyle={{ background: isDark ? '#1f2937' : '#fff', border: 'none', borderRadius: 12 }} />
+              <RechartsTooltip contentStyle={{ background: isDark ? '#1f2937' : '#fff', border: 'none', borderRadius: 12 }} />
               <Area type="monotone" dataKey="online" stroke="#10b981" fill="url(#onlineGrad)" strokeWidth={2} name="أونلاين" />
               <Area type="monotone" dataKey="center" stroke="#3b82f6" fill="url(#centerGrad)" strokeWidth={2} name="سنتر" />
             </AreaChart>
@@ -168,16 +150,16 @@ export default function TeacherHomePage() {
           <h2 className={`font-bold ${textPrimary} mb-6`}>توزيع مستويات الطلاب</h2>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
-              <Pie data={distributionData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value">
-                {distributionData.map((entry, index) => (
+              <Pie data={overview?.distributionData || []} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value">
+                {(overview?.distributionData || []).map((entry: any, index: number) => (
                   <Cell key={index} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value} طالب`, '']} />
+              <RechartsTooltip formatter={(value: any) => [`${value}%`, 'النسبة']} />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-2 mt-4">
-            {distributionData.map((item, idx) => (
+            {(overview?.distributionData || []).map((item: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
@@ -194,12 +176,12 @@ export default function TeacherHomePage() {
         {/* Subject Performance */}
         <div className={`lg:col-span-2 ${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-6`}>أداء الطلاب حسب المادة</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={subjectPerformance} layout="vertical">
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={overview?.subjectPerformance || []} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f0f0f0'} />
               <XAxis type="number" domain={[0, 100]} tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 11 }} />
               <YAxis dataKey="subject" type="category" tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }} width={100} />
-              <Tooltip contentStyle={{ background: isDark ? '#1f2937' : '#fff', border: 'none', borderRadius: 12 }} />
+              <RechartsTooltip contentStyle={{ background: isDark ? '#1f2937' : '#fff', border: 'none', borderRadius: 12 }} />
               <Bar dataKey="avg" fill="#10b981" radius={[0, 6, 6, 0]} name="المتوسط" />
             </BarChart>
           </ResponsiveContainer>
@@ -209,7 +191,7 @@ export default function TeacherHomePage() {
         <div className={`${cardBg} border rounded-2xl p-6`}>
           <h2 className={`font-bold ${textPrimary} mb-4`}>النشاطات الأخيرة</h2>
           <div className="space-y-4">
-            {recentActivities.map((activity, idx) => (
+            {(overview?.recentActivities || []).map((activity: any, idx: number) => (
               <div key={idx} className={`flex items-start gap-3 pb-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'} last:border-0 last:pb-0`}>
                 <div className={`w-8 h-8 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
                   <activity.icon className={`w-4 h-4 ${activity.color}`} />
@@ -241,7 +223,9 @@ export default function TeacherHomePage() {
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {atRiskStudents.map((student, idx) => (
+          {atRiskStudents.length === 0 ? (
+            <p className={`col-span-3 text-center text-sm ${textSecondary} py-8`}>لا يوجد طلاب متعثرين حالياً</p>
+          ) : atRiskStudents.slice(0, 3).map((student, idx) => (
             <div key={idx} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-700/50' : 'border-gray-100 bg-gray-50'}`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -260,11 +244,11 @@ export default function TeacherHomePage() {
                 </span>
               </div>
               <div className={`flex items-center justify-between text-sm ${textSecondary}`}>
-                <span>{student.subject}</span>
-                <span className="font-bold text-red-500">{student.score}٪</span>
+                <span>{student.reasons?.[0] || 'أداء ضعيف'}</span>
+                <span className="font-bold text-red-500">{student.avg}٪</span>
               </div>
               <div className="mt-2 w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                <div className="bg-red-500 h-1.5 rounded-full" style={{ width: `${student.score}%` }} />
+                <div className="bg-red-500 h-1.5 rounded-full" style={{ width: `${student.riskScore}%` }} />
               </div>
               <button className="mt-3 w-full text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center justify-center gap-1 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors">
                 <Eye className="w-3 h-3" /> عرض الملف

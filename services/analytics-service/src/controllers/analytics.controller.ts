@@ -10,20 +10,63 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
     }
 
     const totalUsers = await db.user.count();
+    const studentsCount = await db.user.count({ where: { role: { in: ['ONLINE_STUDENT', 'CENTER_STUDENT'] } } });
+    const teachersCount = await db.user.count({ where: { role: 'TEACHER' } });
+    const parentsCount = await db.user.count({ where: { role: 'PARENT' } });
+    const adminsCount = await db.user.count({ where: { role: 'ADMIN' } });
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeUsers = await db.user.count({ where: { updatedAt: { gte: thirtyDaysAgo } } });
+
     const totalCourses = await db.course.count();
+    const totalVideos = await db.lesson.count();
     const totalExams = await db.exam.count();
+    const totalHomeworks = await db.homework.count();
+    const totalEnrollments = await db.courseEnrollment.count();
+
     const totalSubmissions = await db.submission.count();
+    const examAttempts = await db.examAttempt.findMany({ select: { score: true } });
+    const averageExamScore = examAttempts.length > 0 ? Math.round(examAttempts.reduce((acc, a) => acc + a.score, 0) / examAttempts.length) : 0;
+    const passCount = examAttempts.filter(a => a.score >= 50).length;
+    const passRate = examAttempts.length > 0 ? Math.round((passCount / examAttempts.length) * 100) : 0;
+    
+    // Completion rate for Homeworks: (Total Submissions / Total Expected Submissions)
+    // Expected submissions = enrollments * homeworks per course. This is tricky to calculate quickly without grouping, so we simplify:
+    const completionRate = totalSubmissions > 0 ? Math.round((totalSubmissions / Math.max(1, totalEnrollments)) * 100) : 0;
+
+    const atRiskStudents = await db.user.count({
+      where: {
+        role: { in: ['ONLINE_STUDENT', 'CENTER_STUDENT'] },
+        examAttempts: { some: { score: { lt: 50 } } }
+      }
+    });
+
+    const successfulPayments = await db.payment.findMany({ where: { status: 'COMPLETED' }, select: { amount: true, date: true } });
+    const totalRevenue = successfulPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const monthlyRevenue = successfulPayments
+      .filter(p => p.date.getMonth() === currentMonth && p.date.getFullYear() === currentYear)
+      .reduce((sum, p) => sum + p.amount, 0);
+    const yearlyRevenue = successfulPayments
+      .filter(p => p.date.getFullYear() === currentYear)
+      .reduce((sum, p) => sum + p.amount, 0);
 
     const roleDistribution = await db.user.groupBy({
       by: ['role'],
       _count: true
     });
-    
-    // Generate some basic timeseries data (ideally grouped by createdAt in SQL)
-    // For now, since SQLite/Prisma date grouping is complex, we will generate structural data based on actual counts
+
+    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+    const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
+    const usersThisMonth = await db.user.count({ where: { createdAt: { gte: startOfCurrentMonth } } });
+    const usersLastMonth = await db.user.count({ where: { createdAt: { gte: startOfLastMonth, lt: startOfCurrentMonth } } });
     const enrollmentData = [
-      { month: 'الشهر الماضي', students: Math.max(0, totalUsers - 5) },
-      { month: 'الشهر الحالي', students: totalUsers }
+      { month: 'الشهر الماضي', students: usersLastMonth },
+      { month: 'الشهر الحالي', students: usersThisMonth }
     ];
 
     const courses = await db.course.findMany({
@@ -40,24 +83,27 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    // Real revenue from Payment table (Stripe will update this when integrated)
-    const payments = await db.payment.findMany({
-      where: { status: 'COMPLETED' },
-      select: { amount: true, date: true }
-    });
-    const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
-    const revenueData = [
-      { month: 'إجمالي الإيرادات', revenue: totalRevenue },
-      { month: 'المدفوعات المكتملة', revenue: payments.length }
-    ];
+    const revenueData = [];
+    for (let i = 3; i >= 0; i--) {
+      const d = new Date(currentYear, currentMonth - i, 1);
+      const nextMonth = new Date(currentYear, currentMonth - i + 1, 1);
+      const mRev = successfulPayments
+        .filter(p => p.date >= d && p.date < nextMonth)
+        .reduce((sum, p) => sum + p.amount, 0);
+      revenueData.push({ month: `${d.getMonth() + 1}/${d.getFullYear()}`, revenue: mRev });
+    }
 
     const recentActivities = [
-      { text: `إجمالي الطلاب المسجلين: ${totalUsers}`, time: 'محدث الآن', type: 'info' },
-      { text: `إجمالي الدورات النشطة: ${totalCourses}`, time: 'محدث الآن', type: 'success' },
+      { text: `إجمالي الطلاب المسجلين: ${studentsCount}`, time: 'محدث الآن', type: 'info' },
+      { text: `المدفوعات الناجحة: ${successfulPayments.length}`, time: 'محدث الآن', type: 'success' },
     ];
 
     res.json({
-      overview: { totalUsers, totalCourses, totalExams, totalSubmissions },
+      overview: {
+        totalUsers, studentsCount, teachersCount, parentsCount, adminsCount, activeUsers,
+        totalCourses, totalVideos, totalExams, totalHomeworks, totalEnrollments, totalSubmissions,
+        averageExamScore, passRate, completionRate, atRiskStudents, totalRevenue, monthlyRevenue, yearlyRevenue
+      },
       roleDistribution,
       enrollmentData,
       performanceData: performanceData.length > 0 ? performanceData : [{ course: 'لا يوجد', average: 0 }],
@@ -137,8 +183,7 @@ export const getParentChildOverview = async (req: AuthRequest, res: Response) =>
       overview: {
         overallRate,
         examsCompleted,
-        homeworksCompleted,
-        rank: 1 // Placeholder for now
+        homeworksCompleted
       },
       recent,
       charts: {
@@ -201,17 +246,40 @@ export const getTeacherAnalytics = async (req: AuthRequest, res: Response) => {
     const averageScore = attemptCount > 0 ? Math.round(totalScore / attemptCount) : 0;
     
     let strugglingStudents = 0;
+    let excellent = 0;
+    let good = 0;
     for (const stats of studentScores.values()) {
-       if (stats.total / stats.count < 50) {
+       const avg = stats.total / stats.count;
+       if (avg < 50) {
          strugglingStudents++;
+       } else if (avg >= 85) {
+         excellent++;
+       } else {
+         good++;
        }
     }
+
+    const distributionData = [
+      { name: 'ممتاز', value: excellent, color: '#10b981' },
+      { name: 'جيد جداً', value: good, color: '#3b82f6' },
+      { name: 'متعثر', value: strugglingStudents, color: '#ef4444' },
+    ];
+
+    const subjectPerformance = courses.map(c => {
+      let cTotal = 0;
+      let cCount = 0;
+      c.exams.forEach(e => e.attempts.forEach(a => { cTotal += a.score; cCount++; }));
+      return { subject: c.title, avg: cCount > 0 ? Math.round(cTotal / cCount) : 0 };
+    });
     
     res.json({
       totalStudents,
       totalCourses,
       averageScore,
-      strugglingStudents
+      strugglingStudents,
+      distributionData,
+      subjectPerformance,
+      recentActivities: [] // simplified for now
     });
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching teacher analytics', error: error.message });
@@ -340,5 +408,189 @@ export const getStudentRecent = async (req: AuthRequest, res: Response) => {
     res.json(combined.slice(0, 5));
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching recent items', error: error.message });
+  }
+};
+
+export const getStudentReport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER' && requesterId !== studentId) {
+      // Also parents checking their children, handled broadly or if we do strict checks
+      const parent = await db.user.findFirst({ where: { id: studentId, parentId: requesterId } });
+      if (!parent && requesterRole === 'PARENT') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+    }
+
+    const student = await db.user.findUnique({
+      where: { id: studentId },
+      include: {
+        examAttempts: { include: { exam: { include: { course: true } } } },
+        submissions: { include: { homework: { include: { course: true } } } },
+        attendances: true,
+        videoProgress: { include: { lesson: { include: { course: true } } } }
+      }
+    });
+
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    res.json(student);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching student report', error: error.message });
+  }
+};
+
+export const getRiskAnalytics = async (req: AuthRequest, res: Response) => {
+  try {
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // Fetch students
+    let whereClause: any = { role: { in: ['ONLINE_STUDENT', 'CENTER_STUDENT'] } };
+    if (requesterRole === 'TEACHER') {
+       // Only students enrolled in courses taught by this teacher
+       whereClause = {
+         ...whereClause,
+         enrollments: {
+           some: {
+             course: { teacherId: req.user?.userId }
+           }
+         }
+       };
+    }
+
+    const students = await db.user.findMany({
+      where: whereClause,
+      include: {
+        examAttempts: true,
+        submissions: true,
+        enrollments: {
+          include: { course: true }
+        }
+      }
+    });
+
+    const riskStudents = [];
+    const riskBySubjectMap: Record<string, number> = {};
+
+    for (const student of students) {
+      let riskScore = 0;
+      const reasons: string[] = [];
+
+      // Logic 1: Low average exam score
+      const examAttempts = student.examAttempts;
+      const examAvg = examAttempts.length > 0
+        ? Math.round(examAttempts.reduce((acc, a) => acc + a.score, 0) / examAttempts.length)
+        : null;
+
+      if (examAvg !== null) {
+        if (examAvg < 50) {
+          riskScore += 50;
+          reasons.push('درجات الامتحانات منخفضة جداً');
+        } else if (examAvg < 65) {
+          riskScore += 30;
+          reasons.push('تراجع في مستوى الامتحانات');
+        }
+      }
+
+      // Logic 2: Failed exams count
+      const failedExams = examAttempts.filter(a => a.score < 50).length;
+      if (failedExams >= 3) {
+        riskScore += 30;
+        reasons.push(`رسوب في ${failedExams} امتحانات`);
+      }
+
+      // Logic 3: Missing homeworks (simulated by low submission count vs enrollments)
+      if (student.enrollments.length > 0 && student.submissions.length === 0) {
+        riskScore += 20;
+        reasons.push('عدم تسليم واجبات');
+      }
+
+      if (riskScore >= 40) {
+        let riskLevel = 'متوسط';
+        if (riskScore >= 80) riskLevel = 'حرج';
+        else if (riskScore >= 60) riskLevel = 'عالي';
+
+        riskStudents.push({
+          id: student.id,
+          name: student.name,
+          grade: student.role === 'ONLINE_STUDENT' ? 'أونلاين' : 'سنتر',
+          type: student.role,
+          avg: examAvg || 0,
+          risk: riskLevel,
+          riskScore: Math.min(riskScore, 100),
+          reasons,
+          lastActivity: new Date(student.updatedAt).toLocaleDateString('ar-EG'),
+          trend: -1 * Math.floor(riskScore / 10)
+        });
+
+        // Add to subject map
+        student.enrollments.forEach(e => {
+          riskBySubjectMap[e.course.title] = (riskBySubjectMap[e.course.title] || 0) + 1;
+        });
+      }
+    }
+
+    const riskBySubject = Object.entries(riskBySubjectMap)
+      .map(([subject, count]) => ({ subject, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    res.json({
+      riskStudents: riskStudents.sort((a, b) => b.riskScore - a.riskScore),
+      riskBySubject
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching risk analytics', error: error.message });
+  }
+};
+
+export const getAIStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const totalMessages = await db.chatMessage.count();
+    const totalSessions = await db.chatSession.count();
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeSessions = await db.chatSession.findMany({
+      where: { updatedAt: { gte: thirtyDaysAgo } },
+      select: { userId: true },
+      distinct: ['userId']
+    });
+    const activeStudents = activeSessions.length;
+
+    const recentSessions = await db.chatSession.findMany({
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+      include: {
+        user: { select: { name: true } },
+        messages: { orderBy: { createdAt: 'desc' }, take: 1 }
+      }
+    });
+
+    const conversations = recentSessions.map((s: any) => {
+      const lastMsg = s.messages.length > 0 ? s.messages[0].content : '';
+      const isRecent = (new Date().getTime() - s.updatedAt.getTime()) < 1000 * 60 * 60;
+      return {
+        student: s.user?.name || 'Unknown',
+        lastMessage: lastMsg.length > 50 ? lastMsg.substring(0, 50) + '...' : lastMsg,
+        time: s.updatedAt.toISOString(),
+        status: isRecent ? 'نشط' : 'مكتمل'
+      };
+    });
+
+    res.json({
+      totalMessages,
+      totalSessions,
+      activeStudents,
+      conversations
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching AI stats', error: error.message });
   }
 };

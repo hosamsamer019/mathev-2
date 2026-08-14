@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { courseService } from '../../services/course.service';
 import { homeworkService } from '../../services/homework.service';
 import SupabaseUploader from '../ui/SupabaseUploader';
+import { ACADEMIC_CONFIG } from '@shared/utils/dist/academicConfig';
 
 const videoTypes = [
   { icon: Upload, label: 'رفع فيديو محلي', color: 'bg-blue-100 text-blue-700' },
@@ -17,6 +18,8 @@ export default function TeacherCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string|null>(null);
   const [showAddCourse, setShowAddCourse] = useState(false);
+  const [showEditCourse, setShowEditCourse] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
   const [showAddVideo, setShowAddVideo] = useState(false);
   const [activeTab, setActiveTab] = useState<'courses' | 'videos'>('courses');
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
@@ -75,6 +78,10 @@ export default function TeacherCoursesPage() {
 
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseLevel, setNewCourseLevel] = useState('ثانوي ١');
+  const [newCoursePrice, setNewCoursePrice] = useState(0);
+  const [newCourseCountry, setNewCourseCountry] = useState('EG');
+  const [newCourseEducationLevel, setNewCourseEducationLevel] = useState('');
+  const [newCourseGradeLevel, setNewCourseGradeLevel] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -86,9 +93,17 @@ export default function TeacherCoursesPage() {
     }
     try {
       setIsSubmitting(true);
-      await courseService.createCourse({ title: newCourseTitle, category: newCourseLevel });
+      await courseService.createCourse({ 
+        title: newCourseTitle, 
+        category: newCourseGradeLevel ? newCourseGradeLevel : newCourseLevel, 
+        price: newCoursePrice,
+        country: newCourseCountry,
+        educationLevel: newCourseEducationLevel,
+        gradeLevel: newCourseGradeLevel
+      });
       setShowAddCourse(false);
       setNewCourseTitle('');
+      setNewCoursePrice(0);
       fetchCourses();
     } catch (err: any) {
       console.error('Failed to add course', err);
@@ -100,6 +115,42 @@ export default function TeacherCoursesPage() {
         setFormErrors(errors);
       } else {
         setFormErrors({ global: 'حدث خطأ أثناء الإضافة' });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditCourseSubmit = async () => {
+    setFormErrors({});
+    if (!newCourseTitle.trim()) {
+      setFormErrors({ title: 'يرجى كتابة اسم الدورة' });
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await courseService.updateCourse(editingCourse.id, { 
+        title: newCourseTitle, 
+        price: newCoursePrice,
+        ...(newCourseCountry && { country: newCourseCountry }),
+        ...(newCourseEducationLevel && { educationLevel: newCourseEducationLevel }),
+        ...(newCourseGradeLevel && { gradeLevel: newCourseGradeLevel })
+      });
+      setShowEditCourse(false);
+      setEditingCourse(null);
+      setNewCourseTitle('');
+      setNewCoursePrice(0);
+      fetchCourses();
+    } catch (err: any) {
+      console.error('Failed to update course', err);
+      if (err.response?.data?.errors) {
+        const errors: Record<string, string> = {};
+        err.response.data.errors.forEach((e: any) => {
+          errors[e.path[0]] = e.message;
+        });
+        setFormErrors(errors);
+      } else {
+        setFormErrors({ global: 'حدث خطأ أثناء التعديل' });
       }
     } finally {
       setIsSubmitting(false);
@@ -342,9 +393,14 @@ export default function TeacherCoursesPage() {
                       <Eye className="w-4 h-4" /> تقارير المشاهدة
                     </button>
                     <button 
-                      onClick={() => alert('ميزة تعديل الدورة غير متاحة حالياً لعدم توفر نقطة اتصال (PUT /courses/:id) في الخادم.')} 
-                      className={`p-2 rounded-xl border ${isDark ? 'border-gray-600 text-gray-500' : 'border-gray-200 text-gray-400'} opacity-50 cursor-not-allowed`}
-                      title="غير متاح حالياً (لا يوجد Backend Endpoint)"
+                      onClick={() => {
+                        setEditingCourse(course);
+                        setNewCourseTitle(course.title);
+                        setNewCoursePrice(course.price || 0);
+                        setShowEditCourse(true);
+                      }} 
+                      className={`p-2 rounded-xl border border-blue-200 text-blue-500 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-900/20 transition-colors`}
+                      title="تعديل الدورة"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
@@ -406,14 +462,60 @@ export default function TeacherCoursesPage() {
                 />
                 {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
               </div>
+              <div className="space-y-3">
+                <label className={`block text-sm font-medium ${textPrimary}`}>المستوى الدراسي الموجه له الدورة</label>
+                <select
+                  value={newCourseCountry}
+                  onChange={(e) => {
+                    setNewCourseCountry(e.target.value);
+                    setNewCourseEducationLevel('');
+                    setNewCourseGradeLevel('');
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`}
+                >
+                  {Object.entries(ACADEMIC_CONFIG).map(([key, config]) => (
+                    <option key={key} value={key} className="text-black">{config.label}</option>
+                  ))}
+                </select>
+
+                {newCourseCountry && (
+                  <select
+                    value={newCourseEducationLevel}
+                    onChange={(e) => {
+                      setNewCourseEducationLevel(e.target.value);
+                      setNewCourseGradeLevel('');
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`}
+                  >
+                    <option value="" className="text-black">اختر المرحلة</option>
+                    {Object.entries((ACADEMIC_CONFIG as any)[newCourseCountry].levels).map(([key, level]: [string, any]) => (
+                      <option key={key} value={key} className="text-black">{level.label}</option>
+                    ))}
+                  </select>
+                )}
+
+                {newCourseCountry && newCourseEducationLevel && (
+                  <select
+                    value={newCourseGradeLevel}
+                    onChange={(e) => setNewCourseGradeLevel(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`}
+                  >
+                    <option value="" className="text-black">اختر الصف</option>
+                    {Object.entries((ACADEMIC_CONFIG as any)[newCourseCountry].levels[newCourseEducationLevel].grades).map(([key, label]: [string, any]) => (
+                      <option key={key} value={key} className="text-black">{label}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <div className="space-y-1">
                 <input 
-                  placeholder="المرحلة (مثال: ثانوي ١)" 
-                  value={newCourseLevel}
-                  onChange={e => setNewCourseLevel(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border ${formErrors.level ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200')} text-sm`} 
+                  type="number"
+                  min="0"
+                  placeholder="سعر الدورة (اختياري)" 
+                  value={newCoursePrice}
+                  onChange={e => setNewCoursePrice(Number(e.target.value))}
+                  className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`} 
                 />
-                {formErrors.level && <p className="text-red-500 text-xs mt-1">{formErrors.level}</p>}
               </div>
               {formErrors.global && <p className="text-red-500 text-sm text-center">{formErrors.global}</p>}
             </div>
@@ -585,8 +687,8 @@ export default function TeacherCoursesPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {analytics.map(stat => (
-                              <tr key={stat.id || Math.random()} className={`border-b last:border-0 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+                            {analytics.map((stat, index) => (
+                              <tr key={stat.id || `stat-${index}`} className={`border-b last:border-0 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
                                 <td className={`py-3 px-4 ${textPrimary}`}>{stat.student?.name || 'مستخدم غير معروف'}</td>
                                 <td className={`py-3 px-4`}>
                                   {stat.watched ? (
@@ -649,10 +751,97 @@ export default function TeacherCoursesPage() {
                 )}
               </div>
             )}
-            
             <div className="mt-8 text-left">
               <button onClick={() => setSelectedCourse(null)} className="px-6 py-2 rounded-xl bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium">
                 إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Course Modal */}
+      {showEditCourse && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowEditCourse(false)}>
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-md shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>تعديل الدورة</h2>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <input 
+                  placeholder="اسم الدورة (مثال: فيزياء ثالثة ثانوي)" 
+                  value={newCourseTitle}
+                  onChange={e => setNewCourseTitle(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-xl border ${formErrors.title ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200')} text-sm`} 
+                />
+                {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
+              </div>
+              <div className="space-y-3">
+                <label className={`block text-sm font-medium ${textPrimary}`}>المستوى الدراسي الموجه له الدورة</label>
+                <select
+                  value={newCourseCountry}
+                  onChange={(e) => {
+                    setNewCourseCountry(e.target.value);
+                    setNewCourseEducationLevel('');
+                    setNewCourseGradeLevel('');
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`}
+                >
+                  {Object.entries(ACADEMIC_CONFIG).map(([key, config]) => (
+                    <option key={key} value={key} className="text-black">{config.label}</option>
+                  ))}
+                </select>
+
+                {newCourseCountry && (
+                  <select
+                    value={newCourseEducationLevel}
+                    onChange={(e) => {
+                      setNewCourseEducationLevel(e.target.value);
+                      setNewCourseGradeLevel('');
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`}
+                  >
+                    <option value="" className="text-black">اختر المرحلة</option>
+                    {Object.entries((ACADEMIC_CONFIG as any)[newCourseCountry].levels).map(([key, level]: [string, any]) => (
+                      <option key={key} value={key} className="text-black">{level.label}</option>
+                    ))}
+                  </select>
+                )}
+
+                {newCourseCountry && newCourseEducationLevel && (
+                  <select
+                    value={newCourseGradeLevel}
+                    onChange={(e) => setNewCourseGradeLevel(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`}
+                  >
+                    <option value="" className="text-black">اختر الصف</option>
+                    {Object.entries((ACADEMIC_CONFIG as any)[newCourseCountry].levels[newCourseEducationLevel].grades).map(([key, label]: [string, any]) => (
+                      <option key={key} value={key} className="text-black">{label}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="space-y-1">
+                <input 
+                  type="number"
+                  min="0"
+                  placeholder="سعر الدورة (اختياري)" 
+                  value={newCoursePrice}
+                  onChange={e => setNewCoursePrice(Number(e.target.value))}
+                  className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} text-sm`} 
+                />
+              </div>
+              {formErrors.global && <p className="text-red-500 text-sm text-center">{formErrors.global}</p>}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={handleEditCourseSubmit} 
+                disabled={isSubmitting}
+                className="flex-1 bg-gradient-to-l from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {isSubmitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+              </button>
+              <button onClick={() => setShowEditCourse(false)} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'} font-medium`}>
+                إلغاء
               </button>
             </div>
           </div>

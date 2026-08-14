@@ -6,7 +6,8 @@ import dotenv from 'dotenv';
 import userRoutes from './routes/user.routes.js';
 import attendanceRoutes from './routes/attendance.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
-import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
+import { logger, globalErrorHandler, validateEnv, initSentry } from '@shared/utils';
+import { userRateLimiter } from './middlewares/rateLimiter';
 
 dotenv.config();
 validateEnv();
@@ -15,8 +16,21 @@ const app = express();
 const PORT = process.env.PORT || 4002;
 
 app.use(helmet());
-app.use(cors());
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    const allowedOrigin = process.env.CLIENT_URL || 'https://your-production-domain.com';
+    if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
+app.use(userRateLimiter);
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'OK', service: 'User Service', timestamp: new Date().toISOString() });

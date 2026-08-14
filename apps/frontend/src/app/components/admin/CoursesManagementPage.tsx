@@ -8,7 +8,8 @@ export default function CoursesManagementPage() {
   const [loading, setLoading] = useState(true);
 
   // Form State
-  const [formData, setFormData] = useState({ title: '', description: '', teacherId: '' });
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [formData, setFormData] = useState({ title: '', description: '', teacherId: '', price: 0, status: 'PUBLISHED' });
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -58,10 +59,16 @@ export default function CoursesManagementPage() {
     try {
       setIsSaving(true);
       setValidationErrors({});
-      await courseService.createCourse(formData);
-      showToast('تمت الإضافة بنجاح', 'success');
+      if (editingCourse) {
+        await courseService.updateCourse(editingCourse.id, formData);
+        showToast('تم التعديل بنجاح', 'success');
+      } else {
+        await courseService.createCourse(formData);
+        showToast('تمت الإضافة بنجاح', 'success');
+      }
       setShowModal(false);
-      setFormData({ title: '', description: '', teacherId: '' });
+      setEditingCourse(null);
+      setFormData({ title: '', description: '', teacherId: '', price: 0, status: 'PUBLISHED' });
       fetchCourses();
     } catch (err: any) {
       console.error(err);
@@ -96,7 +103,11 @@ export default function CoursesManagementPage() {
           <p className="text-gray-600">إنشاء وتعديل الدورات التعليمية</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditingCourse(null);
+            setFormData({ title: '', description: '', teacherId: '', price: 0, status: 'PUBLISHED' });
+            setShowModal(true);
+          }}
           className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
         >
           <Plus className="w-5 h-5" />
@@ -115,15 +126,37 @@ export default function CoursesManagementPage() {
 
             <div className="space-y-2 mb-4">
               <p className="text-sm text-gray-600">الوصف: {course.description}</p>
-              <p className="text-sm text-gray-600">عدد الدروس: {course._count?.lessons || 0}</p>
-              <p className="text-sm text-gray-600">عدد الطلاب: {course._count?.enrollments || 0}</p>
+              {course.teacher && (
+                <p className="text-sm text-gray-600">المعلم: {course.teacher.name} ({course.teacher.email})</p>
+              )}
+              <div className="flex gap-4 mt-2">
+                <p className="text-sm font-semibold text-purple-700">السعر: {course.price}ج</p>
+                <p className={`text-sm font-semibold ${course.status === 'PUBLISHED' ? 'text-green-600' : 'text-orange-500'}`}>
+                  الحالة: {course.status === 'PUBLISHED' ? 'منشور' : 'مسودة'}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <p className="text-sm text-gray-600">عدد الدروس: {course._count?.lessons || 0}</p>
+                <p className="text-sm text-gray-600">عدد الطلاب: {course._count?.enrollments || 0}</p>
+                <p className="text-sm text-gray-600">الامتحانات: {course._count?.exams || 0}</p>
+                <p className="text-sm text-gray-600">الواجبات: {course._count?.homeworks || 0}</p>
+              </div>
             </div>
 
             <div className="flex gap-2">
               <button 
-                onClick={() => alert('ميزة التعديل غير متاحة حالياً (نقطة اتصال PUT غير موجودة)')}
-                className="flex-1 flex items-center justify-center gap-2 bg-gray-300 text-gray-500 py-2 rounded-lg cursor-not-allowed"
-                title="غير مدعوم من الخادم"
+                onClick={() => {
+                  setEditingCourse(course);
+                  setFormData({
+                    title: course.title,
+                    description: course.description || '',
+                    teacherId: course.teacherId,
+                    price: course.price || 0,
+                    status: course.status || 'PUBLISHED'
+                  });
+                  setShowModal(true);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-100 text-blue-700 hover:bg-blue-200 py-2 rounded-lg"
               >
                 <Edit className="w-4 h-4" />
                 <span>تعديل</span>
@@ -141,7 +174,7 @@ export default function CoursesManagementPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">إضافة دورة جديدة</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{editingCourse ? 'تعديل دورة' : 'إضافة دورة جديدة'}</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
@@ -180,6 +213,31 @@ export default function CoursesManagementPage() {
                   className={`w-full px-4 py-2 border ${validationErrors.teacherId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
                 {validationErrors.teacherId && <p className="text-red-500 text-xs mt-1">{validationErrors.teacherId}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">السعر (بالجنيه)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                  className={`w-full px-4 py-2 border ${validationErrors.price ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                />
+                {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">الحالة</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  className={`w-full px-4 py-2 border ${validationErrors.status ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                >
+                  <option value="PUBLISHED">منشور (Published)</option>
+                  <option value="DRAFT">مسودة (Draft)</option>
+                </select>
+                {validationErrors.status && <p className="text-red-500 text-xs mt-1">{validationErrors.status}</p>}
               </div>
 
               <div className="flex gap-3 mt-6">

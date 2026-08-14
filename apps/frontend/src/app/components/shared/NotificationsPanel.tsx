@@ -52,6 +52,15 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      await notificationApi.put('/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
@@ -70,12 +79,22 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
             <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full">{unreadCount}</span>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className={`p-1 rounded-lg ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className={`text-xs px-2 py-1 rounded-md transition-colors ${isDark ? 'text-indigo-400 hover:bg-indigo-900/30' : 'text-indigo-600 hover:bg-indigo-50'}`}
+            >
+              تحديد الكل كمقروء
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className={`p-1 rounded-lg ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Notifications List */}

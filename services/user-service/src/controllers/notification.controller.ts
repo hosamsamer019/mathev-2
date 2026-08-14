@@ -38,3 +38,19 @@ export const markAsRead = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error updating notification', error: error.message });
   }
 };
+
+export const markAllAsRead = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    await db.notification.updateMany({
+      where: { userId, read: false },
+      data: { read: true }
+    });
+
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error updating notifications', error: error.message });
+  }
+};

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save } from 'lucide-react';
 import { userService } from '../../services/user.service';
 import { useAuth } from '../../contexts/AuthContext';
+import { ACADEMIC_CONFIG } from '@shared/utils/dist/academicConfig';
 
 export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
@@ -15,7 +16,10 @@ export default function ProfilePage() {
     email: '',
     password: '',
     role: '',
-    center: ''
+    center: '',
+    country: '',
+    educationLevel: '',
+    gradeLevel: ''
   });
 
   const { user, checkAuth } = useAuth();
@@ -31,7 +35,10 @@ export default function ProfilePage() {
               user.role === 'CENTER_STUDENT' ? 'طالب سنتر' :
               user.role === 'TEACHER' ? 'معلم' :
               user.role === 'PARENT' ? 'ولي أمر' : 'طالب',
-        center: (user as any).centerGroup?.name || 'غير محدد'
+        center: (user as any).centerGroup?.name || 'غير محدد',
+        country: (user as any).country || 'EG',
+        educationLevel: (user as any).educationLevel || '',
+        gradeLevel: (user as any).gradeLevel || ''
       }));
     }
     setLoading(false);
@@ -43,7 +50,13 @@ export default function ProfilePage() {
       setIsSaving(true);
       setValidationErrors({});
       
-      const payload: any = { name: formData.name, email: formData.email };
+      const payload: any = { 
+        name: formData.name, 
+        email: formData.email,
+        country: formData.country,
+        educationLevel: formData.educationLevel,
+        gradeLevel: formData.gradeLevel
+      };
       if (formData.password) {
         payload.password = formData.password;
       }
@@ -121,7 +134,7 @@ export default function ProfilePage() {
                   onClick={() => {
                     setEditing(false);
                     setValidationErrors({});
-                    setFormData(prev => ({ ...prev, name: user?.name || '', email: user?.email || '', password: '' }));
+                    setFormData(prev => ({ ...prev, name: user?.name || '', email: user?.email || '', password: '', country: (user as any)?.country || 'EG', educationLevel: (user as any)?.educationLevel || '', gradeLevel: (user as any)?.gradeLevel || '' }));
                   }}
                   disabled={isSaving}
                   className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
@@ -202,6 +215,75 @@ export default function ProfilePage() {
                     />
                   </div>
                   {validationErrors.password && <p className="text-red-500 text-xs mr-8">{validationErrors.password}</p>}
+                </div>
+              </div>
+            )}
+
+            {(user?.role === 'ONLINE_STUDENT' || user?.role === 'CENTER_STUDENT') && (
+              <div className="pt-6 border-t border-gray-200">
+                <h3 className="font-medium text-gray-900 mb-4">المستوى الدراسي</h3>
+                <div className="space-y-4">
+                  {editing ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">البلد</label>
+                        <select
+                          value={formData.country}
+                          onChange={(e) => setFormData({...formData, country: e.target.value, educationLevel: '', gradeLevel: ''})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        >
+                          {Object.entries(ACADEMIC_CONFIG).map(([key, config]) => (
+                            <option key={key} value={key}>{config.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {formData.country && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">المرحلة الدراسية</label>
+                          <select
+                            value={formData.educationLevel}
+                            onChange={(e) => setFormData({...formData, educationLevel: e.target.value, gradeLevel: ''})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="">اختر المرحلة</option>
+                            {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels).map(([key, level]: [string, any]) => (
+                              <option key={key} value={key}>{level.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {formData.country && formData.educationLevel && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
+                          <select
+                            value={formData.gradeLevel}
+                            onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="">اختر الصف</option>
+                            {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels[formData.educationLevel].grades).map(([key, label]: [string, any]) => (
+                              <option key={key} value={key}>{label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-gray-600 flex items-center gap-2">
+                        <span className="font-medium w-32">البلد:</span>
+                        <span className="text-gray-900 font-medium">{formData.country ? (ACADEMIC_CONFIG as any)[formData.country]?.label : 'غير محدد'}</span>
+                      </p>
+                      <p className="text-gray-600 flex items-center gap-2">
+                        <span className="font-medium w-32">المرحلة الدراسية:</span>
+                        <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.label : 'غير محدد'}</span>
+                      </p>
+                      <p className="text-gray-600 flex items-center gap-2">
+                        <span className="font-medium w-32">الصف الدراسي:</span>
+                        <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel && formData.gradeLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.grades[formData.gradeLevel] : 'غير محدد'}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

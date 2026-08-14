@@ -104,7 +104,7 @@ export default function ParentChildrenPage() {
                   { label: 'المتوسط العام', value: `${childData.overview.overallRate}٪`, icon: Award, color: 'from-indigo-500 to-purple-600' },
                   { label: 'الامتحانات المكتملة', value: childData.overview.examsCompleted, icon: TrendingUp, color: 'from-cyan-500 to-blue-600' },
                   { label: 'الواجبات المكتملة', value: childData.overview.homeworksCompleted, icon: CheckCircle, color: 'from-green-500 to-emerald-600' },
-                  { label: 'المرتبة', value: childData.overview.rank, icon: Award, color: 'from-orange-500 to-red-500' },
+                  { label: 'المرتبة', value: childData.overview.rank || '-', icon: Award, color: 'from-orange-500 to-red-500' },
                 ].map((stat, idx) => (
                   <div key={idx} className={`${cardBg} border rounded-2xl p-5`}>
                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>

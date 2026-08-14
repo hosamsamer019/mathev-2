@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, Plus, MoreVertical, TrendingUp, TrendingDown,
   Minus, Eye, MessageCircle, AlertTriangle, CheckCircle, Users, Download
@@ -18,6 +19,7 @@ const statusConfig: Record<string, { color: string; bg: string; icon: React.Comp
 
 export default function TeacherStudentsPage() {
   const { isDark } = useTheme();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
@@ -246,7 +248,7 @@ export default function TeacherStudentsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setSelectedStudent(student)} title="عرض التفاصيل" aria-label="عرض التفاصيل" className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <button onClick={() => navigate(`/teacher/students/${student.id}`)} title="عرض التفاصيل" aria-label="عرض التفاصيل" className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
                         <button onClick={() => alert('جاري فتح محادثة...')} title="محادثة" aria-label="محادثة" className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
@@ -298,7 +300,7 @@ export default function TeacherStudentsPage() {
               ))}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => alert('جاري تحميل تفاصيل الطالب...')} className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 flex items-center justify-center gap-2">
+              <button onClick={() => navigate(`/teacher/students/${selectedStudent.id}`)} className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 flex items-center justify-center gap-2">
                 <Eye className="w-4 h-4" /> عرض التفاصيل
               </button>
               <button onClick={() => alert('جاري فتح المحادثة...')} className={`flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2 border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>

@@ -4,10 +4,12 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { userService } from '../../services/user.service';
 import { LoadingState } from '../ui/LoadingState';
 import { EmptyState } from '../ui/EmptyState';
+import { notificationService } from '../../services/notification.service';
 
 export default function ParentHomePage() {
   const { isDark } = useTheme();
   const [children, setChildren] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
@@ -20,8 +22,12 @@ export default function ParentHomePage() {
 
   const fetchChildren = async () => {
     try {
-      const res = await userService.getChildren();
+      const [res, notifRes] = await Promise.all([
+        userService.getChildren(),
+        notificationService.getNotifications({ limit: 5 })
+      ]);
       setChildren(Array.isArray(res) ? res : []);
+      setNotifications(Array.isArray(notifRes.data) ? notifRes.data : []);
     } catch (err) {
       console.error('Failed to fetch children', err);
     } finally {
@@ -74,10 +80,22 @@ export default function ParentHomePage() {
           <h2 className={`font-bold ${textPrimary}`}>التنبيهات الأخيرة</h2>
         </div>
         <div className="space-y-3">
-          <div className={`p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20`}>
-            <p className={`text-sm font-medium ${textPrimary}`}>لا توجد إشعارات جديدة</p>
-            <p className={`text-xs ${textSecondary} mt-1`}>الآن</p>
-          </div>
+          {notifications.length === 0 ? (
+            <div className={`p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20`}>
+              <p className={`text-sm font-medium ${textPrimary}`}>لا توجد إشعارات جديدة</p>
+              <p className={`text-xs ${textSecondary} mt-1`}>الآن</p>
+            </div>
+          ) : (
+            notifications.slice(0, 5).map((notif: any) => (
+              <div key={notif.id} className={`p-4 rounded-xl border ${notif.read ? (isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') : (isDark ? 'bg-cyan-900/20 border-cyan-800' : 'bg-cyan-50 border-cyan-100')} transition-colors`}>
+                <h3 className={`font-medium ${textPrimary}`}>{notif.title}</h3>
+                <p className={`text-sm ${textSecondary} mt-1`}>{notif.message}</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  {new Date(notif.createdAt).toLocaleDateString('ar-EG')} - {new Date(notif.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

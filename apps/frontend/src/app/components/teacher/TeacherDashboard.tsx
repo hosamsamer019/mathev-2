@@ -12,26 +12,31 @@ import TeacherExamsPage from './TeacherExamsPage';
 import TeacherAIPage from './TeacherAIPage';
 import TeacherProfilePage from './TeacherProfilePage';
 import TeacherQuestionBankPage from './TeacherQuestionBankPage';
+import StudentReportPage from './StudentReportPage';
 import { Database } from 'lucide-react';
-
-const menuItems: MenuItem[] = [
-  { path: '/teacher/home', icon: Home, label: 'لوحة التحكم' },
-  { path: '/teacher/students', icon: Users, label: 'طلابي', badge: 3 },
-  { path: '/teacher/courses', icon: BookOpen, label: 'الدورات والمحتوى' },
-  { path: '/teacher/videos', icon: Video, label: 'الفيديوهات' },
-  { path: '/teacher/exams', icon: ClipboardCheck, label: 'الامتحانات والواجبات' },
-  { path: '/teacher/questions', icon: Database, label: 'بنك الأسئلة' },
-  { path: '/teacher/analytics', icon: BarChart3, label: 'التحليلات والتقارير' },
-  { path: '/teacher/ai', icon: Brain, label: 'أدوات الذكاء الاصطناعي' },
-  { path: '/teacher/profile', icon: User, label: 'الملف الشخصي' },
-];
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function TeacherDashboard() {
+  const { user } = useAuth();
+  const { t } = useLanguage();
+
+  const menuItems: MenuItem[] = [
+    { path: '/teacher/home', icon: Home, label: t('dashboard') as string },
+    { path: '/teacher/students', icon: Users, label: t('students') as string },
+    { path: '/teacher/courses', icon: BookOpen, label: t('courses') as string },
+    { path: '/teacher/exams', icon: ClipboardCheck, label: t('exams') as string },
+    { path: '/teacher/questions', icon: Database, label: t('questionBank') as string },
+    { path: '/teacher/analytics', icon: BarChart3, label: t('summary') as string },
+    { path: '/teacher/ai', icon: Brain, label: t('aiTools') as string },
+    { path: '/teacher/profile', icon: User, label: t('profile') as string },
+  ];
+
   return (
     <SharedLayout
       menuItems={menuItems}
-      title="لوحة المعلم"
-      subtitle="أ. محمد إبراهيم"
+      title={t('teacherDashboard') as string}
+      subtitle={user?.name || ''}
       accentColor="emerald"
       gradientFrom="emerald-600"
       gradientTo="teal-600"
@@ -41,8 +46,8 @@ export default function TeacherDashboard() {
         <Route path="/" element={<Navigate to="/teacher/home" replace />} />
         <Route path="/home" element={<TeacherHomePage />} />
         <Route path="/students" element={<TeacherStudentsPage />} />
+        <Route path="/students/:id" element={<StudentReportPage />} />
         <Route path="/courses" element={<TeacherCoursesPage />} />
-        <Route path="/videos" element={<TeacherCoursesPage />} />
         <Route path="/exams" element={<TeacherExamsPage />} />
         <Route path="/questions" element={<TeacherQuestionBankPage />} />
         <Route path="/analytics" element={<TeacherAnalyticsPage />} />

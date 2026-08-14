@@ -1,0 +1,26 @@
+@echo off
+echo Starting Math Teacher Smart Platform...
+
+echo Starting User Service...
+start cmd /k "cd services\user-service && npm run dev"
+
+echo Starting Course Service...
+start cmd /k "cd services\course-service && npm run dev"
+
+echo Starting Analytics Service...
+start cmd /k "cd services\analytics-service && npm run dev"
+
+echo Starting AI Service...
+start cmd /k "cd services\ai-service && npm run dev"
+
+echo Starting Auth Service...
+start cmd /k "cd services\auth-service && npm run dev"
+
+echo Starting Video Worker...
+start cmd /k "cd services\video-worker && npm run dev"
+
+echo Starting Frontend...
+start cmd /k "cd apps\frontend && npm start"
+
+echo All services are starting up in separate windows!
+pause

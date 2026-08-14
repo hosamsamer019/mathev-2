@@ -3,10 +3,12 @@ import { User, Mail, Phone, MapPin, Edit, Save, Camera, Award, Star, BookOpen, U
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/user.service';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function TeacherProfilePage() {
   const { isDark } = useTheme();
   const { user, checkAuth } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -146,6 +148,17 @@ export default function TeacherProfilePage() {
               rows={3}
               className={`${inputClass} resize-none`}
             />
+          </div>
+          <div className="mt-4">
+            <label className={`text-sm font-medium ${textSecondary} block mb-2`}>لغة العرض</label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as any)}
+              className={`${inputClass}`}
+            >
+              <option value="ARABIC">العربية</option>
+              <option value="ENGLISH">English</option>
+            </select>
           </div>
         </div>
       </div>

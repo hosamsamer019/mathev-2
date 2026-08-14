@@ -23,10 +23,10 @@ const PORT = process.env.PORT || 4004;
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) return callback(null, true);
-    if (origin.startsWith('http://localhost:')) {
+    if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
       return callback(null, true);
     }
-    const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+    const allowedOrigin = process.env.CLIENT_URL || 'https://your-production-domain.com';
     if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
     callback(new Error('Not allowed by CORS'));
   },

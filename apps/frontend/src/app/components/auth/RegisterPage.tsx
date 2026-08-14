@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, ChevronLeft, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../../contexts/AuthContext';
+import { ACADEMIC_CONFIG } from '@shared/utils/dist/academicConfig';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useAuth();
   
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', country: 'EG', educationLevel: '', gradeLevel: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -134,6 +135,55 @@ export default function RegisterPage() {
                 </button>
               </div>
               {validationErrors.password && <p className="text-red-400 text-xs mt-1">{validationErrors.password}</p>}
+            </div>
+
+            {/* Academic Profile */}
+            <div className="pt-4 border-t border-white/10 mt-4">
+              <h3 className="text-md font-semibold text-white mb-3">المستوى الدراسي</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-brand-200 mb-1">البلد</label>
+                  <select
+                    value={formData.country}
+                    onChange={(e) => setFormData({...formData, country: e.target.value, educationLevel: '', gradeLevel: ''})}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                  >
+                    {Object.entries(ACADEMIC_CONFIG).map(([key, config]) => (
+                      <option key={key} value={key} className="text-black">{config.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {formData.country && (
+                  <div>
+                    <label className="block text-sm font-medium text-brand-200 mb-1">المرحلة الدراسية</label>
+                    <select
+                      value={formData.educationLevel}
+                      onChange={(e) => setFormData({...formData, educationLevel: e.target.value, gradeLevel: ''})}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                    >
+                      <option value="" className="text-black">اختر المرحلة</option>
+                      {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels).map(([key, level]: [string, any]) => (
+                        <option key={key} value={key} className="text-black">{level.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {formData.country && formData.educationLevel && (
+                  <div>
+                    <label className="block text-sm font-medium text-brand-200 mb-1">الصف الدراسي</label>
+                    <select
+                      value={formData.gradeLevel}
+                      onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                    >
+                      <option value="" className="text-black">اختر الصف</option>
+                      {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels[formData.educationLevel].grades).map(([key, label]: [string, any]) => (
+                        <option key={key} value={key} className="text-black">{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
 
             {globalError && (
