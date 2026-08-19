@@ -82,6 +82,7 @@
     "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/react-katex": "^3.0.4",
     "@vitejs/plugin-react": "4.7.0",
     "cypress": "^15.18.1",
     "jsdom": "^30.0.1",

@@ -13,6 +13,7 @@ const HOMEWORK_URL = env.VITE_HOMEWORK_API_URL || (useProdPaths ? '/api/homework
 const ANALYTICS_URL = env.VITE_ANALYTICS_API_URL || (useProdPaths ? '/api/analytics' : 'http://localhost:4005/api/analytics');
 const NOTIFICATION_URL = env.VITE_NOTIFICATION_API_URL || (useProdPaths ? '/api/notifications' : 'http://localhost:4002/api/notifications');
 const QUESTION_URL = env.VITE_QUESTION_API_URL || (useProdPaths ? '/api/questions' : 'http://localhost:4004/api/questions');
+const ASSESSMENT_URL = env.VITE_ASSESSMENT_API_URL || (useProdPaths ? '/api/assessments' : 'http://localhost:4004/api/assessments');
 
 export const authApi = axios.create({
   baseURL: AUTH_URL,
@@ -51,8 +52,12 @@ export const questionApi = axios.create({
   baseURL: QUESTION_URL,
 });
 
+export const assessmentApi = axios.create({
+  baseURL: ASSESSMENT_URL,
+});
+
 // Interceptor to add Token to requests and handle 401s
-[userApi, aiApi, courseApi, examApi, homeworkApi, analyticsApi, notificationApi, questionApi].forEach(api => {
+[userApi, aiApi, courseApi, examApi, homeworkApi, analyticsApi, notificationApi, questionApi, assessmentApi].forEach(api => {
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {

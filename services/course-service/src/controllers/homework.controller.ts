@@ -150,9 +150,10 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
     const validatedData = createHomeworkSchema.parse(req.body);
     const { title, courseId, questions, lessonId, type } = validatedData;
     
+    const course = await db.course.findUnique({ where: { id: courseId } });
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+
     if (requesterRole !== 'ADMIN') {
-      const course = await db.course.findUnique({ where: { id: courseId } });
-      if (!course) return res.status(404).json({ message: 'Course not found' });
       if (course.teacherId !== requesterId) {
         return res.status(403).json({ message: 'Forbidden: You do not own this course' });
       }
@@ -167,6 +168,20 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
         type: lessonId ? 'VIDEO_DEPENDENT' : type
       }
     });
+    
+    // Mirror to unified Assessment table
+    await db.assessment.create({
+      data: {
+        id: homework.id,
+        title: homework.title,
+        type: 'ASSIGNMENT',
+        courseId: homework.courseId,
+        lessonId: homework.lessonId,
+        teacherId: course.teacherId,
+        questions: homework.questions as any
+      }
+    });
+
     io.to(`course:${courseId}`).emit('homework_assigned', homework);
 
     // Notify enrolled students and their parents
@@ -224,6 +239,20 @@ export const updateHomework = async (req: AuthRequest, res: Response) => {
         ...(type !== undefined && { type })
       }
     });
+
+    // Mirror to unified Assessment table
+    try {
+      await db.assessment.update({
+        where: { id },
+        data: {
+          ...(title && { title }),
+          ...(lessonId !== undefined && { lessonId }),
+          ...(questions && { questions })
+        }
+      });
+    } catch (err) {
+      // Ignore if it doesn't exist in Assessment yet for some reason
+    }
 
     res.json(updatedHomework);
   } catch (error: any) {

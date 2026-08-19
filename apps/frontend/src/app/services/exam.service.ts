@@ -1,4 +1,4 @@
-import { examApi } from './api';
+import { examApi, assessmentApi } from './api';
 
 // ─── Types ───────────────────────────────────────────────────────────
 export interface ExamQuestion {
@@ -48,13 +48,13 @@ export const examService = {
     examApi.delete(`/${id}`),
 
   startAttempt: (examId: string) =>
-    examApi.post(`/${examId}/start`),
+    assessmentApi.post(`/${examId}/start`),
 
   submitAttempt: (examId: string, answers: SubmitAnswerData[]) =>
-    examApi.post(`/${examId}/submit`, { answers }),
+    assessmentApi.post(`/${examId}/attempt/submit`, { answers }),
 
   syncAttempt: (examId: string, answers: SubmitAnswerData[]) =>
-    examApi.post(`/${examId}/sync`, { answers }),
+    assessmentApi.put(`/${examId}/attempt/answers`, { answers }),
 
   reportViolation: (examId: string, type: string) =>
     examApi.post(`/${examId}/violation`, { type }),

@@ -162,10 +162,6 @@ export default function LoginPage() {
                 >
                   تسجيل دخول المدير العام ←
                 </button>
-                <p className="text-xs text-brand-400">
-                  ليس لديك حساب؟ {' '}
-                  <button onClick={() => navigate('/register')} className="text-white hover:underline">إنشاء حساب جديد</button>
-                </p>
               </div>
             </motion.div>
           )}

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { TrendingUp, Award, Target, Star, Loader2 } from 'lucide-react';
+import { TrendingUp, Award, Target, Star, Loader2, ChevronDown, BookOpen } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { userService } from '../../services/user.service';
 import { analyticsService } from '../../services/analytics.service';
 
 export default function ParentReportsPage() {
+  const navigate = useNavigate();
   const { isDark } = useTheme();
   const [children, setChildren] = useState<any[]>([]);
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
@@ -158,6 +160,62 @@ export default function ParentReportsPage() {
                     <div className={`flex items-center justify-center h-[300px] ${textSecondary}`}>لا توجد نتائج واجبات بعد</div>
                   )}
                 </div>
+              </div>
+
+              {/* Recent Results */}
+              <div className={`${cardBg} border rounded-2xl p-6`}>
+                <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>النتائج الأخيرة</h2>
+                {childData.recent && childData.recent.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right">
+                      <thead>
+                        <tr className={`border-b ${isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                          <th className="py-3 px-4 font-bold">العنوان</th>
+                          <th className="py-3 px-4 font-bold">النوع</th>
+                          <th className="py-3 px-4 font-bold">النتيجة</th>
+                          <th className="py-3 px-4 font-bold">التاريخ</th>
+                          <th className="py-3 px-4 font-bold">إجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {childData.recent.map((result: any, idx: number) => (
+                          <tr key={idx} className={`border-b ${isDark ? 'border-gray-800 hover:bg-gray-800' : 'border-gray-100 hover:bg-gray-50'} transition-colors`}>
+                            <td className={`py-3 px-4 font-medium ${textPrimary}`}>{result.title}</td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                result.type === 'exam' || result.type === 'امتحان'
+                                  ? 'bg-indigo-100 text-indigo-700'
+                                  : 'bg-teal-100 text-teal-700'
+                              }`}>
+                                {result.type === 'exam' || result.type === 'امتحان' ? 'امتحان' : 'واجب'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`font-bold ${
+                                result.score >= 85 ? 'text-green-500' : result.score >= 65 ? 'text-yellow-500' : 'text-red-500'
+                              }`}>
+                                {result.score}٪
+                              </span>
+                            </td>
+                            <td className={`py-3 px-4 text-sm ${textSecondary}`}>{result.date}</td>
+                            <td className="py-3 px-4">
+                              {result.assessmentId && result.id && (
+                                <button
+                                  onClick={() => navigate(`/parent/assessment/${result.assessmentId}/review/${result.id}`)}
+                                  className="text-cyan-600 hover:text-cyan-800 font-bold text-sm transition-colors"
+                                >
+                                  عرض النتيجة التفصيلية
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className={`text-center py-8 ${textSecondary}`}>لا توجد أنشطة مسجلة بعد</div>
+                )}
               </div>
             </>
           )}

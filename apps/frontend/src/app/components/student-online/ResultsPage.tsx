@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, Award, Target, Star, Loader2, Download } from 'lucide-react';
 import { analyticsService } from '../../services/analytics.service';
@@ -6,6 +7,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 export default function ResultsPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState({
     overallRate: 0,
@@ -180,6 +182,7 @@ export default function ResultsPage() {
                   <th className="text-right py-3 px-4 font-medium text-gray-700">النوع</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-700">النتيجة</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-700">التاريخ</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,6 +210,16 @@ export default function ResultsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-600">{result.date}</td>
+                    <td className="py-3 px-4">
+                      {result.assessmentId && result.id && (
+                        <button
+                          onClick={() => navigate(`/student/online/assessment/${result.assessmentId}/review/${result.id}`)}
+                          className="text-indigo-600 hover:text-indigo-800 font-bold text-sm bg-indigo-50 px-3 py-1 rounded-md transition-colors"
+                        >
+                          عرض النتيجة التفصيلية
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

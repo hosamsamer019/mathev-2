@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyToken, AuthRequest } from '../middlewares/auth.middleware.js';
-import { getUsers, createUser, updateUser, deleteUser, getParentChildren, getRisks } from '../controllers/user.controller.js';
+import { getUsers, createUser, updateUser, deleteUser, getParentChildren, getRisks, bulkDeleteUsers, getDeletionImpact } from '../controllers/user.controller.js';
 
 const router = Router();
 
@@ -8,6 +8,8 @@ const router = Router();
 router.get('/risks', verifyToken, getRisks);
 router.get('/users', verifyToken, getUsers);
 router.post('/users', verifyToken, createUser);
+router.post('/users/bulk-delete', verifyToken, bulkDeleteUsers);
+router.post('/users/deletion-impact', verifyToken, getDeletionImpact);
 router.put('/users/:id', verifyToken, updateUser);
 router.delete('/users/:id', verifyToken, deleteUser);
 router.get('/parent/children', verifyToken, getParentChildren);

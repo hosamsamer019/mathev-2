@@ -13,12 +13,13 @@ import ChatbotManagementPage from './ChatbotManagementPage';
 import ReportsPage from './ReportsPage';
 import RiskDetectionPage from './RiskDetectionPage';
 import SubscriptionPage from './SubscriptionPage';
-
 import AdminProfilePage from './AdminProfilePage';
+import AdminUsersPage from './AdminUsersPage'; 
 
 const menuItems: MenuItem[] = [
   { path: '/admin/home', icon: Home, label: 'لوحة التحكم' },
   { path: '/admin/profile', icon: Users, label: 'الملف الشخصي' },
+  { path: '/admin/users', icon: Shield, label: 'إدارة المستخدمين' },
   { path: '/admin/students', icon: Users, label: 'إدارة الطلاب' },
   { path: '/admin/courses', icon: BookOpen, label: 'إدارة الدورات' },
   { path: '/admin/exams', icon: ClipboardCheck, label: 'الامتحانات' },
@@ -44,6 +45,7 @@ export default function AdminDashboard() {
         <Route path="/" element={<Navigate to="/admin/home" replace />} />
         <Route path="/home" element={<AdminHomePage />} />
         <Route path="/profile" element={<AdminProfilePage />} />
+        <Route path="/users" element={<AdminUsersPage />} />
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/courses" element={<CoursesManagementPage />} />
         <Route path="/exams" element={<ExamsManagementPage />} />

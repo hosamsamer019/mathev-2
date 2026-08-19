@@ -16,6 +16,8 @@ import StudentReportPage from './StudentReportPage';
 import { Database } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { notificationService } from '../../services/notification.service';
+import AssessmentReviewPage from '../../pages/AssessmentReviewPage';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -53,6 +55,7 @@ export default function TeacherDashboard() {
         <Route path="/analytics" element={<TeacherAnalyticsPage />} />
         <Route path="/ai" element={<TeacherAIPage />} />
         <Route path="/profile" element={<TeacherProfilePage />} />
+        <Route path="/assessment/:id/review/:attemptId" element={<AssessmentReviewPage />} />
       </Routes>
     </SharedLayout>
   );

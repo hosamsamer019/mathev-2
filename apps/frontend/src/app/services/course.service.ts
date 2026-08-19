@@ -19,6 +19,13 @@ export interface CreateLessonData {
   duration?: number;
   moduleId?: string;
   courseId: string;
+  quizzes?: Array<{
+    id?: string;
+    timestampSec: number;
+    question: string;
+    options: string[];
+    correctAnswer: string;
+  }>;
 }
 
 export interface VideoProgressData {
@@ -72,12 +79,21 @@ export const courseService = {
   deleteLesson: (id: string) =>
     courseApi.delete(`/lessons/${id}`),
 
-  // NOTE: PUT /courses/lessons/:id does NOT exist in the backend.
-  // updateLesson is intentionally omitted.
+  updateLesson: (id: string, data: Partial<CreateLessonData>) =>
+    courseApi.put(`/lessons/${id}`, data),
 
   // ── Video Progress ───────────────────────────────────────────────
   updateVideoProgress: (lessonId: string, data: VideoProgressData) =>
     courseApi.post(`/lessons/${lessonId}/progress`, data),
+
+  postLessonEvents: (lessonId: string, eventData: any) =>
+    courseApi.post(`/lessons/${lessonId}/events`, eventData),
+
+  confirmTeacherCompletion: (lessonId: string, studentId: string) =>
+    courseApi.post(`/lessons/${lessonId}/teacher-complete`, { studentId }),
+
+  getStudentVideoAnalytics: (studentId: string) =>
+    courseApi.get(`/students/${studentId}/analytics/video`),
 
   getVideoAnalytics: (lessonId: string) =>
     courseApi.get(`/lessons/${lessonId}/analytics`),

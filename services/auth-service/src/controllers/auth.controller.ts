@@ -24,83 +24,9 @@ export const loginSchema = z.object({
 });
 
 export const register = async (req: Request, res: Response) => {
-  try {
-    const validatedData = req.body as any;
-    
-    // Enforce academic profile for students
-    if (['ONLINE_STUDENT', 'CENTER_STUDENT'].includes(validatedData.role)) {
-      if (!isValidAcademicProfile(validatedData.country, validatedData.educationLevel, validatedData.gradeLevel)) {
-        return res.status(400).json({ message: 'Invalid or incomplete academic profile for student.' });
-      }
-    }
-
-    const existingUser = await db.user.findUnique({
-      where: { email: validatedData.email }
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-    const newUser = await db.user.create({
-      data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        password: hashedPassword,
-        role: validatedData.role as any,
-        country: validatedData.country,
-        educationLevel: validatedData.educationLevel,
-        gradeLevel: validatedData.gradeLevel,
-      }
-    });
-
-    if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
-      throw new Error('FATAL ERROR: JWT_SECRET or REFRESH_TOKEN_SECRET is not defined');
-    }
-
-    const token = jwt.sign(
-      { userId: newUser.id, role: newUser.role, email: newUser.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
-    const jti = crypto.randomUUID();
-    const refreshToken = jwt.sign(
-      { userId: newUser.id, jti },
-      process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        academicLevel: newUser.academicLevel,
-        country: newUser.country,
-        educationLevel: newUser.educationLevel,
-        gradeLevel: newUser.gradeLevel,
-        language: newUser.language
-      }
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ errors: error.errors });
-    }
-    console.error('Register error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
+  return res.status(403).json({ 
+    message: 'Public registration is disabled. Please contact an administrator to create an account.' 
+  });
 };
 
 export const login = async (req: Request, res: Response) => {

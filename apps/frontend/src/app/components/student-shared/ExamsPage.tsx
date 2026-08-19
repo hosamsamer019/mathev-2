@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Clock, CheckCircle, AlertCircle, Camera, AlertTriangle } from 'lucide-react';
 import { examService } from '../../services/exam.service';
 import { MathContent } from '../ui/MathContent';
+import { MathRenderer } from '../ui/MathRenderer';
+import { GeometryDiagram } from '../ui/GeometryDiagram';
 
 export default function ExamsPage() {
+  const navigate = useNavigate();
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [examState, setExamState] = useState<'list' | 'setup' | 'running' | 'submitted' | 'disqualified'>('list');
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [score, setScore] = useState(0);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
   
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,8 +135,15 @@ export default function ExamsPage() {
       // Tab switch detection
       document.addEventListener('visibilitychange', handleTabSwitch);
 
-    } catch (err) {
-      alert('حدث خطأ أثناء بدء الامتحان. قد يكون لديك محاولة سابقة.');
+    } catch (err: any) {
+      console.error('API exam start failed:', err);
+      const code = err.response?.data?.code;
+      if (code === 'NOT_ENROLLED') alert('أنت غير مسجل في هذا الكورس.');
+      else if (code === 'ATTEMPT_ALREADY_FINISHED') alert('لقد قمت بتسليم هذا الامتحان مسبقًا ولا يمكن الدخول إليه مرة أخرى.');
+      else if (code === 'ASSESSMENT_CLOSED') alert('انتهى موعد تسليم الامتحان.');
+      else if (code === 'ASSESSMENT_NOT_OPEN') alert('لم يبدأ موعد فتح الامتحان بعد.');
+      else if (code === 'STUDENT_ROLE_REQUIRED') alert('هذا الحساب لا يمكنه بدء الامتحان.');
+      else alert('حدث خطأ أثناء بدء الامتحان.');
     }
   };
 
@@ -189,7 +201,8 @@ export default function ExamsPage() {
 
     try {
       const res = await examService.submitAttempt(selectedExam, formatted);
-      setScore(Math.round(res.data.score));
+      setScore(Math.round(res.data.score || res.data.percentage || 0));
+      setAttemptId(res.data.id);
       setExamState('submitted');
     } catch (err) {
       alert('خطأ في التسليم!');
@@ -270,16 +283,54 @@ export default function ExamsPage() {
             }
 
             return (
-              <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0">
-                <div className="font-bold text-gray-900 mb-4">
-                  <span className="text-indigo-600 ml-2">السؤال {idx + 1}:</span>
-                  <MathContent content={q.text || ''} className="leading-relaxed" />
+              <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0" dir="rtl">
+                <div className="font-bold text-gray-900 mb-4 flex justify-between">
+                  <div>
+                    <span className="text-indigo-600 ml-2">السؤال {idx + 1}:</span>
+                    <MathContent content={q.text || ''} className="leading-relaxed inline" />
+                  </div>
+                  {q.points && <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded h-6">{q.points} نقطة</span>}
                 </div>
-                <div className="space-y-3">
+
+                {q.diagram && <GeometryDiagram data={q.diagram} />}
+
+                {q.given && q.given.length > 0 && (
+                  <div className="mb-4 bg-gray-50 p-4 rounded-lg">
+                    <p className="font-medium text-gray-700 mb-2">المعطيات:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {q.given.map((g: string, i: number) => (
+                        <li key={i} className="text-gray-800">
+                          <MathRenderer expression={g} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {q.mathExpression && (
+                  <div className="my-6 text-center overflow-x-auto text-xl">
+                    <MathRenderer expression={q.mathExpression} block />
+                  </div>
+                )}
+
+                {q.required && (
+                  <div className="mb-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100">
+                    <p className="font-medium text-yellow-800">
+                      <span className="font-bold">المطلوب:</span> {q.required}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-3 mt-4">
                   {displayOptions.map((optionObj: { text: string, originalIndex: number }, renderIdx: number) => (
                     <label key={renderIdx} className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors">
                       <input type="radio" name={`question-${q.id}`} value={optionObj.originalIndex} checked={answers[q.id] === optionObj.originalIndex.toString()} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-5 h-5 text-indigo-600" />
-                      <MathContent content={optionObj.text} className="text-gray-900" />
+                      <div className="text-gray-900">
+                         {/* Fallback to MathContent for legacy strings, but MathRenderer natively handles LaTeX better if it's purely math */}
+                         {optionObj.text.includes('\\') || optionObj.text.includes('^') || optionObj.text.match(/[a-zA-Z]/) 
+                            ? <MathRenderer expression={optionObj.text} />
+                            : <MathContent content={optionObj.text} />}
+                      </div>
                     </label>
                   ))}
                 </div>
@@ -315,7 +366,17 @@ export default function ExamsPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-2">انتهى الامتحان!</h2>
           <div className="text-6xl font-bold text-indigo-600 mb-4">{score}%</div>
           <p className="text-gray-600 mb-8">{passed ? 'مبروك! لقد نجحت' : 'للأسف، لم تنجح'}</p>
-          <button onClick={() => { setExamState('list'); setAnswers({}); fetchExams(); }} className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700">العودة للامتحانات</button>
+          <div className="flex gap-4 justify-center">
+            <button onClick={() => { setExamState('list'); setAnswers({}); fetchExams(); }} className="bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 font-bold transition-colors">العودة للامتحانات</button>
+            {attemptId && (
+              <button 
+                onClick={() => navigate(`/student/online/assessment/${currentExam.id}/review/${attemptId}`)} 
+                className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-bold transition-colors shadow-sm"
+              >
+                عرض النتيجة التفصيلية
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

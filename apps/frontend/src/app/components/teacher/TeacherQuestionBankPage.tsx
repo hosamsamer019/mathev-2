@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Tag, Search, Save, X, Database, Brain, Loader2 } from 'lucide-react';
 import { questionService } from '../../services/question.service';
 import { aiService } from '../../services/ai.service';
+import { QuestionPreview, StructuredQuestion } from '../ui/QuestionPreview';
 
 export default function TeacherQuestionBankPage() {
   const [questions, setQuestions] = useState<any[]>([]);
@@ -27,8 +28,18 @@ export default function TeacherQuestionBankPage() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'متوسط', count: 5, academicLevel: 'PREP_1' });
-  const [generatedQuestions, setGeneratedQuestions] = useState<any[] | null>(null);
+  const [aiForm, setAiForm] = useState({
+    topic: '',
+    difficulty: 'متوسط',
+    count: 5,
+    academicLevel: 'PREP_1',
+    gradeLevel: '',
+    subject: 'رياضيات',
+    customInstructions: '',
+  });
+  const [generatedQuestions, setGeneratedQuestions] = useState<StructuredQuestion[] | null>(null);
+  const [editingGeneratedQuestion, setEditingGeneratedQuestion] = useState<number | null>(null);
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchQuestions();
@@ -145,27 +156,65 @@ export default function TeacherQuestionBankPage() {
   const handleUpdateGeneratedOption = (qIndex: number, optIndex: number, val: string) => {
     if (!generatedQuestions) return;
     const updated = [...generatedQuestions];
-    updated[qIndex].options[optIndex] = val;
+    if (updated[qIndex].options) {
+      updated[qIndex].options![optIndex].text = val;
+    }
     setGeneratedQuestions(updated);
+  };
+
+  const handleRegenerateQuestion = async (qIndex: number) => {
+    if (!generatedQuestions) return;
+    try {
+      setRegeneratingIndex(qIndex);
+      const { aiApi } = await import('../../services/api');
+      const res = await aiApi.post('/questions/regenerate', {
+        topic: aiForm.topic,
+        difficulty: aiForm.difficulty,
+        gradeLevel: aiForm.gradeLevel || undefined,
+        subject: aiForm.subject || undefined,
+        customInstructions: aiForm.customInstructions || undefined,
+      });
+      if (res.data?.question) {
+        const updated = [...generatedQuestions];
+        updated[qIndex] = res.data.question;
+        setGeneratedQuestions(updated);
+        setEditingGeneratedQuestion(null);
+      } else {
+        alert('فشل التوليد: لم يتم إرجاع سؤال');
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'حدث خطأ أثناء إعادة التوليد');
+    } finally {
+      setRegeneratingIndex(null);
+    }
   };
 
   const handleSaveGenerated = async () => {
     if (!generatedQuestions) return;
     try {
       setAiLoading(true);
-      // Save all one by one (or could bulk if endpoint supported it)
       for (const q of generatedQuestions) {
         await questionService.createQuestion({
-          text: q.text,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          tag: aiForm.topic
+          text: q.questionText,
+          options: q.options?.map(o => o.text) || [],
+          correctAnswer: q.options?.findIndex(o => o.id === q.correctAnswer) ?? 0,
+          tag: aiForm.topic,
+          academicLevel: aiForm.academicLevel,
+          mathExpression: q.mathExpression,
+          diagram: q.diagram,
+          solutionSteps: q.solutionSteps,
+          given: q.given,
+          required: q.required,
+          explanation: q.explanation,
+          solutionExplanation: q.solutionExplanation,
+          generationLogic: q.generationLogic,
+          validationStatus: q.validationStatus,
         });
       }
       setShowAiModal(false);
       setGeneratedQuestions(null);
       fetchQuestions();
-    } catch (err) {
+    } catch (err: any) {
       alert('فشل في حفظ بعض الأسئلة');
     } finally {
       setAiLoading(false);
@@ -185,7 +234,7 @@ export default function TeacherQuestionBankPage() {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              setAiForm({ topic: '', difficulty: 'متوسط', count: 5, academicLevel: 'PREP_1' });
+              setAiForm({ topic: '', difficulty: 'متوسط', count: 5, academicLevel: 'PREP_1', gradeLevel: '', subject: 'رياضيات', customInstructions: '' });
               setGeneratedQuestions(null);
               setAiError(null);
               setShowAiModal(true);
@@ -406,40 +455,79 @@ export default function TeacherQuestionBankPage() {
                     تم التوليد بنجاح! يرجى مراجعة الأسئلة وتعديلها إذا لزم الأمر قبل حفظها في البنك.
                   </div>
                   {generatedQuestions.map((q, qIndex) => (
-                    <div key={qIndex} className="p-4 border border-gray-200 rounded-xl bg-gray-50">
-                      <input
-                        type="text"
-                        value={q.text}
-                        onChange={(e) => {
-                          const updated = [...generatedQuestions];
-                          updated[qIndex].text = e.target.value;
-                          setGeneratedQuestions(updated);
-                        }}
-                        className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg font-bold"
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {q.options.map((opt: string, optIndex: number) => (
-                          <div key={optIndex} className="flex gap-2 items-center">
-                            <input
-                              type="radio"
-                              name={`ai-q-${qIndex}`}
-                              checked={q.correctAnswer === optIndex}
-                              onChange={() => {
-                                const updated = [...generatedQuestions];
-                                updated[qIndex].correctAnswer = optIndex;
-                                setGeneratedQuestions(updated);
-                              }}
-                              className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                            />
-                            <input
-                              type="text"
-                              value={opt}
-                              onChange={(e) => handleUpdateGeneratedOption(qIndex, optIndex, e.target.value)}
-                              className={`w-full px-3 py-1.5 border rounded-md text-sm ${q.correctAnswer === optIndex ? 'border-green-400 bg-green-50' : 'border-gray-300 bg-white'}`}
-                            />
+                    <div key={qIndex} className="relative">
+                      {editingGeneratedQuestion === qIndex ? (
+                        <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                          <input
+                            type="text"
+                            value={q.questionText}
+                            onChange={(e) => {
+                              const updated = [...generatedQuestions];
+                              updated[qIndex].questionText = e.target.value;
+                              setGeneratedQuestions(updated);
+                            }}
+                            className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg font-bold"
+                            placeholder="نص السؤال"
+                          />
+                          <input
+                            type="text"
+                            value={q.mathExpression || ''}
+                            onChange={(e) => {
+                              const updated = [...generatedQuestions];
+                              updated[qIndex].mathExpression = e.target.value;
+                              setGeneratedQuestions(updated);
+                            }}
+                            className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg font-mono text-left"
+                            placeholder="معادلة LaTeX (اختياري)"
+                            dir="ltr"
+                          />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {q.options?.map((opt, optIndex) => (
+                              <div key={opt.id} className="flex gap-2 items-center">
+                                <input
+                                  type="radio"
+                                  name={`ai-q-${qIndex}`}
+                                  checked={q.correctAnswer === opt.id}
+                                  onChange={() => {
+                                    const updated = [...generatedQuestions];
+                                    updated[qIndex].correctAnswer = opt.id;
+                                    setGeneratedQuestions(updated);
+                                  }}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                                />
+                                <input
+                                  type="text"
+                                  value={opt.text}
+                                  onChange={(e) => handleUpdateGeneratedOption(qIndex, optIndex, e.target.value)}
+                                  className={`w-full px-3 py-1.5 border rounded-md text-sm ${q.correctAnswer === opt.id ? 'border-green-400 bg-green-50' : 'border-gray-300 bg-white'}`}
+                                  placeholder={`خيار ${opt.id}`}
+                                />
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                          <div className="mt-3 flex justify-end">
+                            <button onClick={() => setEditingGeneratedQuestion(null)} className="px-4 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">
+                              تم التعديل
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <div className="absolute top-4 left-4 z-10 flex gap-2">
+                             <button onClick={() => setEditingGeneratedQuestion(qIndex)} className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-md font-bold hover:bg-purple-200 transition-colors">
+                               تعديل
+                             </button>
+                             <button
+                               onClick={() => handleRegenerateQuestion(qIndex)}
+                               disabled={regeneratingIndex === qIndex}
+                               className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-md font-bold hover:bg-orange-200 transition-colors disabled:opacity-50"
+                             >
+                               {regeneratingIndex === qIndex ? '...' : '↺'} إعادة توليد
+                             </button>
+                          </div>
+                          <QuestionPreview question={q} showSolution={true} isTeacher={true} />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

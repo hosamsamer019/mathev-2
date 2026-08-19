@@ -12,7 +12,13 @@ const questionSchema = z.object({
   academicLevel: z.enum(['PREP_1', 'PREP_2', 'PREP_3', 'SEC_1', 'SEC_2', 'SEC_3']).optional(),
   country: z.string().optional(),
   educationLevel: z.string().optional(),
-  gradeLevel: z.string().optional()
+  gradeLevel: z.string().optional(),
+  mathExpression: z.string().nullable().optional(),
+  diagram: z.any().nullable().optional(),
+  solutionSteps: z.any().nullable().optional(),
+  given: z.any().nullable().optional(),
+  required: z.string().nullable().optional(),
+  explanation: z.string().nullable().optional()
 });
 
 export const createQuestion = async (req: AuthRequest, res: Response) => {
@@ -34,7 +40,13 @@ export const createQuestion = async (req: AuthRequest, res: Response) => {
         academicLevel: data.academicLevel as any,
         country: (data.country || null) as any,
         educationLevel: (data.educationLevel || null) as any,
-        gradeLevel: (data.gradeLevel || null) as any
+        gradeLevel: (data.gradeLevel || null) as any,
+        mathExpression: data.mathExpression,
+        diagram: data.diagram,
+        solutionSteps: data.solutionSteps,
+        given: data.given,
+        required: data.required,
+        explanation: data.explanation
       }
     });
 
@@ -123,7 +135,13 @@ export const updateQuestion = async (req: AuthRequest, res: Response) => {
         academicLevel: data.academicLevel as any,
         country: data.country !== undefined ? data.country as any : undefined,
         educationLevel: data.educationLevel !== undefined ? data.educationLevel as any : undefined,
-        gradeLevel: data.gradeLevel !== undefined ? data.gradeLevel as any : undefined
+        gradeLevel: data.gradeLevel !== undefined ? data.gradeLevel as any : undefined,
+        mathExpression: data.mathExpression !== undefined ? data.mathExpression : undefined,
+        diagram: data.diagram !== undefined ? data.diagram : undefined,
+        solutionSteps: data.solutionSteps !== undefined ? data.solutionSteps : undefined,
+        given: data.given !== undefined ? data.given : undefined,
+        required: data.required !== undefined ? data.required : undefined,
+        explanation: data.explanation !== undefined ? data.explanation : undefined
       }
     });
 

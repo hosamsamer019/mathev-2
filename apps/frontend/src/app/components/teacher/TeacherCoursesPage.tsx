@@ -1,15 +1,51 @@
 import { useEffect, useState } from 'react';
-import { Plus, Play, Edit, Trash2, Eye, Upload, Youtube, Clock, Users, Star, BookOpen } from 'lucide-react';
+import { Plus, Play, Edit, Trash2, Eye, Upload, Youtube, Clock, Users, Star, BookOpen, Database, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { courseService } from '../../services/course.service';
 import { homeworkService } from '../../services/homework.service';
 import SupabaseUploader from '../ui/SupabaseUploader';
-import { ACADEMIC_CONFIG } from '@shared/utils/dist/academicConfig';
+import { isGoogleDriveUrl } from '../../utils/videoUtils';
+
+const ACADEMIC_CONFIG = {
+  EG: {
+    label: 'مصر',
+    levels: {
+      PRIMARY: {
+        label: 'ابتدائي',
+        grades: {
+          PRIMARY_1: 'الصف الأول الابتدائي',
+          PRIMARY_2: 'الصف الثاني الابتدائي',
+          PRIMARY_3: 'الصف الثالث الابتدائي',
+          PRIMARY_4: 'الصف الرابع الابتدائي',
+          PRIMARY_5: 'الصف الخامس الابتدائي',
+          PRIMARY_6: 'الصف السادس الابتدائي'
+        }
+      },
+      PREPARATORY: {
+        label: 'إعدادي',
+        grades: {
+          PREPARATORY_1: 'الصف الأول الإعدادي',
+          PREPARATORY_2: 'الصف الثاني الإعدادي',
+          PREPARATORY_3: 'الصف الثالث الإعدادي'
+        }
+      },
+      SECONDARY: {
+        label: 'ثانوي',
+        grades: {
+          SECONDARY_1: 'الصف الأول الثانوي',
+          SECONDARY_2: 'الصف الثاني الثانوي',
+          SECONDARY_3: 'الصف الثالث الثانوي'
+        }
+      }
+    }
+  }
+} as const;
 
 const videoTypes = [
-  { icon: Upload, label: 'رفع فيديو محلي', color: 'bg-blue-100 text-blue-700' },
-  { icon: Youtube, label: 'رابط يوتيوب', color: 'bg-red-100 text-red-700' },
-  { icon: Play, label: 'تسجيل مباشر', color: 'bg-green-100 text-green-700' },
+  { icon: Youtube, label: 'رابط يوتيوب', color: 'bg-red-100 text-red-700', disabled: false },
+  { icon: Database, label: 'Google Drive', color: 'bg-blue-100 text-blue-700', disabled: false },
+  { icon: Upload, label: 'رفع فيديو محلي', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400', disabled: true },
+  { icon: Play, label: 'تسجيل مباشر', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400', disabled: true },
 ];
 
 export default function TeacherCoursesPage() {
@@ -21,6 +57,7 @@ export default function TeacherCoursesPage() {
   const [showEditCourse, setShowEditCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [showAddVideo, setShowAddVideo] = useState(false);
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'courses' | 'videos'>('courses');
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [lessonAnalytics, setLessonAnalytics] = useState<Record<string, any[]>>({});
@@ -30,10 +67,12 @@ export default function TeacherCoursesPage() {
   const [videoTitle, setVideoTitle] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
-  const [selectedVideoType, setSelectedVideoType] = useState('رفع فيديو محلي');
+  const [selectedVideoType, setSelectedVideoType] = useState('رابط يوتيوب');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [quizzes, setQuizzes] = useState<any[]>([]);
-  const [newQuiz, setNewQuiz] = useState({ timestampSec: '', question: '', options: '', correctAnswer: '' });
+  const [newQuiz, setNewQuiz] = useState({ id: '', timestampSec: '', question: '', options: '', correctAnswer: '' });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successDetails, setSuccessDetails] = useState({ title: '', source: '', isEdit: false });
 
   useEffect(() => {
     fetchCourses();
@@ -179,26 +218,37 @@ export default function TeacherCoursesPage() {
     }
     try {
       setIsVideoSubmitting(true);
-      await courseService.createLesson({ 
+      const payload = {
         title: videoTitle, 
         videoUrl: videoUrl, 
         fileUrl: pdfUrl || undefined,
         courseId: selectedCourseId,
-        // Backend doesn't support quizzes array in createLesson endpoint right now
-        // quizzes: quizzes.map(q => ({
-        //   ...q,
-        //   timestampSec: parseFloat(q.timestampSec),
-        //   options: q.options.split('-').map((o:string) => o.trim())
-        // }))
-      });
+        quizzes: quizzes.map(q => ({
+          ...(q.id ? { id: q.id } : {}),
+          timestampSec: parseFloat(q.timestampSec),
+          question: q.question,
+          options: typeof q.options === 'string' ? q.options.split('-').map((o:string) => o.trim()) : q.options,
+          correctAnswer: q.correctAnswer
+        }))
+      };
+
+      if (editingLessonId) {
+        await courseService.updateLesson(editingLessonId, payload);
+        setSuccessDetails({ title: videoTitle, source: selectedVideoType, isEdit: true });
+      } else {
+        await courseService.createLesson(payload);
+        setSuccessDetails({ title: videoTitle, source: selectedVideoType, isEdit: false });
+      }
+      setShowSuccessModal(true);
+
       setShowAddVideo(false);
+      setEditingLessonId(null);
       setVideoTitle('');
       setVideoUrl('');
       setPdfUrl('');
       setQuizzes([]);
       setSelectedCourseId('');
-      alert('تم إضافة الفيديو بنجاح');
-      setSelectedVideoType('رفع فيديو محلي');
+      setSelectedVideoType('رابط يوتيوب');
       fetchCourses();
     } catch (err: any) {
       console.error(err);
@@ -218,12 +268,12 @@ export default function TeacherCoursesPage() {
 
   const handleAddQuiz = () => {
     if(newQuiz.timestampSec && newQuiz.question && newQuiz.options && newQuiz.correctAnswer) {
-      if (!newQuiz.options.includes('-')) {
+      if (typeof newQuiz.options === 'string' && !newQuiz.options.includes('-')) {
         alert('يجب أن تحتوي الخيارات على علامة "-" للفصل بينها. مثال: الإجابة الأولى - الإجابة الثانية');
         return;
       }
       setQuizzes([...quizzes, newQuiz]);
-      setNewQuiz({ timestampSec: '', question: '', options: '', correctAnswer: '' });
+      setNewQuiz({ id: '', timestampSec: '', question: '', options: '', correctAnswer: '' });
     } else {
       alert('يرجى تعبئة جميع حقول الاختبار');
     }
@@ -259,6 +309,24 @@ export default function TeacherCoursesPage() {
     }
   };
 
+  const handleEditVideo = (video: any) => {
+    setSelectedCourseId(video.courseId);
+    setVideoTitle(video.title);
+    setVideoUrl(video.videoUrl || '');
+    setPdfUrl(video.pdfUrl || '');
+    if (isGoogleDriveUrl(video.videoUrl)) {
+      setSelectedVideoType('Google Drive');
+    } else {
+      setSelectedVideoType('رابط يوتيوب');
+    }
+    setQuizzes(video.quizzes ? video.quizzes.map((q: any) => ({
+      ...q,
+      options: Array.isArray(q.options) ? q.options.join(' - ') : q.options
+    })) : []);
+    setEditingLessonId(video.id);
+    setShowAddVideo(true);
+  };
+
   const handleDeleteVideo = async (videoId: string) => {
     if (window.confirm('هل أنت متأكد من رغبتك في حذف هذا الفيديو؟')) {
       try {
@@ -285,7 +353,16 @@ export default function TeacherCoursesPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => setShowAddVideo(true)}
+            onClick={() => {
+              setEditingLessonId(null);
+              setVideoTitle('');
+              setVideoUrl('');
+              setPdfUrl('');
+              setQuizzes([]);
+              setSelectedCourseId('');
+              setSelectedVideoType('رابط يوتيوب');
+              setShowAddVideo(true);
+            }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} text-sm transition-colors`}
           >
             <Play className="w-4 h-4" /> إضافة فيديو
@@ -431,6 +508,9 @@ export default function TeacherCoursesPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <button onClick={() => handleEditVideo(video)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200">
+                        <Edit className="w-4 h-4" />
+                      </button>
                       <button onClick={() => window.open(`/student/online/videos/${video.id}`, '_blank')} className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-200">
                         معاينة الفيديو
                       </button>
@@ -537,20 +617,31 @@ export default function TeacherCoursesPage() {
 
       {/* Add Video Modal */}
       {showAddVideo && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAddVideo(false)}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => {
+          setShowAddVideo(false);
+          setEditingLessonId(null);
+        }}>
           <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-md shadow-2xl`} onClick={(e) => e.stopPropagation()}>
             <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>إضافة فيديو جديد</h2>
             <div className="space-y-3 mb-6 flex gap-2">
               {videoTypes.map((type, idx) => (
                 <button 
                   key={idx} 
-                  onClick={() => setSelectedVideoType(type.label)}
-                  className={`flex-1 flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-colors ${
+                  disabled={type.disabled}
+                  onClick={() => !type.disabled && setSelectedVideoType(type.label)}
+                  className={`relative flex-1 flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-colors ${
+                    type.disabled ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700' : 
                     selectedVideoType === type.label 
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' 
                       : (isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50')
                   }`}
                 >
+                  {type.disabled && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                      قريباً
+                    </span>
+                  )}
                   <span className={`p-2 rounded-lg ${type.color}`}>
                     <type.icon className="w-5 h-5" />
                   </span>
@@ -591,6 +682,16 @@ export default function TeacherCoursesPage() {
                   />
                   {videoFormErrors.videoUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.videoUrl}</p>}
                 </div>
+              ) : selectedVideoType === 'Google Drive' ? (
+                <div className="space-y-1">
+                  <input
+                    placeholder="رابط Google Drive (مثال: https://drive.google.com/file/d/...)"
+                    value={videoUrl}
+                    onChange={e => setVideoUrl(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border ${videoFormErrors.videoUrl ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                  />
+                  {videoFormErrors.videoUrl && <p className="text-red-500 text-xs mt-1">{videoFormErrors.videoUrl}</p>}
+                </div>
               ) : selectedVideoType === 'رفع فيديو محلي' ? (
                 <div className="space-y-1">
                   <label className={`block text-sm font-medium mb-1 ${textPrimary}`}>الفيديو (MP4)</label>
@@ -624,7 +725,18 @@ export default function TeacherCoursesPage() {
               </div>
               
               <div className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'} space-y-3`}>
-                <h4 className={`text-sm font-bold ${textPrimary}`}>أسئلة منبثقة تفاعلية داخل الفيديو</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className={`text-sm font-bold ${textPrimary}`}>أسئلة منبثقة تفاعلية داخل الفيديو</h4>
+                </div>
+                {selectedVideoType === 'Google Drive' && (
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-yellow-800 dark:text-yellow-200 leading-relaxed">
+                      <strong>ملاحظة هامة:</strong> مشغل Google Drive لا يدعم التوقيت الزمني (لا يمكن إظهار السؤال في وقت محدد أثناء العرض). 
+                      ستظهر هذه الأسئلة للطالب أسفل الفيديو بدلاً من أن تكون منبثقة.
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input placeholder="الوقت بالثواني (مثال: 120)" value={newQuiz.timestampSec} onChange={e=>setNewQuiz({...newQuiz, timestampSec: e.target.value})} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
                   <input placeholder="السؤال" value={newQuiz.question} onChange={e=>setNewQuiz({...newQuiz, question: e.target.value})} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
@@ -648,7 +760,10 @@ export default function TeacherCoursesPage() {
               >
                 {isVideoSubmitting ? 'جاري الإضافة...' : 'إضافة'}
               </button>
-              <button onClick={() => setShowAddVideo(false)} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'} font-medium`}>
+              <button onClick={() => {
+                setShowAddVideo(false);
+                setEditingLessonId(null);
+              }} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'} font-medium`}>
                 إلغاء
               </button>
             </div>
@@ -844,6 +959,30 @@ export default function TeacherCoursesPage() {
                 إلغاء
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity duration-300">
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-sm shadow-2xl text-center transform transition-all duration-300 scale-100 opacity-100`}>
+            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-10 h-10 text-emerald-500" />
+            </div>
+            <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+              {successDetails.isEdit ? 'تم تعديل الفيديو بنجاح' : 'تمت إضافة الفيديو بنجاح'}
+            </h2>
+            <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'} mb-8`}>
+              <p className={`font-semibold ${textPrimary} mb-1 truncate`}>{successDetails.title}</p>
+              <p className={`text-sm ${textSecondary}`}>{successDetails.source}</p>
+            </div>
+            <button 
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-xl transition-colors"
+            >
+              حسنًا
+            </button>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { homeworkApi } from './api';
+import { homeworkApi, assessmentApi } from './api';
 
 // ─── Types ───────────────────────────────────────────────────────────
 export interface HomeworkQuestion {
@@ -43,8 +43,10 @@ export const homeworkService = {
   deleteHomework: (id: string) =>
     homeworkApi.delete(`/${id}`),
 
-  submitHomework: (id: string, data: SubmitHomeworkData) =>
-    homeworkApi.post(`/${id}/submit`, data),
+  submitHomework: async (id: string, data: SubmitHomeworkData) => {
+    await assessmentApi.post(`/${id}/start`);
+    return assessmentApi.post(`/${id}/attempt/submit`, data);
+  },
 
   getStudentSubmission: (id: string) =>
     homeworkApi.get(`/${id}/submission`),

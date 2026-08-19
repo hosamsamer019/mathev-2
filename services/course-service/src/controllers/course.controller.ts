@@ -32,12 +32,29 @@ const courseUpdateSchema = z.object({
 });
 
 const lessonCreateSchema = z.object({
-  title: z.string().min(2),
+  title: z.string().min(3, 'Title is too short'),
   videoUrl: z.string().optional(),
   fileUrl: z.string().optional(),
-  duration: z.number().int().nonnegative().default(0),
-  moduleId: z.string().optional(),
-  courseId: z.string()
+  courseId: z.string().uuid('Invalid Course ID'),
+  quizzes: z.array(z.object({
+    timestampSec: z.number().min(0),
+    question: z.string(),
+    options: z.array(z.string()),
+    correctAnswer: z.string()
+  })).optional()
+});
+
+const lessonUpdateSchema = z.object({
+  title: z.string().min(3).optional(),
+  videoUrl: z.string().optional(),
+  fileUrl: z.string().optional(),
+  quizzes: z.array(z.object({
+    id: z.string().uuid().optional(),
+    timestampSec: z.number().min(0),
+    question: z.string(),
+    options: z.array(z.string()),
+    correctAnswer: z.string()
+  })).optional()
 });
 
 export const getCourses = async (req: AuthRequest, res: Response) => {
@@ -173,8 +190,198 @@ export const enrollCourse = async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json({ message: 'Enrolled successfully', enrollment });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const postLessonEvents = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: lessonId } = req.params;
+    const { eventType, playedSeconds, progress, lastTimestamp } = req.body;
+    const studentId = req.user?.userId;
+
+    if (!studentId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const lesson = await db.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) return res.status(404).json({ message: 'Lesson not found' });
+    
+    const isEnrolled = await checkUserEnrollment(req.user, lesson.courseId);
+    if (!isEnrolled) return res.status(403).json({ message: 'Forbidden' });
+
+    let videoProgress = await db.videoProgress.findUnique({
+      where: { studentId_lessonId: { studentId, lessonId } }
+    });
+
+    if (!videoProgress) {
+      videoProgress = await db.videoProgress.create({
+        data: {
+          studentId,
+          lessonId,
+          status: 'NOT_STARTED',
+        }
+      });
+    }
+
+    const updates: any = { updatedAt: new Date() };
+    const historyToResolve: any[] = [];
+    const now = new Date();
+
+    if (progress !== undefined) updates.progress = progress;
+    if (lastTimestamp !== undefined) updates.lastTimestamp = lastTimestamp;
+
+    if (eventType === 'LESSON_OPENED') {
+      if (videoProgress.status === 'NOT_STARTED') {
+        updates.status = 'LESSON_OPENED';
+      }
+      if (!videoProgress.firstOpenedAt) updates.firstOpenedAt = now;
+      updates.lastActivityAt = now;
+      
+      if (videoProgress.currentRiskCode === 'NOT_OPENED_3_DAYS') {
+        historyToResolve.push({ code: 'NOT_OPENED_3_DAYS', resolution: 'LESSON_OPENED' });
+      }
+    } 
+    else if (eventType === 'VIDEO_PLAYING') {
+      if (!videoProgress.firstActivityAt) updates.firstActivityAt = now;
+      if (!videoProgress.firstOpenedAt) updates.firstOpenedAt = now;
+      if (videoProgress.status === 'NOT_STARTED' || videoProgress.status === 'LESSON_OPENED') {
+        updates.status = 'IN_PROGRESS';
+      }
+      
+      // Session logic: if last activity was > 30 mins ago
+      const thirtyMins = 30 * 60 * 1000;
+      if (!videoProgress.lastActivityAt || (now.getTime() - videoProgress.lastActivityAt.getTime() > thirtyMins)) {
+        updates.watchSessionsCount = videoProgress.watchSessionsCount + 1;
+      }
+      
+      updates.lastActivityAt = now;
+
+      if (videoProgress.currentRiskCode === 'NOT_STARTED_3_DAYS') {
+        historyToResolve.push({ code: 'NOT_STARTED_3_DAYS', resolution: 'VIDEO_STARTED' });
+      }
+      if (videoProgress.currentRiskCode === 'ABANDONED_VIDEO') {
+        historyToResolve.push({ code: 'ABANDONED_VIDEO', resolution: 'VIDEO_RESUMED' });
+      }
+    }
+    else if (eventType === 'VIDEO_PAUSED') {
+      updates.lastActivityAt = now;
+    }
+    else if (eventType === 'VIDEO_PROGRESS_TICK') {
+      if (playedSeconds) {
+        updates.totalWatchTimeSec = videoProgress.totalWatchTimeSec + playedSeconds;
+      }
+      updates.lastActivityAt = now;
+      updates.lastProgressUpdateAt = now;
+      if (videoProgress.status === 'NOT_STARTED' || videoProgress.status === 'LESSON_OPENED') {
+        updates.status = 'IN_PROGRESS';
+      }
+    }
+    else if (eventType === 'VIDEO_COMPLETED') {
+      updates.status = 'COMPLETED';
+      updates.watched = true;
+      if (!videoProgress.completedAt) updates.completedAt = now;
+      updates.completionSource = 'VIDEO_PLAYER';
+      updates.lastActivityAt = now;
+    }
+    else if (eventType === 'QUIZ_SUBMITTED') {
+      updates.lastActivityAt = now;
+      if (videoProgress.currentRiskCode === 'NOT_OPENED_3_DAYS') {
+        historyToResolve.push({ code: 'NOT_OPENED_3_DAYS', resolution: 'QUIZ_SUBMITTED' });
+      }
+    }
+
+    if (historyToResolve.length > 0) {
+      updates.currentRiskLevel = 'NONE';
+      updates.currentRiskCode = null;
+      
+      for (const res of historyToResolve) {
+        await db.studentRiskHistory.updateMany({
+          where: { 
+            studentId, 
+            lessonId, 
+            riskCode: res.code,
+            resolvedAt: null
+          },
+          data: {
+            resolvedAt: now,
+            resolutionCode: res.resolution
+          }
+        });
+      }
+    }
+
+    const updatedProgress = await db.videoProgress.update({
+      where: { studentId_lessonId: { studentId, lessonId } },
+      data: updates
+    });
+
+    return res.json({ message: 'Event processed', progress: updatedProgress });
   } catch (error: any) {
-    res.status(500).json({ message: 'Error enrolling in course', error: error.message });
+    console.error('Post event error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const confirmTeacherCompletion = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: lessonId } = req.params;
+    const { studentId } = req.body;
+    
+    if (!studentId) return res.status(400).json({ message: 'studentId required' });
+
+    let videoProgress = await db.videoProgress.findUnique({
+      where: { studentId_lessonId: { studentId, lessonId } }
+    });
+
+    if (!videoProgress) {
+      videoProgress = await db.videoProgress.create({
+        data: {
+          studentId,
+          lessonId,
+          status: 'COMPLETED',
+          watched: true,
+          completedAt: new Date(),
+          completionSource: 'TEACHER_CONFIRMED'
+        }
+      });
+    } else {
+      videoProgress = await db.videoProgress.update({
+        where: { studentId_lessonId: { studentId, lessonId } },
+        data: {
+          status: 'COMPLETED',
+          watched: true,
+          completedAt: videoProgress.completedAt || new Date(),
+          completionSource: 'TEACHER_CONFIRMED'
+        }
+      });
+    }
+    
+    return res.json({ message: 'Completion confirmed', progress: videoProgress });
+  } catch (error) {
+    console.error('Teacher confirm error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getStudentVideoAnalytics = async (req: AuthRequest, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const analytics = await db.videoProgress.findMany({
+      where: { studentId },
+      include: {
+        lesson: {
+          include: { course: true }
+        },
+        riskHistory: {
+          orderBy: { detectedAt: 'desc' }
+        }
+      }
+    });
+    return res.json({ analytics });
+  } catch (error) {
+    console.error('Analytics fetch error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -396,7 +603,17 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
         title: data.title,
         videoUrl: data.videoUrl,
         pdfUrl: data.fileUrl, // mapped from fileUrl in schema
-        courseId: data.courseId
+        courseId: data.courseId,
+        ...(data.quizzes && data.quizzes.length > 0 && {
+          quizzes: {
+            create: data.quizzes.map(q => ({
+              timestampSec: q.timestampSec,
+              question: q.question,
+              options: q.options,
+              correctAnswer: q.correctAnswer
+            }))
+          }
+        })
       }
     });
     io.to(`course:${lesson.courseId}`).emit('lesson_created', lesson);
@@ -408,6 +625,78 @@ export const createLesson = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
     res.status(500).json({ message: 'Error creating lesson', error: error.message });
+  }
+};
+
+export const updateLesson = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = lessonUpdateSchema.parse(req.body);
+    
+    const lesson = await db.lesson.findUnique({
+      where: { id },
+      include: { course: true }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && lesson.course.teacherId !== req.user?.userId) {
+      return res.status(403).json({ message: 'Forbidden: You do not own this lesson' });
+    }
+
+    const updatedLesson = await db.lesson.update({
+      where: { id },
+      data: {
+        ...(data.title && { title: data.title }),
+        ...(data.videoUrl !== undefined && { videoUrl: data.videoUrl }),
+        ...(data.fileUrl !== undefined && { pdfUrl: data.fileUrl })
+      }
+    });
+
+    if (data.quizzes) {
+      const existingQuizzes = await db.lessonQuiz.findMany({ where: { lessonId: id } });
+      const newQuizIds = data.quizzes.filter(q => q.id).map(q => q.id);
+      
+      const quizzesToDelete = existingQuizzes.filter(q => !newQuizIds.includes(q.id));
+      
+      if (quizzesToDelete.length > 0) {
+        await db.lessonQuiz.deleteMany({
+          where: { id: { in: quizzesToDelete.map(q => q.id) } }
+        });
+      }
+      
+      for (const q of data.quizzes) {
+        if (q.id) {
+           await db.lessonQuiz.update({
+             where: { id: q.id },
+             data: {
+               timestampSec: q.timestampSec,
+               question: q.question,
+               options: q.options,
+               correctAnswer: q.correctAnswer
+             }
+           });
+        } else {
+           await db.lessonQuiz.create({
+             data: {
+               lessonId: id,
+               timestampSec: q.timestampSec,
+               question: q.question,
+               options: q.options,
+               correctAnswer: q.correctAnswer
+             }
+           });
+        }
+      }
+    }
+
+    res.json(updatedLesson);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) return res.status(400).json({ errors: error.errors });
+    res.status(500).json({ message: 'Error updating lesson', error: error.message });
   }
 };
 
@@ -471,6 +760,20 @@ export const updateVideoProgress = async (req: AuthRequest, res: Response) => {
     const isEnrolled = await checkUserEnrollment(req.user, lesson.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Forbidden: You are not enrolled in this course' });
 
+    // Strict Completion Validation
+    let finalWatched = false;
+    if (watched) {
+      const allQuizzes = await db.lessonQuiz.findMany({ where: { lessonId } });
+      const currentProgress = await db.videoProgress.findUnique({
+        where: { studentId_lessonId: { studentId, lessonId } }
+      });
+      const answeredQuizzes = Array.isArray(currentProgress?.answeredQuizzes) ? currentProgress?.answeredQuizzes as string[] : [];
+      const allAnswered = allQuizzes.every(q => answeredQuizzes.includes(q.id));
+      if (allAnswered) {
+        finalWatched = true;
+      }
+    }
+
     const videoProgress = await db.videoProgress.upsert({
       where: {
         studentId_lessonId: {
@@ -480,15 +783,16 @@ export const updateVideoProgress = async (req: AuthRequest, res: Response) => {
       },
       update: {
         progress,
-        watched: watched !== undefined ? watched : undefined,
+        ...(finalWatched ? { watched: true } : {}),
         lastTimestamp: lastTimestamp !== undefined ? lastTimestamp : undefined
       },
       create: {
         studentId,
         lessonId,
         progress,
-        watched: watched || false,
-        lastTimestamp: lastTimestamp || 0
+        watched: finalWatched,
+        lastTimestamp: lastTimestamp || 0,
+        answeredQuizzes: []
       }
     });
 
@@ -543,6 +847,24 @@ export const submitLessonQuiz = async (req: AuthRequest, res: Response) => {
 
     const passed = quiz.correctAnswer === answer;
     const score = passed ? 100 : 0;
+
+    if (passed) {
+      const studentId = req.user?.userId;
+      if (studentId) {
+        const progress = await db.videoProgress.findUnique({
+          where: { studentId_lessonId: { studentId, lessonId } }
+        });
+        const answered = Array.isArray(progress?.answeredQuizzes) ? [...(progress.answeredQuizzes as string[])] : [];
+        if (!answered.includes(quizId)) {
+          answered.push(quizId);
+          await db.videoProgress.upsert({
+            where: { studentId_lessonId: { studentId, lessonId } },
+            update: { answeredQuizzes: answered },
+            create: { studentId, lessonId, answeredQuizzes: answered }
+          });
+        }
+      }
+    }
 
     res.json({ score, passed });
   } catch (error: any) {

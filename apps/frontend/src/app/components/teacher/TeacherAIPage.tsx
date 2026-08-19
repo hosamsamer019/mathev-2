@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { aiService } from '../../services/ai.service';
 import { questionService } from '../../services/question.service';
 import { analyticsApi } from '../../services/api';
+import { QuestionPreview, StructuredQuestion } from '../ui/QuestionPreview';
 
 const aiTools = [
   {
@@ -98,10 +99,16 @@ export default function TeacherAIPage() {
       setGenerating(true);
       for (const q of generatedQuestions) {
         await questionService.createQuestion({
-          text: q.text,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          tag: selectedTopics.join('، ')
+          text: q.questionText,
+          options: q.options?.map((o: any) => o.text) || [],
+          correctAnswer: q.options?.findIndex((o: any) => o.id === q.correctAnswer) || 0,
+          tag: selectedTopics.join('، '),
+          mathExpression: q.mathExpression,
+          diagram: q.diagram,
+          solutionSteps: q.solutionSteps,
+          given: q.given,
+          required: q.required,
+          explanation: q.explanation
         });
       }
       alert('تم حفظ الأسئلة في بنك الأسئلة بنجاح!');
@@ -286,15 +293,21 @@ export default function TeacherAIPage() {
                 <Zap className="w-5 h-5" />
                 <span className="font-medium">تم توليد الواجب بنجاح! ({questionCount} سؤال في {selectedTopics.join('، ')})</span>
               </div>
-              {generatedQuestions.map((q, idx) => (
-                <div key={idx} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-700/50' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">توليد الذكاء الاصطناعي</span>
-                    <span className={`text-xs ${textSecondary}`}>{q.options.length} خيارات</span>
+              <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto">
+                {generatedQuestions.map((q, idx) => (
+                  <div key={idx} className="relative">
+                    <div className="absolute top-4 left-4 z-10 flex gap-2">
+                       <button className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-md font-bold hover:bg-purple-200 transition-colors">
+                          تعديل
+                       </button>
+                       <button className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-md font-bold hover:bg-red-200 transition-colors">
+                          إعادة التوليد
+                       </button>
+                    </div>
+                    <QuestionPreview question={q} showSolution={true} />
                   </div>
-                  <p className={textPrimary}>{idx + 1}. {q.text}</p>
-                </div>
-              ))}
+                ))}
+              </div>
               <div className="flex gap-3">
                 <button onClick={handleSaveToBank} disabled={generating} className="bg-gradient-to-l from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90">
                   حفظ في بنك الأسئلة

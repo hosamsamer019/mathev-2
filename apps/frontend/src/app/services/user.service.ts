@@ -43,6 +43,16 @@ export const userService = {
     await userApi.delete(`/users/${id}`);
   },
 
+  getDeletionImpact: async (payload: { userIds?: string[], selectAll?: boolean, search?: string, role?: string, excludedIds?: string[] }): Promise<any> => {
+    const response = await userApi.post('/users/deletion-impact', payload);
+    return response.data;
+  },
+
+  bulkDeleteUsers: async (payload: { userIds?: string[], selectAll?: boolean, search?: string, role?: string, excludedIds?: string[] }): Promise<{ count: number }> => {
+    const response = await userApi.post('/users/bulk-delete', payload);
+    return response.data;
+  },
+
   getChildren: async (): Promise<User[]> => {
     const response = await userApi.get('/parent/children');
     return response.data;

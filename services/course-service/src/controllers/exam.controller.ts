@@ -86,61 +86,24 @@ export const getExamDetails = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const exam = await db.exam.findUnique({
       where: { id },
-      include: { 
-        attempts: {
-          include: { 
-            student: { select: { name: true, email: true } },
-            ExamViolation: true
-          }
-        }
-      }
+      include: {} // do not fetch old attempts
     });
     if (!exam) return res.status(404).json({ message: 'Exam not found' });
 
-    if (exam.attempts) {
-      exam.attempts = exam.attempts.map((attempt: any) => {
-        const { ExamViolation, ...rest } = attempt;
-        return {
-          ...rest,
-          violations: ExamViolation || []
-        };
-      }) as any;
-    }
-
-    const isEnrolled = await checkUserEnrollment(req.user, exam.courseId);
-    if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
-
-    // Normalize questions before processing
-    try {
-      exam.questions = normalizeExamQuestions(exam.questions, exam.id) as any;
-    } catch (normErr: any) {
-      console.error(`[EXAM DATA ERROR]`, normErr.message);
-      // Return 500 so it doesn't fail silently
-      return res.status(500).json({ message: 'Exam data is corrupted', error: normErr.message });
-    }
-
-    // Randomize and secure questions for students
-    if (req.user?.role?.toUpperCase().includes('STUDENT')) {
-      if (exam.randomization) {
-        const crypto = await import('crypto');
-        const questionsCopy = [...(exam.questions as any[])];
-        for (let i = questionsCopy.length - 1; i > 0; i--) {
-          const j = crypto.randomInt(0, i + 1);
-          [questionsCopy[i], questionsCopy[j]] = [questionsCopy[j], questionsCopy[i]];
-        }
-        exam.questions = questionsCopy as any;
+    // Fetch unified AssessmentAttempt records instead
+    const attempts = await db.assessmentAttempt.findMany({
+      where: { assessmentId: id },
+      include: {
+        student: { select: { name: true, email: true } },
       }
-      exam.questions = (exam.questions as any[]).map((q: any) => {
-        const { correctAnswer, ...rest } = q;
-        return rest;
-      }) as any;
-    }
+    });
 
-    res.json(exam);
+    res.json({ ...exam, attempts });
   } catch (error: any) {
-    res.status(500).json({ message: 'Error fetching exam', error: error.message });
+    res.status(500).json({ message: 'Error fetching exam details', error: error.message });
   }
 };
+
 
 import { z } from 'zod';
 
@@ -170,9 +133,10 @@ export const createExam = async (req: AuthRequest, res: Response) => {
     const validatedData = createExamSchema.parse(req.body);
     const { title, courseId, duration, questions, requiresCamera, startTime, endTime, randomization, passingScore } = validatedData;
     
+    const course = await db.course.findUnique({ where: { id: courseId } });
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+
     if (requesterRole !== 'ADMIN') {
-      const course = await db.course.findUnique({ where: { id: courseId } });
-      if (!course) return res.status(404).json({ message: 'Course not found' });
       if (course.teacherId !== requesterId) {
         return res.status(403).json({ message: 'Forbidden: You do not own this course' });
       }
@@ -191,6 +155,24 @@ export const createExam = async (req: AuthRequest, res: Response) => {
         passingScore: passingScore || 50
       }
     });
+
+    // Mirror to unified Assessment table
+    await db.assessment.create({
+      data: {
+        id: exam.id,
+        title: exam.title,
+        type: 'EXAM',
+        courseId: exam.courseId,
+        teacherId: course.teacherId,
+        durationMinutes: exam.duration,
+        questions: exam.questions as any,
+        passingScore: exam.passingScore,
+        randomization: exam.randomization,
+        openAt: exam.startTime,
+        closeAt: exam.endTime
+      }
+    });
+
     io.to(`course:${courseId}`).emit('exam_created', exam);
     
     // Notify enrolled students and their parents
@@ -248,6 +230,22 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
       where: { id },
       data: updateData
     });
+
+    // Mirror to unified Assessment table
+    try {
+      await db.assessment.update({
+        where: { id },
+        data: {
+          ...(updateData.title && { title: updateData.title }),
+          ...(updateData.duration && { durationMinutes: updateData.duration }),
+          ...(updateData.questions && { questions: updateData.questions as any }),
+          ...(updateData.passingScore && { passingScore: updateData.passingScore }),
+          ...(updateData.randomization !== undefined && { randomization: updateData.randomization }),
+          ...(updateData.startTime !== undefined && { openAt: updateData.startTime }),
+          ...(updateData.endTime !== undefined && { closeAt: updateData.endTime })
+        }
+      });
+    } catch (err) {}
 
     io.to(`course:${updatedExam.courseId}`).emit('exam_updated', updatedExam);
 

@@ -4,7 +4,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import LoginPage from './components/auth/LoginPage';
-import RegisterPage from './components/auth/RegisterPage';
 import AdminLoginPage from './components/auth/AdminLoginPage';
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/auth/ResetPasswordPage';
@@ -36,7 +35,7 @@ export default function App() {
                     {/* Landing & Auth */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/register" element={<Navigate to="/login" replace />} />
                     <Route path="/admin/login" element={<AdminLoginPage />} />
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/reset-password" element={<ResetPasswordPage />} />

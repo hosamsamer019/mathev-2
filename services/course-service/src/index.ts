@@ -9,10 +9,12 @@ import examRoutes from './routes/exam.routes.js';
 import questionRoutes from './routes/question.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import assessmentRoutes from './routes/assessment.routes.js';
 
 import http from 'http';
 import { Server } from 'socket.io';
 import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
+import { setupRiskEngineJob } from './jobs/riskEngine.job.js';
 
 dotenv.config();
 validateEnv();
@@ -47,6 +49,7 @@ app.use('/api/exams', examRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/assessments', assessmentRoutes);
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {
@@ -104,6 +107,7 @@ io.on('connection', (socket) => {
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   server.listen(PORT, () => {
     logger.info(`🚀 Course Service (w/ Socket.IO) running on http://localhost:${PORT}`);
+    setupRiskEngineJob().catch(console.error);
   });
 }
 

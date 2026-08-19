@@ -40,6 +40,10 @@ model User {
   sessions       UserSession[]
   videoProgress  VideoProgress[]
   videoUploads   VideoUpload[]
+
+  // Unified Assessments
+  teacherAssessments Assessment[]       @relation("TeacherAssessments")
+  assessmentAttempts AssessmentAttempt[]
 }
 
 model CenterGroup {
@@ -70,6 +74,8 @@ model Course {
   exams          Exam[]
   homeworks      Homework[]
   lessons        Lesson[]
+  
+  assessments    Assessment[]
 
   @@index([teacherId])
 }
@@ -92,6 +98,7 @@ model Lesson {
   title     String
   videoUrl  String?
   createdAt DateTime        @default(now())
+  publishedAt DateTime?
   courseId  String
   updatedAt DateTime        @updatedAt
   pdfUrl    String?
@@ -99,6 +106,8 @@ model Lesson {
   course    Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   quizzes   LessonQuiz[]
   progress  VideoProgress[]
+  
+  assessments Assessment[]
 
   @@index([courseId])
 }
@@ -202,18 +211,106 @@ model Payment {
 }
 
 model VideoProgress {
-  id            String   @id @default(uuid())
-  studentId     String
-  lessonId      String
-  watched       Boolean  @default(false)
-  progress      Float    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  lastTimestamp Float    @default(0)
-  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student       User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(uuid())
+  studentId            String
+  lessonId             String
+  watched              Boolean  @default(false)
+  progress             Float    @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  lastTimestamp        Float    @default(0)
+  answeredQuizzes      Json?
+  
+  status               String    @default("NOT_STARTED")
+  firstOpenedAt        DateTime?
+  firstActivityAt      DateTime?
+  lastActivityAt       DateTime?
+  lastProgressUpdateAt DateTime?
+  totalWatchTimeSec    Int       @default(0)
+  watchSessionsCount   Int       @default(0)
+  completedAt          DateTime?
+  completionSource     String    @default("NONE")
+
+  currentRiskLevel     String    @default("NONE")
+  currentRiskCode      String?
+  riskDetectedAt       DateTime?
+
+  lesson               Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student              User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  riskHistory          StudentRiskHistory[]
 
   @@unique([studentId, lessonId])
+}
+
+model Assessment {
+  id              String         @id @default(uuid())
+  title           String
+  description     String?
+  type            AssessmentType // ASSIGNMENT, QUIZ, EXAM
+  courseId        String
+  lessonId        String?
+  teacherId       String
+  
+  openAt          DateTime?
+  closeAt         DateTime?
+  durationMinutes Int?
+  
+  status          String         @default("PUBLISHED")
+  totalPoints     Float          @default(100)
+  
+  questions       Json?          
+  
+  passingScore    Float?
+  showResult      Boolean        @default(true)
+  randomization   Boolean        @default(false)
+  requiresCamera  Boolean        @default(false)
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  course          Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson          Lesson?        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  teacher         User           @relation("TeacherAssessments", fields: [teacherId], references: [id])
+  attempts        AssessmentAttempt[]
+}
+
+model AssessmentAttempt {
+  id           String        @id @default(uuid())
+  assessmentId String
+  studentId    String
+  
+  status       AttemptStatus 
+  
+  startedAt    DateTime      @default(now())
+  expiresAt    DateTime?
+  submittedAt  DateTime?
+  
+  score        Float?
+  totalPoints  Float?
+  percentage   Float?
+  
+  answers      Json?         
+  
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  assessment   Assessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student      User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, assessmentId])
+}
+
+model StudentRiskHistory {
+  id             String    @id @default(uuid())
+  studentId      String
+  lessonId       String
+  riskLevel      String
+  riskCode       String
+  detectedAt     DateTime  @default(now())
+  resolvedAt     DateTime?
+  resolutionCode String?
+
+  videoProgress  VideoProgress @relation(fields: [studentId, lessonId], references: [studentId, lessonId], onDelete: Cascade)
 }
 
 model LessonQuiz {
@@ -272,6 +369,14 @@ model QuestionBank {
   country        CountryCode?
   educationLevel EducationLevel?
   gradeLevel     GradeLevel?
+  mathExpression String?
+  diagram        Json?
+  solutionSteps  Json?
+  given          Json?
+  required       String?
+  generationLogic   Json?      // { questionDesign, mathematicalMethod, difficultyReason, learningObjective }
+  solutionExplanation String?  // Concise pedagogical solution narrative
+  validationStatus   String?   // STRUCTURALLY_VALID | MATHEMATICALLY_VERIFIED | NEEDS_REVIEW | INVALID
   source         String          @default("MANUAL")
   creatorId      String
   createdAt      DateTime        @default(now())
@@ -405,4 +510,18 @@ enum GradeLevel {
   SECONDARY_2
   SECONDARY_3
   OTHER
+}
+
+enum AssessmentType {
+  ASSIGNMENT
+  QUIZ
+  EXAM
+}
+
+enum AttemptStatus {
+  STARTED
+  IN_PROGRESS
+  SUBMITTED
+  TIME_EXPIRED
+  GRADED
 }

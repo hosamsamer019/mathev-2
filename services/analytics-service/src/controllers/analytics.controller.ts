@@ -383,7 +383,8 @@ export const getStudentRecent = async (req: AuthRequest, res: Response) => {
     const combined = [];
     for (const e of exams) {
       combined.push({
-        id: e.id,
+        id: e.id, // attempt id
+        assessmentId: e.examId,
         title: e.exam.title,
         type: 'exam',
         score: e.score,
@@ -394,7 +395,8 @@ export const getStudentRecent = async (req: AuthRequest, res: Response) => {
 
     for (const h of homeworks) {
       combined.push({
-        id: h.id,
+        id: h.id, // attempt id
+        assessmentId: h.homeworkId,
         title: h.homework.title,
         type: 'homework',
         score: h.grade || 0,

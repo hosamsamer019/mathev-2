@@ -1,6 +1,39 @@
 import { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
-import { ACADEMIC_CONFIG } from '@shared/utils/dist/academicConfig';
+const ACADEMIC_CONFIG = {
+  EG: {
+    label: 'مصر',
+    levels: {
+      PRIMARY: {
+        label: 'ابتدائي',
+        grades: {
+          PRIMARY_1: 'الصف الأول الابتدائي',
+          PRIMARY_2: 'الصف الثاني الابتدائي',
+          PRIMARY_3: 'الصف الثالث الابتدائي',
+          PRIMARY_4: 'الصف الرابع الابتدائي',
+          PRIMARY_5: 'الصف الخامس الابتدائي',
+          PRIMARY_6: 'الصف السادس الابتدائي'
+        }
+      },
+      PREPARATORY: {
+        label: 'إعدادي',
+        grades: {
+          PREPARATORY_1: 'الصف الأول الإعدادي',
+          PREPARATORY_2: 'الصف الثاني الإعدادي',
+          PREPARATORY_3: 'الصف الثالث الإعدادي'
+        }
+      },
+      SECONDARY: {
+        label: 'ثانوي',
+        grades: {
+          SECONDARY_1: 'الصف الأول الثانوي',
+          SECONDARY_2: 'الصف الثاني الثانوي',
+          SECONDARY_3: 'الصف الثالث الثانوي'
+        }
+      }
+    }
+  }
+} as const;
 import { userService } from '../../services/user.service';
 
 export default function StudentsPage() {

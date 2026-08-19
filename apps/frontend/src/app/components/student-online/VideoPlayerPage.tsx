@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Pause, Eye, ChevronRight, FileText, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import confetti from 'canvas-confetti';
+import { toast } from 'sonner';
 import SupabaseUploader from '../ui/SupabaseUploader';
 import { courseService } from '../../services/course.service';
 import { homeworkService } from '../../services/homework.service';
+import { isGoogleDriveUrl, getGoogleDrivePreviewUrl } from '../../utils/videoUtils';
 
 export default function VideoPlayerPage() {
   const navigate = useNavigate();
@@ -22,8 +24,23 @@ export default function VideoPlayerPage() {
   const [homeworkUrl, setHomeworkUrl] = useState('');
   
   const playerRef = useRef<any>(null);
-  const lastTimeRef = useRef(0);
   const maxTimeRef = useRef(0);
+  const lastSavedTimeRef = useRef(0);
+  const isCompletedRef = useRef(false);
+  const activeQuizRef = useRef<any>(null);
+  const hasAutoResumed = useRef(false);
+  
+  const lastRealTimeRef = useRef<number>(0);
+  const lastYtTimeRef = useRef<number>(0);
+  const pendingSeekTargetRef = useRef<number | null>(null);
+  const seekTimeoutRef = useRef<any>(null);
+  const pendingSeekTicksRef = useRef<number>(0);
+  const pendingSeekLastTimeRef = useRef<number>(0);
+
+  const handleSetActiveQuiz = (quiz: any) => {
+    setActiveQuiz(quiz);
+    activeQuizRef.current = quiz;
+  };
 
   useEffect(() => {
     // Load YouTube IFrame API
@@ -38,12 +55,47 @@ export default function VideoPlayerPage() {
   useEffect(() => {
     const fetchLesson = async () => {
       try {
+        // Reset all lesson-specific state for new video
+        setActiveQuiz(null);
+        activeQuizRef.current = null;
+        maxTimeRef.current = 0;
+        isCompletedRef.current = false;
+        hasAutoResumed.current = false;
+        setPlayerState(-1);
+        setQuizAnswered({});
+        setQuizFeedback(null);
+        setIsBlurred(false);
+
+        // Reset all timing and seek refs
+        lastRealTimeRef.current = 0;
+        lastYtTimeRef.current = 0;
+        pendingSeekTargetRef.current = null;
+        pendingSeekTicksRef.current = 0;
+        pendingSeekLastTimeRef.current = 0;
+        if (seekTimeoutRef.current) {
+          clearTimeout(seekTimeoutRef.current);
+          seekTimeoutRef.current = null;
+        }
+
         const res = await courseService.getLessonDetails(videoId!);
         if (res.data) {
           setLesson(res.data);
           if (res.data.progress && res.data.progress.length > 0) {
             maxTimeRef.current = res.data.progress[0].lastTimestamp || 0;
-            lastTimeRef.current = maxTimeRef.current;
+            isCompletedRef.current = res.data.progress[0].watched || false;
+            
+            const answeredFromBackend = res.data.progress[0].answeredQuizzes;
+            if (Array.isArray(answeredFromBackend)) {
+              const newQuizAnswered: Record<string, boolean> = {};
+              answeredFromBackend.forEach((id: string) => {
+                newQuizAnswered[id] = true;
+              });
+              setQuizAnswered(newQuizAnswered);
+            }
+          }
+          
+          if (res.data.videoUrl && isGoogleDriveUrl(res.data.videoUrl)) {
+            courseService.postLessonEvents(videoId!, { eventType: 'LESSON_OPENED' }).catch(console.error);
           }
         }
         
@@ -60,6 +112,7 @@ export default function VideoPlayerPage() {
 
   const initPlayer = () => {
     if (!lesson?.videoUrl || !(window as any).YT) return;
+    if (isGoogleDriveUrl(lesson.videoUrl)) return;
     const match = lesson.videoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
     const ytId = match && match[2].length === 11 ? match[2] : null;
     if (!ytId) return;
@@ -77,9 +130,19 @@ export default function VideoPlayerPage() {
       events: {
         onStateChange: (event: any) => {
           setPlayerState(event.data);
-          // Resume from last timestamp when video starts playing (State 1 = playing)
-          if (event.data === 1 && maxTimeRef.current > 0 && playerRef.current.getCurrentTime() < 2) {
-             playerRef.current.seekTo(maxTimeRef.current, true);
+          if (event.data === 1) {
+            courseService.postLessonEvents(ytId, { eventType: 'VIDEO_PLAYING' }).catch(console.error);
+            // Absolute Playback Lock
+            if (activeQuizRef.current) {
+              playerRef.current.pauseVideo();
+              return;
+            }
+            if (!hasAutoResumed.current && maxTimeRef.current > 0 && playerRef.current.getCurrentTime() < 2) {
+               hasAutoResumed.current = true;
+               playerRef.current.seekTo(maxTimeRef.current, true);
+            }
+          } else if (event.data === 2) {
+            courseService.postLessonEvents(ytId, { eventType: 'VIDEO_PAUSED' }).catch(console.error);
           }
         }
       }
@@ -87,62 +150,201 @@ export default function VideoPlayerPage() {
   };
 
   useEffect(() => {
-    if (lesson && (window as any).YT && (window as any).YT.Player && !playerRef.current) {
-      initPlayer();
+    if (lesson && isGoogleDriveUrl(lesson.videoUrl)) return;
+    if (lesson && (window as any).YT && (window as any).YT.Player) {
+      if (!playerRef.current) {
+        initPlayer();
+      } else {
+        // Player already exists, just load the new video
+        const match = lesson.videoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+        const ytId = match && match[2].length === 11 ? match[2] : null;
+        if (ytId && typeof playerRef.current.loadVideoById === 'function') {
+          playerRef.current.loadVideoById(ytId);
+        }
+      }
     } else if (lesson && !(window as any).YT) {
       (window as any).onYouTubeIframeAPIReady = initPlayer;
     }
   }, [lesson]);
 
+  const executeProgrammaticSeek = (targetTime: number, hitQuiz: any = null) => {
+    if (!playerRef.current) return;
+    
+    pendingSeekTargetRef.current = targetTime;
+    pendingSeekTicksRef.current = 0;
+    pendingSeekLastTimeRef.current = playerRef.current.getCurrentTime() || 0;
+    
+    playerRef.current.seekTo(targetTime, true);
+    
+    if (hitQuiz) {
+      playerRef.current.pauseVideo();
+      handleSetActiveQuiz(hitQuiz);
+    }
+    
+    // Fail-safe: if YouTube gets stuck or the tolerance check fails, forcefully resolve after 5 seconds
+    if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current);
+    seekTimeoutRef.current = setTimeout(() => {
+      if (pendingSeekTargetRef.current !== null) {
+        pendingSeekTargetRef.current = null;
+        pendingSeekTicksRef.current = 0;
+        if (playerRef.current) {
+          lastYtTimeRef.current = playerRef.current.getCurrentTime() || 0;
+          lastRealTimeRef.current = Date.now();
+        }
+      }
+    }, 5000); 
+  };
+
   useEffect(() => {
-    // Monitor progress and prevent fast forward
+    (window as any)._testPlayerRef = playerRef;
+    (window as any)._testMaxTimeRef = maxTimeRef;
+    (window as any)._testActiveQuizRef = activeQuizRef;
+  }, []);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      if (!playerRef.current || playerState !== 1) return; // 1 = playing
+      if (!playerRef.current) return;
+      if (activeQuizRef.current) return; // Absolute interval lock while quiz is active
       
-      const currentTime = playerRef.current.getCurrentTime();
+      const currentTime = playerRef.current.getCurrentTime() || 0;
+      
+      if (pendingSeekTargetRef.current !== null) {
+        const diff = Math.abs(currentTime - pendingSeekTargetRef.current);
+        const timeAdvanced = currentTime !== pendingSeekLastTimeRef.current;
+        
+        let settled = false;
+        if (diff <= 0.5) {
+           settled = true;
+        } else if (diff <= 2.5) {
+           // Allow for keyframe snapping if the time is advancing normally (playing) or cleanly paused.
+           if (timeAdvanced || playerState === 2) {
+              pendingSeekTicksRef.current += 1;
+           } else {
+              pendingSeekTicksRef.current = 0;
+           }
+           if (pendingSeekTicksRef.current >= 2) {
+              settled = true;
+           }
+        }
+        
+        pendingSeekLastTimeRef.current = currentTime;
+        
+        if (settled) {
+          pendingSeekTargetRef.current = null;
+          pendingSeekTicksRef.current = 0;
+          lastYtTimeRef.current = currentTime;
+          lastRealTimeRef.current = Date.now();
+          if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current);
+        }
+        return; // Freeze interval while programmatic seek completes/buffers
+      }
+      
       const duration = playerRef.current.getDuration();
       
       if (!duration) return;
 
-      // Restrict fast-forwarding if not previously watched fully
-      const isWatched = lesson?.progress && lesson.progress.length > 0 && lesson.progress[0].watched;
-      
-      if (!isWatched && currentTime > maxTimeRef.current + 2) {
-        // Fast forward detected, snap back to maxTime
-        playerRef.current.seekTo(maxTimeRef.current, true);
+      const now = Date.now();
+      const realTimeDiff = (now - lastRealTimeRef.current) / 1000;
+      const ytTimeDiff = currentTime - lastYtTimeRef.current;
+      const rate = playerRef.current.getPlaybackRate() || 1;
+
+      if (lastRealTimeRef.current === 0) {
+        lastYtTimeRef.current = currentTime;
+        lastRealTimeRef.current = now;
         return;
       }
-      
-      if (currentTime > maxTimeRef.current) {
-        maxTimeRef.current = currentTime;
+
+      let isSeek = false;
+      if (ytTimeDiff > (realTimeDiff * rate) + 2) {
+        isSeek = true;
+      } else if (ytTimeDiff < -2) {
+        isSeek = true;
       }
-      lastTimeRef.current = currentTime;
-      
+
+      const sortedQuizzes = [...(lesson?.quizzes || [])].map((q: any) => ({
+        ...q,
+        timestampSec: Number(q.timestampSec)
+      })).sort((a: any, b: any) => a.timestampSec - b.timestampSec);
+
+      if (isSeek && ytTimeDiff > 0) {
+        // Forward Seek
+        let allowedMax = maxTimeRef.current;
+        if (isCompletedRef.current) allowedMax = Infinity;
+        
+        let firstBlockingQuizTime = Infinity;
+        for (const quiz of sortedQuizzes) {
+          // You cannot jump over an unanswered quiz that is AFTER your previous position
+          if (!quizAnswered[quiz.id] && quiz.timestampSec > lastYtTimeRef.current) {
+            firstBlockingQuizTime = quiz.timestampSec;
+            break;
+          }
+        }
+        
+        const authorizedTime = Math.min(allowedMax, firstBlockingQuizTime);
+
+        if (currentTime > authorizedTime) {
+          playerRef.current.seekTo(authorizedTime, true);
+          lastYtTimeRef.current = authorizedTime;
+          lastRealTimeRef.current = now;
+          return; // Skip progress update this tick
+        } else {
+          maxTimeRef.current = Math.max(maxTimeRef.current, currentTime);
+        }
+      } else if (!isSeek) {
+        maxTimeRef.current = Math.max(maxTimeRef.current, currentTime);
+      }
+
+      // Quiz Detection (Natural playback crossing)
+      if (!isSeek && playerState === 1 && lesson?.quizzes) {
+         for (const quiz of sortedQuizzes) {
+            if (!quizAnswered[quiz.id]) {
+               // Crossing logic with 0.1s tolerance
+               if (lastYtTimeRef.current < quiz.timestampSec + 0.1 && currentTime >= quiz.timestampSec - 0.1) {
+                 playerRef.current.pauseVideo();
+                 playerRef.current.seekTo(quiz.timestampSec, true);
+                 if (!activeQuizRef.current || activeQuizRef.current.id !== quiz.id) {
+                   handleSetActiveQuiz(quiz);
+                   setQuizFeedback(null);
+                 }
+                 lastYtTimeRef.current = quiz.timestampSec;
+                 lastRealTimeRef.current = Date.now();
+                 return;
+               }
+            }
+         }
+      }
+
+      // Sync progress bar
       const currentProgress = Math.min((currentTime / duration) * 100, 100);
       setProgress(currentProgress);
 
-      // Trigger Quizzes
-      if (lesson?.quizzes) {
-        // Sort quizzes by timestamp to ensure chronological order
-        const sortedQuizzes = [...lesson.quizzes].sort((a, b) => a.timestampSec - b.timestampSec);
-        for (const quiz of sortedQuizzes) {
-          if (currentTime >= quiz.timestampSec && !quizAnswered[quiz.id]) {
-            playerRef.current.pauseVideo();
-            setActiveQuiz(quiz);
-            break; // Stop after triggering the first unanswered quiz
-          }
+      // Authoritative Completion Logic
+      if (!isCompletedRef.current) {
+        const isVideoEnded = playerState === 0; // 0 = ended
+        const allQuizzes = lesson?.quizzes || [];
+        const allQuizzesAnswered = allQuizzes.every((q: any) => quizAnswered[q.id]);
+        
+        if (isVideoEnded && allQuizzesAnswered) {
+          isCompletedRef.current = true;
+          courseService.postLessonEvents(videoId!, { eventType: 'VIDEO_COMPLETED' }).catch(console.error);
         }
       }
 
-      // Send progress to backend
-      if (Math.round(currentTime) % 10 === 0) { // every 10 seconds
-        courseService.updateVideoProgress(videoId!, {
+      // Persist progress
+      if (now - lastSavedTimeRef.current > 15000) {
+        const playedSeconds = lastSavedTimeRef.current === 0 ? 0 : (now - lastSavedTimeRef.current) / 1000;
+        lastSavedTimeRef.current = now;
+        courseService.postLessonEvents(videoId!, {
+          eventType: 'VIDEO_PROGRESS_TICK',
+          playedSeconds: Math.round(playedSeconds),
           progress: currentProgress,
-          watched: currentProgress >= 90,
-          lastTimestamp: currentTime
+          lastTimestamp: maxTimeRef.current
         }).catch(console.error);
       }
-    }, 1000);
+
+      lastYtTimeRef.current = currentTime;
+      lastRealTimeRef.current = now;
+    }, 500);
 
     return () => clearInterval(interval);
   }, [playerState, lesson, videoId, quizAnswered]);
@@ -152,13 +354,27 @@ export default function VideoPlayerPage() {
   useEffect(() => {
     let devToolsCheckInterval: any;
 
-    const handleBlur = () => setIsBlurred(true);
+    const handleBlur = () => {
+      // Delay to allow DOM focus state to settle (e.g. iframe stealing focus programmatically)
+      setTimeout(() => {
+        // 1. If focus moved to our own iframe (YouTube or Google Drive)
+        if (document.activeElement?.tagName === 'IFRAME') return;
+        
+        // 2. If the document actually still has focus (e.g. a toast or modal in the same window)
+        if (document.hasFocus && document.hasFocus()) return;
+        
+        // 3. Otherwise, it's a genuine exit
+        setIsBlurred(true);
+      }, 150);
+    };
     const handleFocus = () => setIsBlurred(false);
     
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         setIsBlurred(true);
-        if (playerRef.current && playerState === 1) {
+        if (playerRef.current && typeof playerRef.current.getPlayerState === 'function' && playerRef.current.getPlayerState() === 1) {
           playerRef.current.pauseVideo();
         }
       } else {
@@ -168,13 +384,14 @@ export default function VideoPlayerPage() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Block PrintScreen, Ctrl+P, Windows+Shift+S, F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S
+      const key = e.key.toLowerCase();
       if (
         e.key === 'PrintScreen' || 
-        (e.ctrlKey && e.key === 'p') || 
-        (e.metaKey && e.shiftKey && e.key === 's') ||
+        (e.ctrlKey && key === 'p') || 
+        (e.metaKey && e.shiftKey && key === 's') ||
         e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
-        (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'))
+        (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
+        (e.ctrlKey && (key === 'u' || key === 's'))
       ) {
         e.preventDefault();
         setIsBlurred(true);
@@ -195,11 +412,22 @@ export default function VideoPlayerPage() {
     };
 
     const detectDevTools = () => {
-      const widthThreshold = window.outerWidth - window.innerWidth > 160;
-      const heightThreshold = window.outerHeight - window.innerHeight > 160;
-      if (widthThreshold || heightThreshold) {
+      // Multiply by devicePixelRatio to account for browser zoom
+      const zoom = window.devicePixelRatio || 1;
+      const widthThreshold = window.outerWidth - (window.innerWidth * zoom) > 300;
+      const heightThreshold = window.outerHeight - (window.innerHeight * zoom) > 300;
+      
+      // On high-DPI displays (e.g. retina), devicePixelRatio is > 1 even without zoom, 
+      // which breaks outerWidth comparisons in some browsers because outerWidth is often in CSS pixels.
+      // A safer check that balances DevTools detection without breaking high-DPI or zoom:
+      const diffX = Math.abs(window.outerWidth - window.innerWidth);
+      const diffY = Math.abs(window.outerHeight - window.innerHeight);
+      // Modern browsers usually don't have chrome > 350px unless devtools is open
+      if (diffX > 350 || diffY > 350) {
         setIsBlurred(true);
-        if (playerRef.current && playerState === 1) playerRef.current.pauseVideo();
+        if (playerRef.current && typeof playerRef.current.getPlayerState === 'function' && playerRef.current.getPlayerState() === 1) {
+          playerRef.current.pauseVideo();
+        }
       }
     };
 
@@ -209,7 +437,7 @@ export default function VideoPlayerPage() {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     document.addEventListener('copy', handleCopy);
-    document.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('contextmenu', handleContextMenu);
     
     devToolsCheckInterval = setInterval(detectDevTools, 1000);
     
@@ -220,27 +448,75 @@ export default function VideoPlayerPage() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('contextmenu', handleContextMenu);
       clearInterval(devToolsCheckInterval);
     };
-  }, [playerState]);
+  }, []);
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!playerRef.current) return;
-    const rect = e.currentTarget.getBoundingClientRect();
     
-    const clickX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    if (activeQuizRef.current) {
+      toast.error('يجب الإجابة على السؤال أولاً.');
+      return;
+    }
+
+    const clickX = e.nativeEvent.offsetX;
+    const targetWidth = e.currentTarget.clientWidth || 1;
+    let percentage = Math.max(0, Math.min(1, clickX / targetWidth));
+    
+    // In RTL layouts, if the progress bar visually fills from right to left, we might need to invert the percentage.
+    // However, since we forced dir="ltr" on the container, it visually fills left to right.
+    // offsetX reliably gives distance from the left edge.
     const duration = playerRef.current.getDuration();
-    if (duration) {
-      const targetTime = duration * percentage;
-      const isWatched = lesson?.progress && lesson.progress.length > 0 && lesson.progress[0].watched;
-      
-      if (!isWatched && targetTime > maxTimeRef.current) {
-        alert('لا يمكنك تخطي الفيديو إلا بعد مشاهدته كاملاً للمرة الأولى.');
-        playerRef.current.seekTo(maxTimeRef.current, true);
-      } else {
-        playerRef.current.seekTo(targetTime, true);
+    if (!duration) return;
+    
+    const targetTime = duration * percentage;
+    const currentTime = pendingSeekTargetRef.current !== null 
+                        ? pendingSeekTargetRef.current 
+                        : (playerRef.current.getCurrentTime() || 0);
+
+    // 1. Backward seeking must ALWAYS work.
+    if (targetTime < currentTime) {
+      executeProgrammaticSeek(targetTime);
+      return;
+    }
+
+    // 2. Forward seeking
+    let allowedMax = maxTimeRef.current;
+    if (isCompletedRef.current) allowedMax = Infinity;
+
+    // Find the EARLIEST unanswered quiz that is AFTER the current position
+    const sortedQuizzes = [...(lesson?.quizzes || [])]
+        .map((q: any) => ({ ...q, timestampSec: Number(q.timestampSec) }))
+        .sort((a: any, b: any) => a.timestampSec - b.timestampSec);
+
+    let firstBlockingQuizTime = Infinity;
+    for (const quiz of sortedQuizzes) {
+      if (!quizAnswered[quiz.id] && quiz.timestampSec > currentTime) {
+        firstBlockingQuizTime = quiz.timestampSec;
+        break; // Only the earliest one blocks
       }
+    }
+
+    // Add a 1.5s tolerance to account for state machine polling lag
+    const authorizedTime = Math.min(allowedMax, firstBlockingQuizTime) + 1.5;
+
+    if (targetTime > authorizedTime) {
+      // Unauthorized forward seek
+      if (firstBlockingQuizTime <= allowedMax && targetTime > firstBlockingQuizTime + 1.5) {
+         // Blocked by an unanswered quiz
+         toast.error('لا يمكنك تخطي سؤال مطلوب.');
+         // Execute seek to the quiz so the state machine natural crossing triggers it
+         executeProgrammaticSeek(firstBlockingQuizTime);
+      } else {
+         // Blocked by maxWatchedTime
+         toast.error('لا يمكنك تخطي الفيديو إلا بعد مشاهدته كاملاً للمرة الأولى.');
+         executeProgrammaticSeek(authorizedTime);
+      }
+    } else {
+      // Authorized forward seek
+      executeProgrammaticSeek(targetTime);
     }
   };
 
@@ -248,7 +524,8 @@ export default function VideoPlayerPage() {
     if (!activeQuiz) return;
     try {
       const res = await courseService.submitLessonQuiz(videoId!, activeQuiz.id, option);
-      if (res.data.correct) {
+      courseService.postLessonEvents(videoId!, { eventType: 'QUIZ_SUBMITTED' }).catch(console.error);
+      if (res.data.passed) {
         setQuizFeedback('success');
         confetti({
           particleCount: 100,
@@ -258,7 +535,7 @@ export default function VideoPlayerPage() {
         });
         setTimeout(() => {
           setQuizAnswered(prev => ({ ...prev, [activeQuiz.id]: true }));
-          setActiveQuiz(null);
+          handleSetActiveQuiz(null);
           setQuizFeedback(null);
           playerRef.current.playVideo();
         }, 2500);
@@ -304,38 +581,81 @@ export default function VideoPlayerPage() {
             <div className="bg-black rounded-xl overflow-hidden relative" onContextMenu={e => e.preventDefault()}>
               <div className="relative aspect-video bg-gray-800 flex items-center justify-center">
                 {lesson?.videoUrl ? (
-                  <div id="yt-player" className="w-full h-full pointer-events-none" />
+                  isGoogleDriveUrl(lesson.videoUrl) ? (
+                    <div className="w-full h-full flex flex-col pointer-events-auto z-[50]">
+                      <iframe
+                        src={getGoogleDrivePreviewUrl(lesson.videoUrl) || ''}
+                        className="w-full h-full border-0 rounded-xl"
+                        allow="autoplay; fullscreen"
+                        allowFullScreen
+                      ></iframe>
+                      <div className="absolute top-4 left-4 right-4 bg-yellow-900/90 text-yellow-100 p-3 rounded-xl flex items-center gap-3 shadow-xl backdrop-blur-sm z-[60] pointer-events-none">
+                        <AlertTriangle className="w-6 h-6 flex-shrink-0" />
+                        <span className="text-sm">إذا لم يعمل الفيديو، يرجى طلب تغيير صلاحيات المشاركة لجوجل درايف إلى "أي شخص لديه الرابط". الأسئلة الموقوتة غير مدعومة هنا.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div id="yt-player" className="w-full h-full pointer-events-none" />
+                  )
                 ) : (
                   <div className="text-white">جاري تحميل الفيديو...</div>
                 )}
 
-                <div 
-                  className="absolute inset-0 z-10 cursor-pointer"
-                  onClick={() => {
-                    if (playerState === 1) {
-                      playerRef.current?.pauseVideo();
-                    } else {
-                      playerRef.current?.playVideo();
-                    }
-                  }}
-                  onDoubleClick={(e) => {
-                    if (!playerRef.current) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const current = playerRef.current.getCurrentTime() || 0;
-                    const duration = playerRef.current.getDuration() || 0;
-                    if (clickX > rect.width / 2) {
-                      // Right side: Forward 10s
-                      playerRef.current.seekTo(Math.min(duration, current + 10), true);
-                    } else {
-                      // Left side: Backward 10s
-                      playerRef.current.seekTo(Math.max(0, current - 10), true);
-                    }
-                  }}
-                />
+                {(!lesson?.videoUrl || !isGoogleDriveUrl(lesson.videoUrl)) && (
+                  <div 
+                    className="absolute inset-0 z-10 cursor-pointer"
+                    onClick={() => {
+                      if (activeQuizRef.current) return;
+                      if (playerState === 1) {
+                        playerRef.current?.pauseVideo();
+                      } else {
+                        playerRef.current?.playVideo();
+                      }
+                    }}
+                    onDoubleClick={(e) => {
+                      if (!playerRef.current || activeQuizRef.current) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const clickX = e.clientX - rect.left;
+                      const current = pendingSeekTargetRef.current !== null ? pendingSeekTargetRef.current : (playerRef.current.getCurrentTime() || 0);
+                      const duration = playerRef.current.getDuration() || 0;
+                      
+                      if (clickX > rect.width / 2) {
+                        // Forward 10s
+                        let targetTime = Math.min(duration, current + 10);
+                        
+                        const sortedQuizzes = [...(lesson?.quizzes || [])]
+                          .map(q => ({...q, timestampSec: Number(q.timestampSec)}))
+                          .sort((a: any, b: any) => a.timestampSec - b.timestampSec);
+                          
+                        let hitQuiz = null;
+                        for (const quiz of sortedQuizzes) {
+                          if (!quizAnswered[quiz.id] && quiz.timestampSec > current && quiz.timestampSec <= targetTime) {
+                            hitQuiz = quiz;
+                            break;
+                          }
+                        }
+                        
+                        if (hitQuiz) {
+                          executeProgrammaticSeek(hitQuiz.timestampSec, hitQuiz);
+                          return;
+                        }
+                        
+                        if (!isCompletedRef.current && targetTime > maxTimeRef.current) {
+                           targetTime = maxTimeRef.current;
+                        }
+                        
+                        executeProgrammaticSeek(targetTime);
+                      } else {
+                        // Backward 10s
+                        const targetTime = Math.max(0, current - 10);
+                        executeProgrammaticSeek(targetTime);
+                      }
+                    }}
+                  />
+                )}
 
                 {/* Custom Play Icon */}
-                {playerState !== 1 && (
+                {(!lesson?.videoUrl || !isGoogleDriveUrl(lesson.videoUrl)) && playerState !== 1 && (
                   <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                     <div className="bg-indigo-600/80 p-4 rounded-full shadow-lg backdrop-blur-sm">
                       <Play className="w-12 h-12 text-white ml-2" />
@@ -405,57 +725,84 @@ export default function VideoPlayerPage() {
                 </div>
               )}
 
-              <div className="bg-gray-900 p-4 rounded-b-xl" dir="ltr">
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => {
-                      if (playerState === 1) playerRef.current?.pauseVideo();
-                      else playerRef.current?.playVideo();
-                    }} 
-                    className="text-white hover:text-indigo-400 focus:outline-none transition-colors"
-                  >
-                    {playerState === 1 ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      if (!playerRef.current) return;
-                      const current = playerRef.current.getCurrentTime() || 0;
-                      playerRef.current.seekTo(Math.max(0, current - 10), true);
-                    }} 
-                    className="text-white hover:text-indigo-400 focus:outline-none transition-colors" 
-                    title="تأخير 10 ثواني"
-                  >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></svg>
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      if (!playerRef.current) return;
-                      const current = playerRef.current.getCurrentTime() || 0;
-                      const duration = playerRef.current.getDuration() || 0;
-                      playerRef.current.seekTo(Math.min(duration, current + 10), true);
-                    }} 
-                    className="text-white hover:text-indigo-400 focus:outline-none transition-colors" 
-                    title="تقديم 10 ثواني"
-                  >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon></svg>
-                  </button>
-
-                  <div 
-                    className="flex-1 bg-gray-700 h-3 rounded-full cursor-pointer relative group"
-                    onClick={handleSeek}
-                  >
-                    <div 
-                      className="bg-indigo-600 h-3 rounded-full transition-all duration-300 relative" 
-                      style={{ width: `${Math.round(progress)}%` }}
+              {(!lesson?.videoUrl || !isGoogleDriveUrl(lesson.videoUrl)) && (
+                <div className="bg-gray-900 p-4 rounded-b-xl" dir="ltr">
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => {
+                        if (activeQuizRef.current) return;
+                        if (playerState === 1) playerRef.current?.pauseVideo();
+                        else playerRef.current?.playVideo();
+                      }} 
+                      className="text-white hover:text-indigo-400 focus:outline-none transition-colors"
                     >
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg transform translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {playerState === 1 ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        if (!playerRef.current || activeQuizRef.current) return;
+                        const current = pendingSeekTargetRef.current !== null ? pendingSeekTargetRef.current : (playerRef.current.getCurrentTime() || 0);
+                        const targetTime = Math.max(0, current - 10);
+                        executeProgrammaticSeek(targetTime);
+                      }} 
+                      className="text-white hover:text-indigo-400 focus:outline-none transition-colors" 
+                      title="تأخير 10 ثواني"
+                    >
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></svg>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        if (!playerRef.current || activeQuizRef.current) return;
+                        const current = pendingSeekTargetRef.current !== null ? pendingSeekTargetRef.current : (playerRef.current.getCurrentTime() || 0);
+                        const duration = playerRef.current.getDuration() || 0;
+                        let targetTime = Math.min(duration, current + 10);
+                        
+                        const sortedQuizzes = [...(lesson?.quizzes || [])]
+                          .map(q => ({...q, timestampSec: Number(q.timestampSec)}))
+                          .sort((a: any, b: any) => a.timestampSec - b.timestampSec);
+                          
+                        let hitQuiz = null;
+                        for (const quiz of sortedQuizzes) {
+                          if (!quizAnswered[quiz.id] && quiz.timestampSec > current && quiz.timestampSec <= targetTime) {
+                            hitQuiz = quiz;
+                            break;
+                          }
+                        }
+
+                        if (hitQuiz) {
+                          executeProgrammaticSeek(hitQuiz.timestampSec, hitQuiz);
+                          return;
+                        }
+
+                        if (!isCompletedRef.current && targetTime > maxTimeRef.current) {
+                           targetTime = maxTimeRef.current;
+                        }
+                        
+                        executeProgrammaticSeek(targetTime);
+                      }} 
+                      className="text-white hover:text-indigo-400 focus:outline-none transition-colors" 
+                      title="تقديم 10 ثواني"
+                    >
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon></svg>
+                    </button>
+
+                    <div 
+                      className="flex-1 bg-gray-700 h-3 rounded-full cursor-pointer relative group"
+                      onClick={handleSeek}
+                    >
+                      <div 
+                        className="bg-indigo-600 h-3 rounded-full transition-all duration-300 relative" 
+                        style={{ width: `${Math.round(progress)}%` }}
+                      >
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg transform translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
+                    <span className="text-white text-sm w-16 font-medium text-right" dir="rtl">{Math.round(progress)}% تم</span>
                   </div>
-                  <span className="text-white text-sm w-16 font-medium text-right" dir="rtl">{Math.round(progress)}% تم</span>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="bg-gray-800 rounded-xl p-6">
@@ -476,6 +823,64 @@ export default function VideoPlayerPage() {
                   </a>
                 </div>
               )}
+
+              {/* Google Drive Quizzes */}
+              {lesson?.videoUrl && isGoogleDriveUrl(lesson.videoUrl) && lesson?.quizzes?.length > 0 && (
+                <div className="mb-6 bg-gray-900 border border-gray-700 p-4 rounded-xl">
+                  <h4 className="text-white font-medium mb-4">أسئلة الدرس</h4>
+                  <div className="space-y-4">
+                    {lesson.quizzes.map((quiz: any, idx: number) => (
+                      <div key={quiz.id || idx} className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="bg-indigo-600/20 text-indigo-400 w-8 h-8 rounded-lg flex items-center justify-center font-bold">
+                            {idx + 1}
+                          </span>
+                          <h5 className="text-white font-medium">{quiz.question}</h5>
+                        </div>
+                        
+                        {quizAnswered[quiz.id] ? (
+                          <div className="flex items-center gap-2 text-green-500 bg-green-500/10 p-3 rounded-lg border border-green-500/20">
+                            <CheckCircle className="w-5 h-5" />
+                            <span className="text-sm font-medium">تمت الإجابة بشكل صحيح</span>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {(Array.isArray(quiz.options) ? quiz.options : 
+                              (typeof quiz.options === 'string' ? quiz.options.split('-') : [])).map((opt: string, i: number) => (
+                              <button
+                                key={i}
+                                onClick={async () => {
+                                  try {
+                                    const res = await courseService.submitLessonQuiz(videoId!, quiz.id, opt);
+                                    if (res.data.passed) {
+                                      setQuizAnswered(prev => ({ ...prev, [quiz.id]: true }));
+                                      confetti({
+                                        particleCount: 100,
+                                        spread: 70,
+                                        origin: { y: 0.6 },
+                                        colors: ['#4F46E5', '#10B981', '#F59E0B']
+                                      });
+                                    } else {
+                                      toast.error('إجابة خاطئة، حاول مرة أخرى.');
+                                    }
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast.error('حدث خطأ أثناء إرسال الإجابة.');
+                                  }
+                                }}
+                                className="w-full p-3 rounded-lg border border-gray-600 hover:bg-indigo-600 hover:border-indigo-500 text-gray-300 hover:text-white transition-colors text-sm text-right"
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               
               {/* Homework Submission */}
               <div className="mb-6 bg-gray-900 border border-gray-700 p-4 rounded-xl">
@@ -515,13 +920,13 @@ export default function VideoPlayerPage() {
                             try {
                               const { homeworkApi } = await import('../../services/api');
                               await homeworkApi.post(`/${select.value}/submit`, { url: homeworkUrl, answers: [] });
-                              alert('تم تسليم الواجب بنجاح! سيقوم المعلم بمراجعته.');
+                              toast.success('تم تسليم الواجب بنجاح! سيقوم المعلم بمراجعته.');
                               setHomeworkUrl('');
                             } catch (err) {
-                              alert('فشل في تسليم الواجب');
+                              toast.error('فشل في تسليم الواجب');
                             }
                           } else {
-                            alert('يرجى رفع ملف الواجب أو وضع رابطه أولاً.');
+                            toast.warning('يرجى التأكد من اختيار الواجب وإضافة رابط الحل');
                           }
                         }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
                           تسليم الواجب

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { SolverService } from './services/solver.service.js';
 import { ChatService } from './services/chat.service.js';
 import { GeneratorService } from './services/generator.service.js';
+import { ValidatorService } from './services/validator.service.js';
 import { verifyToken, AuthRequest } from './middlewares/auth.middleware.js';
 import { aiRateLimiter } from './middlewares/rateLimiter.js';
 import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
@@ -47,7 +48,12 @@ const chatSchema = z.object({
 const generateQuestionsSchema = z.object({
   topic: z.string().min(1).max(500),
   difficulty: z.string().min(1).max(50),
-  count: z.number().int().min(1).max(20) // Capped at 20 to bound costs
+  count: z.number().int().min(1).max(20),
+  // Optional context for type-aware generation and per-question regeneration
+  gradeLevel: z.string().optional(),
+  subject: z.string().optional(),
+  subtopic: z.string().optional(),
+  customInstructions: z.string().max(500).optional(),
 });
 
 // Solve endpoint — now requires authentication
@@ -260,21 +266,84 @@ app.post('/api/ai/generate-questions', aiRateLimiter, verifyToken, async (req: A
       return res.status(429).json({ message: 'Rate limit exceeded. Please wait.' });
     }
 
-    const { topic, difficulty, count } = generateQuestionsSchema.parse(req.body);
+    const { topic, difficulty, count, gradeLevel, subject, subtopic, customInstructions } = generateQuestionsSchema.parse(req.body);
     
     // GeneratorService retries internally if parsing fails
-    const result = await GeneratorService.generateMCQ(topic, difficulty, count);
+    const result = await GeneratorService.generateMCQ(topic, difficulty, count, {
+      gradeLevel,
+      subject,
+      subtopic,
+      customInstructions,
+    });
     
+    // Validate with 3-level validator — assigns validationStatus per question
+    const validatedData = ValidatorService.validateBatch(result.data);
+
     // Log token usage for basic cost visibility
-    logger.info(`[Smart Generation] User ${userId} generated ${count} questions. Tokens used: ${result.tokensUsed}`);
+    logger.info(`[Smart Generation] User ${userId} generated ${validatedData.questions.length} questions. Tokens: ${result.tokensUsed}`);
     
-    res.json({ questions: result.data.questions, tokensUsed: result.tokensUsed });
+    if (validatedData.questions.length === 0) {
+       return res.status(500).json({ message: 'تعذر إنشاء سؤال صالح رياضيًا. حاول إعادة التوليد.' });
+    }
+
+    res.json({ questions: validatedData.questions, tokensUsed: result.tokensUsed });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
     logger.error('generate-questions error', { error: error.message });
     res.status(500).json({ message: 'Failed to generate questions', error: error.message });
+  }
+});
+
+app.post('/api/ai/questions/regenerate', aiRateLimiter, verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const role = req.user?.role;
+    if (!userId || (role !== 'TEACHER' && role !== 'ADMIN')) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // Extract the full constraint context to preserve for regeneration
+    const { topic, difficulty, gradeLevel, subject, subtopic, customInstructions } = req.body;
+    
+    if (!topic || !difficulty) {
+      return res.status(400).json({ message: 'topic and difficulty are required for regeneration.' });
+    }
+    
+    // Generate just 1 question with the exact same context
+    const result = await GeneratorService.generateMCQ(topic, difficulty, 1, {
+      gradeLevel,
+      subject,
+      subtopic,
+      customInstructions,
+    });
+    const validatedData = ValidatorService.validateBatch(result.data);
+    
+    if (validatedData.questions.length === 0) {
+       return res.status(500).json({ message: 'تعذر إنشاء سؤال صالح رياضيًا. حاول إعادة التوليد.' });
+    }
+    
+    res.json({ question: validatedData.questions[0], tokensUsed: result.tokensUsed });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to regenerate question', error: error.message });
+  }
+});
+
+app.post('/api/ai/questions/validate', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    // Explicit validation endpoint
+    const { questions } = req.body;
+    const validatedData = ValidatorService.validateBatch({ questions });
+    const invalidCount = questions.length - validatedData.questions.length;
+    
+    res.json({ 
+      isValid: invalidCount === 0,
+      validQuestions: validatedData.questions,
+      invalidCount
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Validation failed', error: error.message });
   }
 });
 

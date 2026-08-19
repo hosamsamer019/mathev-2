@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { homeworkService } from '../../services/homework.service';
 
@@ -7,6 +8,8 @@ export default function HomeworkPage() {
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const [homeworks, setHomeworks] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -77,12 +80,19 @@ export default function HomeworkPage() {
 
     homeworkService.submitHomework(selectedHomework, { answers: formattedAnswers })
       .then((res) => {
-        setScore(Math.round(res.data.score));
+        setScore(Math.round(res.data.score || res.data.percentage || 0));
+        setAttemptId(res.data.id);
         setSubmitted(true);
       })
       .catch((err) => {
         console.error('API submission failed:', err);
-        alert('حدث خطأ أثناء تسليم الواجب. يرجى المحاولة مرة أخرى.');
+        const code = err.response?.data?.code;
+        if (code === 'NOT_ENROLLED') alert('أنت غير مسجل في هذا الكورس.');
+        else if (code === 'ATTEMPT_ALREADY_FINISHED') alert('لقد قمت بتسليم هذا الواجب مسبقًا ولا يمكن الدخول إليه مرة أخرى.');
+        else if (code === 'ASSESSMENT_CLOSED') alert('انتهى موعد تسليم الواجب.');
+        else if (code === 'ASSESSMENT_NOT_OPEN') alert('لم يبدأ موعد فتح الواجب بعد.');
+        else if (code === 'STUDENT_ROLE_REQUIRED') alert('هذا الحساب لا يمكنه بدء الواجب.');
+        else alert('حدث خطأ أثناء تسليم الواجب. يرجى المحاولة مرة أخرى.');
       });
   };
 
@@ -175,42 +185,26 @@ export default function HomeworkPage() {
               {score >= 70 ? 'أحسنت! لقد نجحت في الواجب' : 'يمكنك المحاولة مرة أخرى'}
             </p>
 
-            <div className="space-y-4 mb-8">
-              {questions.map((q, idx) => (
-                <div key={q.id} className="text-right p-4 bg-gray-50 rounded-lg">
-                  <p className="font-medium text-gray-900 mb-2">{q.text || q.question}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">إجابتك:</span>
-                    <span className={`font-medium ${
-                      parseInt(answers[q.id]) === q.correct ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {(Array.isArray(q.options) ? q.options : [])[parseInt(answers[q.id])] || 'غير محدد'}
-                    </span>
-                    {parseInt(answers[q.id]) === q.correct ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <>
-                        <XCircle className="w-4 h-4 text-red-600" />
-                        <span className="text-sm text-gray-600 mr-2">
-                          الإجابة الصحيحة: {(Array.isArray(q.options) ? q.options : [])[q.correct] || 'غير محدد'}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="flex gap-4 justify-center mt-8">
+              <button
+                onClick={() => {
+                  setSelectedHomework(null);
+                  setAnswers({});
+                  setSubmitted(false);
+                }}
+                className="bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 font-bold transition-colors"
+              >
+                العودة للواجبات
+              </button>
+              {attemptId && (
+                <button
+                  onClick={() => navigate(`/student/online/assessment/${selectedHomework}/review/${attemptId}`)}
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-bold transition-colors shadow-sm"
+                >
+                  عرض النتيجة التفصيلية
+                </button>
+              )}
             </div>
-
-            <button
-              onClick={() => {
-                setSelectedHomework(null);
-                setAnswers({});
-                setSubmitted(false);
-              }}
-              className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700"
-            >
-              العودة للواجبات
-            </button>
           </div>
         </div>
       </div>

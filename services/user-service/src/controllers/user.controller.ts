@@ -111,6 +111,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
     const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
     const skip = (page - 1) * limit;
     const search = req.query.search as string;
+    const roleFilter = req.query.role as string;
 
     let whereClause: any = {};
     
@@ -119,6 +120,10 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } }
       ];
+    }
+    
+    if (roleFilter) {
+      whereClause.role = roleFilter;
     }
 
     const requesterRole = (req.user?.role || '').toUpperCase();
@@ -363,6 +368,15 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     const validatedData = updateUserSchema.parse(req.body);
     const { name, email, role, parentId, centerGroupId, password, childId, academicLevel, country, educationLevel, gradeLevel, language } = validatedData;
     
+    // Strict Academic Profile Authorization check
+    if (requesterRole !== 'ADMIN') {
+      const forbiddenFields = ['country', 'educationLevel', 'gradeLevel', 'academicLevel'];
+      const hasForbiddenField = forbiddenFields.some(field => Object.prototype.hasOwnProperty.call(req.body, field));
+      if (hasForbiddenField) {
+        return res.status(403).json({ message: 'Only administrators can modify the academic profile' });
+      }
+    }
+    
     if (['ONLINE_STUDENT', 'CENTER_STUDENT'].includes((role || existingUser.role) as any)) {
       const c = country !== undefined ? country : existingUser.country;
       const el = educationLevel !== undefined ? educationLevel : existingUser.educationLevel;
@@ -411,6 +425,106 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
   }
 };
 
+const getTargetUserIds = async (
+  req: AuthRequest,
+  payload: { userIds?: string[], selectAll?: boolean, search?: string, role?: string, excludedIds?: string[] }
+): Promise<string[]> => {
+  if (payload.selectAll) {
+    let whereClause: any = {};
+    if (payload.search) {
+      whereClause.OR = [
+        { name: { contains: payload.search, mode: 'insensitive' } },
+        { email: { contains: payload.search, mode: 'insensitive' } }
+      ];
+    }
+    if (payload.role) {
+      whereClause.role = payload.role;
+    }
+
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN') {
+      throw new Error('Only admins can perform bulk selection');
+    }
+
+    const excludedIds = Array.isArray(payload.excludedIds) ? payload.excludedIds : [];
+    
+    whereClause.id = { notIn: [req.user?.userId, ...excludedIds].filter(Boolean) as string[] };
+
+    const matchingUsers = await db.user.findMany({
+      where: whereClause,
+      select: { id: true }
+    });
+    return matchingUsers.map(u => u.id);
+  } else {
+    const ids = Array.isArray(payload.userIds) ? payload.userIds : [];
+    return ids.filter(id => id !== req.user?.userId);
+  }
+};
+
+export const getDeletionImpact = async (req: AuthRequest, res: Response) => {
+  try {
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can perform this action' });
+    }
+
+    const targetUserIds = await getTargetUserIds(req, req.body);
+    if (targetUserIds.length === 0) {
+      return res.status(400).json({ message: 'No users to delete' });
+    }
+
+    const impact = {
+      users: 0,
+      teachers: 0,
+      courses: 0,
+      enrollments: 0,
+      examAttempts: 0,
+      payments: 0,
+      submissions: 0,
+      attendances: 0,
+      emails: [] as string[]
+    };
+
+    const users = await db.user.findMany({
+      where: { id: { in: targetUserIds } },
+      select: {
+        role: true,
+        email: true,
+        _count: {
+          select: {
+            taughtCourses: true,
+            enrollments: true,
+            examAttempts: true,
+            payments: true,
+            submissions: true,
+            attendances: true,
+          }
+        }
+      }
+    });
+
+    for (let i = 0; i < users.length; i++) {
+      const u = users[i];
+      impact.users++;
+      if (u.role === 'TEACHER') impact.teachers++;
+      impact.courses += u._count.taughtCourses;
+      impact.enrollments += u._count.enrollments;
+      impact.examAttempts += u._count.examAttempts;
+      impact.payments += u._count.payments;
+      impact.submissions += u._count.submissions;
+      impact.attendances += u._count.attendances;
+      
+      if (impact.emails.length < 10) {
+        impact.emails.push(u.email);
+      }
+    }
+
+    res.json(impact);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error calculating impact', error: error.message });
+  }
+};
+
 export const deleteUser = async (req: AuthRequest, res: Response) => {
   try {
     const requesterRole = (req.user?.role || '').toUpperCase();
@@ -418,10 +532,83 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
     const { id } = req.params;
-    await db.user.delete({ where: { id } });
+    
+    await db.$transaction(async (tx) => {
+        if (id === req.user?.userId) {
+            throw new Error('Cannot delete your own account');
+        }
+        
+        const user = await tx.user.findUnique({ where: { id }, select: { role: true } });
+        if (!user) throw new Error('User not found');
+        
+        if (user.role === 'ADMIN') {
+            const totalAdmins = await tx.user.count({ where: { role: 'ADMIN' } });
+            if (totalAdmins <= 1) throw new Error('Cannot delete the last remaining admin account');
+        }
+        
+        await tx.user.updateMany({
+            where: { parentId: id },
+            data: { parentId: null }
+        });
+        
+        await tx.user.delete({ where: { id } });
+    });
+    
     res.json({ message: 'User deleted successfully' });
   } catch (error: any) {
+    if (error.message.includes('Cannot delete')) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Error deleting user', error: error.message });
+  }
+};
+
+export const bulkDeleteUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can delete users' });
+    }
+    
+    const targetUserIds = await getTargetUserIds(req, req.body);
+    if (targetUserIds.length === 0) {
+      return res.status(400).json({ message: 'No users to delete' });
+    }
+    
+    let deletedCount = 0;
+    
+    await db.$transaction(async (tx) => {
+        const usersToDelete = await tx.user.findMany({
+            where: { id: { in: targetUserIds } },
+            select: { id: true, role: true }
+        });
+        
+        const adminCountToDelete = usersToDelete.filter(u => u.role === 'ADMIN').length;
+        if (adminCountToDelete > 0) {
+            const totalAdmins = await tx.user.count({ where: { role: 'ADMIN' } });
+            if (totalAdmins <= adminCountToDelete) {
+                throw new Error('Cannot delete the last remaining admin account(s)');
+            }
+        }
+        
+        await tx.user.updateMany({
+            where: { parentId: { in: targetUserIds } },
+            data: { parentId: null }
+        });
+        
+        const result = await tx.user.deleteMany({
+            where: { id: { in: targetUserIds } }
+        });
+        
+        deletedCount = result.count;
+    });
+    
+    res.json({ message: 'Users deleted successfully', count: deletedCount });
+  } catch (error: any) {
+    if (error.message.includes('Cannot delete')) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Error deleting users', error: error.message });
   }
 };
 

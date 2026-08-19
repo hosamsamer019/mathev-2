@@ -1,6 +1,4 @@
-# Math Teacher Smart Platform
 
-  This is a code bundle for Math Teacher Smart Platform. The original project is available at https://www.figma.com/design/P4HWxPX2b23WFXOQ8PBY9Y/Math-Teacher-Smart-Platform.
 
   ## 🚀 Getting Started
 

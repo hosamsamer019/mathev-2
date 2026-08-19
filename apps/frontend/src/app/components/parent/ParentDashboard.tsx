@@ -9,6 +9,7 @@ import ProfilePage from '../student-shared/ProfilePage';
 import { useState, useEffect } from 'react';
 import { userService } from '../../services/user.service';
 import { notificationService } from '../../services/notification.service';
+import AssessmentReviewPage from '../../pages/AssessmentReviewPage';
 
 const menuItems: MenuItem[] = [
   { path: '/parent/home', icon: Home, label: 'الرئيسية' },
@@ -59,6 +60,7 @@ export default function ParentDashboard() {
         <Route path="/messages" element={<ParentHomePage />} />
         <Route path="/subscription" element={<ParentSubscriptionPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/assessment/:id/review/:attemptId" element={<AssessmentReviewPage />} />
       </Routes>
     </SharedLayout>
   );

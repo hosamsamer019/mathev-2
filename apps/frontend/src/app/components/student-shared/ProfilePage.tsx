@@ -2,7 +2,40 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save } from 'lucide-react';
 import { userService } from '../../services/user.service';
 import { useAuth } from '../../contexts/AuthContext';
-import { ACADEMIC_CONFIG } from '@shared/utils/dist/academicConfig';
+const ACADEMIC_CONFIG = {
+  EG: {
+    label: 'مصر',
+    levels: {
+      PRIMARY: {
+        label: 'ابتدائي',
+        grades: {
+          PRIMARY_1: 'الصف الأول الابتدائي',
+          PRIMARY_2: 'الصف الثاني الابتدائي',
+          PRIMARY_3: 'الصف الثالث الابتدائي',
+          PRIMARY_4: 'الصف الرابع الابتدائي',
+          PRIMARY_5: 'الصف الخامس الابتدائي',
+          PRIMARY_6: 'الصف السادس الابتدائي'
+        }
+      },
+      PREPARATORY: {
+        label: 'إعدادي',
+        grades: {
+          PREPARATORY_1: 'الصف الأول الإعدادي',
+          PREPARATORY_2: 'الصف الثاني الإعدادي',
+          PREPARATORY_3: 'الصف الثالث الإعدادي'
+        }
+      },
+      SECONDARY: {
+        label: 'ثانوي',
+        grades: {
+          SECONDARY_1: 'الصف الأول الثانوي',
+          SECONDARY_2: 'الصف الثاني الثانوي',
+          SECONDARY_3: 'الصف الثالث الثانوي'
+        }
+      }
+    }
+  }
+} as const;
 
 export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
@@ -52,10 +85,7 @@ export default function ProfilePage() {
       
       const payload: any = { 
         name: formData.name, 
-        email: formData.email,
-        country: formData.country,
-        educationLevel: formData.educationLevel,
-        gradeLevel: formData.gradeLevel
+        email: formData.email
       };
       if (formData.password) {
         payload.password = formData.password;
@@ -221,69 +251,30 @@ export default function ProfilePage() {
 
             {(user?.role === 'ONLINE_STUDENT' || user?.role === 'CENTER_STUDENT') && (
               <div className="pt-6 border-t border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-4">المستوى الدراسي</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-gray-900">المستوى الدراسي</h3>
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium border border-gray-200">للقراءة فقط</span>
+                </div>
                 <div className="space-y-4">
-                  {editing ? (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">البلد</label>
-                        <select
-                          value={formData.country}
-                          onChange={(e) => setFormData({...formData, country: e.target.value, educationLevel: '', gradeLevel: ''})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                        >
-                          {Object.entries(ACADEMIC_CONFIG).map(([key, config]) => (
-                            <option key={key} value={key}>{config.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      {formData.country && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">المرحلة الدراسية</label>
-                          <select
-                            value={formData.educationLevel}
-                            onChange={(e) => setFormData({...formData, educationLevel: e.target.value, gradeLevel: ''})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                          >
-                            <option value="">اختر المرحلة</option>
-                            {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels).map(([key, level]: [string, any]) => (
-                              <option key={key} value={key}>{level.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {formData.country && formData.educationLevel && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
-                          <select
-                            value={formData.gradeLevel}
-                            onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                          >
-                            <option value="">اختر الصف</option>
-                            {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels[formData.educationLevel].grades).map(([key, label]: [string, any]) => (
-                              <option key={key} value={key}>{label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-gray-600 flex items-center gap-2">
-                        <span className="font-medium w-32">البلد:</span>
-                        <span className="text-gray-900 font-medium">{formData.country ? (ACADEMIC_CONFIG as any)[formData.country]?.label : 'غير محدد'}</span>
-                      </p>
-                      <p className="text-gray-600 flex items-center gap-2">
-                        <span className="font-medium w-32">المرحلة الدراسية:</span>
-                        <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.label : 'غير محدد'}</span>
-                      </p>
-                      <p className="text-gray-600 flex items-center gap-2">
-                        <span className="font-medium w-32">الصف الدراسي:</span>
-                        <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel && formData.gradeLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.grades[formData.gradeLevel] : 'غير محدد'}</span>
-                      </p>
-                    </div>
-                  )}
+                  <div className="space-y-2 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <p className="text-gray-600 flex items-center gap-2">
+                      <span className="font-medium w-32">البلد:</span>
+                      <span className="text-gray-900 font-medium">{formData.country ? (ACADEMIC_CONFIG as any)[formData.country]?.label : 'غير محدد'}</span>
+                    </p>
+                    <p className="text-gray-600 flex items-center gap-2">
+                      <span className="font-medium w-32">المرحلة الدراسية:</span>
+                      <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.label : 'غير محدد'}</span>
+                    </p>
+                    <p className="text-gray-600 flex items-center gap-2">
+                      <span className="font-medium w-32">الصف الدراسي:</span>
+                      <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel && formData.gradeLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.grades[formData.gradeLevel] : 'غير محدد'}</span>
+                    </p>
+                  </div>
+                  <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100 mt-4 flex justify-center items-center gap-2">
+                    <p className="text-sm text-indigo-700 font-medium">
+                      لتغيير الصف الدراسي، يرجى التواصل مع الإدارة.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

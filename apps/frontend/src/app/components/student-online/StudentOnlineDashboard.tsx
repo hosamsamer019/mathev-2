@@ -15,6 +15,7 @@ import AIMathSolverPage from '../ai/AIMathSolverPage';
 import AdaptiveLearningPage from '../ai/AdaptiveLearningPage';
 import { userService } from '../../services/user.service';
 import { homeworkService } from '../../services/homework.service';
+import AssessmentReviewPage from '../../pages/AssessmentReviewPage';
 
 const menuItems: MenuItem[] = [
   { path: '/student/online/home', icon: Home, label: 'الرئيسية' },
@@ -82,6 +83,7 @@ export default function StudentOnlineDashboard() {
         <Route path="/learning-path" element={<AdaptiveLearningPage />} />
         <Route path="/chatbot" element={<ChatbotPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/assessment/:id/review/:attemptId" element={<AssessmentReviewPage />} />
       </Routes>
     </SharedLayout>
   );
