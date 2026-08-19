@@ -23,7 +23,8 @@ export interface CreateExamData {
 
 export interface SubmitAnswerData {
   questionId: string;
-  selectedOption: any;
+  answer?: string | number;
+  selectedOption?: number; // legacy
 }
 
 

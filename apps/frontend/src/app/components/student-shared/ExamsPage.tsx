@@ -163,7 +163,7 @@ export default function ExamsPage() {
     if (!selectedExam) return;
     const formatted = Object.entries(answers).map(([qId, val]) => ({
       questionId: qId,
-      selectedOption: parseInt(val)
+      answer: val
     }));
     examService.syncAttempt(selectedExam, formatted).catch(() => {});
   };
@@ -196,7 +196,7 @@ export default function ExamsPage() {
     if (!selectedExam) return;
     const formatted = Object.entries(answers).map(([qId, val]) => ({
       questionId: qId,
-      selectedOption: parseInt(val)
+      answer: val
     }));
 
     try {

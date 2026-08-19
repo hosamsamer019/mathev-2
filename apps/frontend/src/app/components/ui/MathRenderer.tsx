@@ -25,7 +25,13 @@ export const MathRenderer: React.FC<MathRendererProps> = ({ expression, block = 
   try {
     return (
       <span dir="ltr" className="inline-block" style={{ direction: 'ltr', margin: '0 4px' }}>
-        {block ? <BlockMath math={cleanExpr} /> : <InlineMath math={cleanExpr} />}
+        {block ? (
+          // @ts-ignore - react-katex types do not include settings, but katex does
+          <BlockMath math={cleanExpr} settings={{ strict: "ignore" }} />
+        ) : (
+          // @ts-ignore - react-katex types do not include settings, but katex does
+          <InlineMath math={cleanExpr} settings={{ strict: "ignore" }} />
+        )}
       </span>
     );
   } catch (error) {

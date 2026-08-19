@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { db, AttemptStatus } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
+import { normalizeAnswer } from '../utils/answerNormalizer.js';
 
 /**
  * Validates if the user is enrolled or authorized to access the course's assessment
@@ -231,11 +232,16 @@ export const submitAssessment = async (req: AuthRequest, res: Response) => {
       
       questions.forEach((q) => {
         const studentAns = (answersToSave as any[])?.find(a => String(a.questionId) === String(q.id));
-        const correctAnswer = q.correct !== undefined ? q.correct : q.correctAnswer;
-        if (correctAnswer !== undefined) {
+        const rawStudentAnswer = studentAns?.answer ?? studentAns?.selectedOption ?? null;
+        
+        const normalizedStudentAnswer = normalizeAnswer(q, rawStudentAnswer);
+        const normalizedCorrectAnswer = normalizeAnswer(q, q.correct !== undefined ? q.correct : q.correctAnswer);
+        
+        if (normalizedCorrectAnswer !== null && normalizedCorrectAnswer !== undefined) {
            const maxPts = q.points || 1;
            totalPoints += maxPts;
-           if (String(studentAns?.answer) === String(correctAnswer)) {
+           
+           if (normalizedStudentAnswer !== null && String(normalizedStudentAnswer) === String(normalizedCorrectAnswer)) {
              score += maxPts;
            }
         }
@@ -320,8 +326,11 @@ export const getAssessmentReview = async (req: AuthRequest, res: Response) => {
 
     const questionsReview = rawQuestions.map((q) => {
       const sAns = studentAnswers.find(a => String(a.questionId) === String(q.id));
-      const studentAnswer = sAns?.answer ?? null;
-      const correctAnswer = q.correct !== undefined ? q.correct : q.correctAnswer;
+      
+      const rawStudentAnswer = sAns?.answer ?? sAns?.selectedOption ?? null;
+      const studentAnswer = normalizeAnswer(q, rawStudentAnswer);
+      const correctAnswer = normalizeAnswer(q, q.correct !== undefined ? q.correct : q.correctAnswer);
+      
       const maxPts = q.points || 1;
       
       const isCorrect = studentAnswer !== null && studentAnswer !== undefined && studentAnswer !== "" && String(studentAnswer) === String(correctAnswer);

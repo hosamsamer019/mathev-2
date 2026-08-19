@@ -3,6 +3,36 @@ import { CheckCircle, XCircle, AlertTriangle, HelpCircle, FileText, Check } from
 import { MathRenderer } from './MathRenderer';
 import { GeometryDiagram } from './GeometryDiagram';
 
+const resolveOptionText = (options: any, answer: any) => {
+  if (answer === null || answer === undefined || answer === "") return null;
+  const strAnswer = String(answer).trim();
+
+  if (Array.isArray(options)) {
+    if (options.length > 0 && typeof options[0] === 'object' && options[0] !== null && 'id' in options[0]) {
+      const match = options.find((o: any) => String(o.id) === strAnswer);
+      if (match) return match.text;
+      
+      const idx = parseInt(strAnswer, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < options.length) {
+        return options[idx].text;
+      }
+    } else if (options.length > 0 && typeof options[0] === 'string') {
+      const idx = parseInt(strAnswer, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < options.length) {
+        return options[idx];
+      }
+    }
+  } else if (typeof options === 'string') {
+    const parsedOptions = options.split('-');
+    const idx = parseInt(strAnswer, 10);
+    if (!isNaN(idx) && idx >= 0 && idx < parsedOptions.length) {
+      return parsedOptions[idx];
+    }
+  }
+
+  return strAnswer;
+};
+
 interface AssessmentReviewProps {
   data: any;
   isTeacher: boolean;
@@ -132,15 +162,14 @@ function QuestionReviewItem({ q, index, isTeacher }: { q: any; index: number; is
             <div className="text-xs uppercase tracking-wider font-bold mb-2 opacity-75">إجابتك</div>
             <div className="font-medium text-lg min-h-[28px]" dir="ltr">
               {isUnanswered ? <span className="text-gray-400" dir="rtl">لا توجد إجابة</span> : (
-                // If options exist, try to find the full text of the option
-                q.options?.find((o: any) => String(o.id) === String(q.studentAnswer))?.text || q.studentAnswer
+                resolveOptionText(q.options, q.studentAnswer)
               )}
             </div>
           </div>
           <div className="p-4 rounded-xl border bg-gray-50 border-gray-200 text-gray-900">
             <div className="text-xs uppercase tracking-wider font-bold mb-2 opacity-75">الإجابة الصحيحة</div>
             <div className="font-medium text-lg min-h-[28px]" dir="ltr">
-              {q.options?.find((o: any) => String(o.id) === String(q.correctAnswer))?.text || q.correctAnswer}
+              {resolveOptionText(q.options, q.correctAnswer) || <span className="text-red-500" dir="rtl">غير متوفرة</span>}
             </div>
           </div>
         </div>

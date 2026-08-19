@@ -75,7 +75,7 @@ export default function HomeworkPage() {
     // Format answers for API
     const formattedAnswers = Object.entries(answers).map(([qId, val]) => ({
       questionId: qId,
-      selectedOption: parseInt(val)
+      answer: val
     }));
 
     homeworkService.submitHomework(selectedHomework, { answers: formattedAnswers })

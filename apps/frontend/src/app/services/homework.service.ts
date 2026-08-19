@@ -18,7 +18,7 @@ export interface CreateHomeworkData {
 }
 
 export interface SubmitHomeworkData {
-  answers?: { questionId: string; selectedOption: any }[];
+  answers?: { questionId: string; answer?: string | number; selectedOption?: any }[];
   grade?: number;
   url?: string;
 }
