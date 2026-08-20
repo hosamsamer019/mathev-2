@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldCheck, BarChart3, Brain, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { aiApi } from '../../services/api';
 import { examService } from '../../services/exam.service';
@@ -36,6 +37,8 @@ export default function TeacherExamsPage() {
   const [newDuration, setNewDuration] = useState('');
   const [newCourseId, setNewCourseId] = useState('');
   const [newRequiresCamera, setNewRequiresCamera] = useState(false);
+  const [newStartTime, setNewStartTime] = useState('');
+  const [newEndTime, setNewEndTime] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -177,6 +180,13 @@ export default function TeacherExamsPage() {
       if (q.options.some((opt: string) => !opt.trim())) return setFormErrors({ global: `جميع خيارات السؤال ${i+1} مطلوبة` });
       if (q.correct === null || q.correct === undefined) return setFormErrors({ global: `يجب اختيار الإجابة الصحيحة للسؤال ${i+1}` });
     }
+    if (newStartTime && newEndTime) {
+      if (new Date(newStartTime) >= new Date(newEndTime)) {
+        toast.error('يجب أن يكون موعد البداية قبل موعد النهاية');
+        return;
+      }
+    }
+
     try {
       setIsSubmitting(true);
       
@@ -185,23 +195,37 @@ export default function TeacherExamsPage() {
         text: q.text,
         type: 'mcq',
         options: q.options,
-        correct: q.correct
+        correct: q.correct,
+        generationLogic: q.generationLogic,
+        solutionSteps: q.solutionSteps,
+        solutionExplanation: q.solutionExplanation,
+        validationStatus: q.validationStatus
       }));
 
       if (editingExamId) {
         if (newType === 'واجب') {
-          alert('ميزة تعديل الواجب غير متاحة حالياً لعدم توفر نقطة اتصال (PUT /homework/:id) في الخادم.');
-          setIsSubmitting(false);
-          return;
+          const homeworkPayload = {
+            title: newTitle,
+            courseId: newCourseId,
+            questions: mappedQuestions,
+            type: 'NORMAL' as const,
+            openAt: newStartTime ? new Date(newStartTime).toISOString() : undefined,
+            closeAt: newEndTime ? new Date(newEndTime).toISOString() : undefined
+          };
+          await homeworkService.updateHomework(editingExamId, homeworkPayload);
+          toast.success('تم تعديل الواجب بنجاح');
         } else {
           const examPayload = {
             title: newTitle,
             courseId: newCourseId,
             duration: parseInt(newDuration) || 60,
             requiresCamera: newRequiresCamera,
-            questions: mappedQuestions
+            questions: mappedQuestions,
+            startTime: newStartTime ? new Date(newStartTime).toISOString() : undefined,
+            endTime: newEndTime ? new Date(newEndTime).toISOString() : undefined
           };
           await examService.updateExam(editingExamId, examPayload);
+          toast.success('تم تعديل الامتحان بنجاح');
         }
       } else {
         if (newType === 'واجب') {
@@ -210,18 +234,24 @@ export default function TeacherExamsPage() {
             title: newTitle,
             courseId: newCourseId,
             questions: mappedQuestions,
-            type: 'NORMAL' as const
+            type: 'NORMAL' as const,
+            openAt: newStartTime ? new Date(newStartTime).toISOString() : undefined,
+            closeAt: newEndTime ? new Date(newEndTime).toISOString() : undefined
           };
           await homeworkService.createHomework(homeworkPayload);
+          toast.success('تم إنشاء الواجب بنجاح');
         } else {
           const examPayload = {
             title: newTitle,
             courseId: newCourseId,
             duration: parseInt(newDuration) || 60,
             requiresCamera: newRequiresCamera,
-            questions: mappedQuestions
+            questions: mappedQuestions,
+            startTime: newStartTime ? new Date(newStartTime).toISOString() : undefined,
+            endTime: newEndTime ? new Date(newEndTime).toISOString() : undefined
           };
           await examService.createExam(examPayload);
+          toast.success('تم إنشاء الامتحان بنجاح');
         }
       }
 
@@ -231,19 +261,13 @@ export default function TeacherExamsPage() {
       setNewTitle('');
       setNewDuration('');
       setNewRequiresCamera(false);
+      setNewStartTime('');
+      setNewEndTime('');
       setQuestions([]);
       fetchExams();
     } catch (err: any) {
       console.error('Create failed', err);
-      if (err.response?.data?.errors) {
-        const errors: Record<string, string> = {};
-        err.response.data.errors.forEach((e: any) => {
-          errors[e.path[0]] = e.message;
-        });
-        setFormErrors(errors);
-      } else {
-        setFormErrors({ global: 'حدث خطأ أثناء الإنشاء' });
-      }
+      toast.error('حدث خطأ أثناء الحفظ');
     } finally {
       setIsSubmitting(false);
     }
@@ -260,6 +284,8 @@ export default function TeacherExamsPage() {
       setNewDuration(exam.duration?.toString() || '60');
       setNewCourseId(exam.courseId);
       setNewRequiresCamera(exam.requiresCamera || false);
+      setNewStartTime(exam.startTime ? new Date(exam.startTime).toISOString().slice(0,16) : '');
+      setNewEndTime(exam.endTime ? new Date(exam.endTime).toISOString().slice(0,16) : '');
       
       const examQuestions = Array.isArray(exam.questions) ? exam.questions.map((q: any) => ({
         text: q.text,
@@ -271,7 +297,7 @@ export default function TeacherExamsPage() {
       setEditingExamId(id);
       setShowCreate(true);
     } catch (err) {
-      alert('فشل في جلب بيانات الامتحان للتعديل');
+      toast.error('فشل في جلب بيانات الامتحان للتعديل');
     } finally {
       setLoading(false);
     }
@@ -284,7 +310,7 @@ export default function TeacherExamsPage() {
       setSelectedExamResults(res.data);
       setShowResults(true);
     } catch (err) {
-      alert('فشل في جلب نتائج الامتحان');
+      toast.error('فشل في جلب نتائج الامتحان');
     } finally {
       setLoading(false);
     }
@@ -368,10 +394,10 @@ export default function TeacherExamsPage() {
         setGeneratedQuestions(updated);
         setEditingGeneratedQuestion(null);
       } else {
-        alert('فشل التوليد: لم يتم إرجاع سؤال');
+        toast.error('فشل التوليد: لم يتم إرجاع سؤال');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'حدث خطأ أثناء إعادة التوليد');
+      toast.error(err.response?.data?.message || 'حدث خطأ أثناء إعادة التوليد');
     } finally {
       setRegeneratingIndex(null);
     }
@@ -406,7 +432,11 @@ export default function TeacherExamsPage() {
       const newFormQuestions = generatedQuestions.map(q => ({
         text: q.questionText,
         options: q.options?.map(o => o.text) || [],
-        correct: q.options?.findIndex(o => o.id === q.correctAnswer) || 0
+        correct: q.options?.findIndex(o => o.id === q.correctAnswer) || 0,
+        generationLogic: q.generationLogic,
+        solutionSteps: q.solutionSteps,
+        solutionExplanation: q.solutionExplanation,
+        validationStatus: q.validationStatus
       }));
 
       setQuestions(prev => [...prev, ...newFormQuestions]);
@@ -417,11 +447,15 @@ export default function TeacherExamsPage() {
       // If bank was updated, fetch it in background
       if (saveToBank) fetchBankQuestions();
     } catch (err) {
-      alert('فشل في حفظ بعض الأسئلة في بنك الأسئلة. تمت الإضافة للنموذج فقط.');
+      toast.warning('فشل في حفظ بعض الأسئلة في بنك الأسئلة. تمت الإضافة للنموذج فقط.');
       const newFormQuestions = generatedQuestions.map(q => ({
         text: q.questionText,
         options: q.options?.map(o => o.text) || [],
-        correct: q.options?.findIndex(o => o.id === q.correctAnswer) || 0
+        correct: q.options?.findIndex(o => o.id === q.correctAnswer) || 0,
+        generationLogic: q.generationLogic,
+        solutionSteps: q.solutionSteps,
+        solutionExplanation: q.solutionExplanation,
+        validationStatus: q.validationStatus
       }));
       setQuestions(prev => [...prev, ...newFormQuestions]);
       setShowAiModal(false);
@@ -587,7 +621,7 @@ export default function TeacherExamsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {exams.filter(e => e.status === 'منتهي').length === 0 && <p className={textSecondary}>لا يوجد نتائج بعد.</p>}
             {exams.filter(e => e.status === 'منتهي').map((exam) => (
-              <button key={exam.id} onClick={() => alert('عرض تقرير النتيجة')} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} text-right transition-colors`}>
+              <button key={exam.id} onClick={() => toast.info('عرض تقرير النتيجة قيد التطوير')} className={`p-4 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} text-right transition-colors`}>
                 <h3 className={`font-semibold ${textPrimary}`}>{exam.title}</h3>
                 <p className={`text-sm ${textSecondary} mt-1`}>{exam.students} طالب • متوسط: {exam.avgScore}٪</p>
               </button>
@@ -651,7 +685,26 @@ export default function TeacherExamsPage() {
                   {formErrors.duration && <p className="text-red-500 text-xs mt-1">{formErrors.duration}</p>}
                 </div>
               </div>
-              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className={`block text-xs font-medium ${textSecondary} mb-1`}>موعد البداية</label>
+                  <input
+                    type="datetime-local"
+                    value={newStartTime}
+                    onChange={e => setNewStartTime(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className={`block text-xs font-medium ${textSecondary} mb-1`}>موعد النهاية</label>
+                  <input
+                    type="datetime-local"
+                    value={newEndTime}
+                    onChange={e => setNewEndTime(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                  />
+                </div>
+              </div>
               <div className="border-t border-b py-4 my-4 border-gray-200 dark:border-gray-700 max-h-80 overflow-y-auto pr-2">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className={`text-lg font-bold ${textPrimary}`}>أسئلة الامتحان (MCQ)</h3>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { homeworkService } from '../../services/homework.service';
+import { toast } from 'sonner';
+import { normalizeAssessmentResult } from '../../utils/assessmentResultNormalizer';
 
 export default function HomeworkPage() {
   const [selectedHomework, setSelectedHomework] = useState<string | null>(null);
@@ -33,8 +35,16 @@ export default function HomeworkPage() {
             status: hw.status === 'draft' ? 'pending' : hw.status,
             score: hw.score || null,
             deadline: new Date(hw.deadline || Date.now()).toLocaleDateString(),
+            deadlineRaw: hw.deadline,
             isLocked: hw.isLocked || false
-          }));
+          })).filter((hw: any) => {
+            const now = new Date().getTime();
+            const isTooLate = hw.deadlineRaw && now > new Date(hw.deadlineRaw).getTime();
+            if (isTooLate && hw.status !== 'completed') {
+              return false;
+            }
+            return true;
+          });
           setHomeworks(mapped);
         } else {
           setHomeworks([]);
@@ -62,7 +72,7 @@ export default function HomeworkPage() {
         .catch((err: any) => {
           console.error('Error fetching homework details:', err);
           if (err.response?.status === 403) {
-            alert('غير مصرح لك بعرض هذا الواجب.');
+            toast.error('غير مصرح لك بعرض هذا الواجب.');
             setSelectedHomework(null);
           }
         });
@@ -80,19 +90,20 @@ export default function HomeworkPage() {
 
     homeworkService.submitHomework(selectedHomework, { answers: formattedAnswers })
       .then((res) => {
-        setScore(Math.round(res.data.score || res.data.percentage || 0));
+        const normalized = normalizeAssessmentResult(res.data);
+        setScore(normalized.percentage);
         setAttemptId(res.data.id);
         setSubmitted(true);
       })
       .catch((err) => {
         console.error('API submission failed:', err);
         const code = err.response?.data?.code;
-        if (code === 'NOT_ENROLLED') alert('أنت غير مسجل في هذا الكورس.');
-        else if (code === 'ATTEMPT_ALREADY_FINISHED') alert('لقد قمت بتسليم هذا الواجب مسبقًا ولا يمكن الدخول إليه مرة أخرى.');
-        else if (code === 'ASSESSMENT_CLOSED') alert('انتهى موعد تسليم الواجب.');
-        else if (code === 'ASSESSMENT_NOT_OPEN') alert('لم يبدأ موعد فتح الواجب بعد.');
-        else if (code === 'STUDENT_ROLE_REQUIRED') alert('هذا الحساب لا يمكنه بدء الواجب.');
-        else alert('حدث خطأ أثناء تسليم الواجب. يرجى المحاولة مرة أخرى.');
+        if (code === 'NOT_ENROLLED') toast.error('أنت غير مسجل في هذا الكورس.');
+        else if (code === 'ATTEMPT_ALREADY_FINISHED') toast.warning('لقد قمت بتسليم هذا الواجب مسبقًا ولا يمكن الدخول إليه مرة أخرى.');
+        else if (code === 'ASSESSMENT_CLOSED') toast.error('انتهى موعد تسليم الواجب.');
+        else if (code === 'ASSESSMENT_NOT_OPEN') toast.info('لم يبدأ موعد فتح الواجب بعد.');
+        else if (code === 'STUDENT_ROLE_REQUIRED') toast.error('هذا الحساب لا يمكنه بدء الواجب.');
+        else toast.error('حدث خطأ أثناء تسليم الواجب. يرجى المحاولة مرة أخرى.');
       });
   };
 
@@ -116,7 +127,7 @@ export default function HomeworkPage() {
               className={`bg-white rounded-xl shadow-md p-6 transition-shadow ${hw.isLocked ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-xl cursor-pointer'}`}
               onClick={() => {
                 if (hw.isLocked) {
-                  alert('يجب إكمال مشاهدة فيديو الدرس قبل فتح الواجب');
+                  toast.info('يجب إكمال مشاهدة فيديو الدرس قبل فتح الواجب');
                   return;
                 }
                 if (hw.status === 'pending' || hw.status === 'available') {

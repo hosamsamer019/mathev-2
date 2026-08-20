@@ -5,6 +5,8 @@ import { examService } from '../../services/exam.service';
 import { MathContent } from '../ui/MathContent';
 import { MathRenderer } from '../ui/MathRenderer';
 import { GeometryDiagram } from '../ui/GeometryDiagram';
+import { toast } from 'sonner';
+import { normalizeAssessmentResult } from '../../utils/assessmentResultNormalizer';
 
 export default function ExamsPage() {
   const navigate = useNavigate();
@@ -61,9 +63,9 @@ export default function ExamsPage() {
     } catch (err: any) {
       console.error('Failed to load exam details', err);
       if (err.response?.status === 403) {
-        alert('غير مصرح لك بدخول هذا الامتحان.');
+        toast.error('غير مصرح لك بدخول هذا الامتحان.');
       } else {
-        alert('فشل تحميل تفاصيل الامتحان');
+        toast.error('فشل تحميل تفاصيل الامتحان');
       }
       setExamState('list');
     } finally {
@@ -80,7 +82,7 @@ export default function ExamsPage() {
       streamRef.current = stream;
       setCameraActive(true);
     } catch (err) {
-      alert('يجب السماح بالوصول للكاميرا لبدء الامتحان.');
+      toast.error('يجب السماح بالوصول للكاميرا لبدء الامتحان.');
     }
   };
 
@@ -93,7 +95,7 @@ export default function ExamsPage() {
   const beginExam = async () => {
     // Fix #2: Camera is optional based on exam config
     if (currentExam?.requiresCamera && !cameraActive) {
-      alert('يجب تشغيل الكاميرا أولاً!');
+      toast.error('يجب تشغيل الكاميرا أولاً!');
       return;
     }
 
@@ -138,19 +140,19 @@ export default function ExamsPage() {
     } catch (err: any) {
       console.error('API exam start failed:', err);
       const code = err.response?.data?.code;
-      if (code === 'NOT_ENROLLED') alert('أنت غير مسجل في هذا الكورس.');
-      else if (code === 'ATTEMPT_ALREADY_FINISHED') alert('لقد قمت بتسليم هذا الامتحان مسبقًا ولا يمكن الدخول إليه مرة أخرى.');
-      else if (code === 'ASSESSMENT_CLOSED') alert('انتهى موعد تسليم الامتحان.');
-      else if (code === 'ASSESSMENT_NOT_OPEN') alert('لم يبدأ موعد فتح الامتحان بعد.');
-      else if (code === 'STUDENT_ROLE_REQUIRED') alert('هذا الحساب لا يمكنه بدء الامتحان.');
-      else alert('حدث خطأ أثناء بدء الامتحان.');
+      if (code === 'NOT_ENROLLED') toast.error('أنت غير مسجل في هذا الكورس.');
+      else if (code === 'ATTEMPT_ALREADY_FINISHED') toast.warning('لقد قمت بتسليم هذا الامتحان مسبقًا ولا يمكن الدخول إليه مرة أخرى.');
+      else if (code === 'ASSESSMENT_CLOSED') toast.error('انتهى موعد تسليم الامتحان.');
+      else if (code === 'ASSESSMENT_NOT_OPEN') toast.info('لم يبدأ موعد فتح الامتحان بعد.');
+      else if (code === 'STUDENT_ROLE_REQUIRED') toast.error('هذا الحساب لا يمكنه بدء الامتحان.');
+      else toast.error('حدث خطأ أثناء بدء الامتحان.');
     }
   };
 
   const handleTabSwitch = () => {
     if (document.hidden && selectedExam && examState === 'running') {
       examService.reportViolation(selectedExam, 'TAB_SWITCH')
-        .then(() => alert('تحذير: تم تسجيل خروجك من صفحة الامتحان!'))
+        .then(() => toast.warning('تحذير: تم تسجيل خروجك من صفحة الامتحان!'))
         .catch((err: any) => {
           if (err.response?.data?.message?.includes('Disqualified')) {
             handleDisqualification();
@@ -201,11 +203,12 @@ export default function ExamsPage() {
 
     try {
       const res = await examService.submitAttempt(selectedExam, formatted);
-      setScore(Math.round(res.data.score || res.data.percentage || 0));
+      const normalized = normalizeAssessmentResult(res.data);
+      setScore(normalized.percentage);
       setAttemptId(res.data.id);
       setExamState('submitted');
     } catch (err) {
-      alert('خطأ في التسليم!');
+      toast.error('خطأ في التسليم!');
       setExamState('list');
     }
   };
@@ -401,6 +404,10 @@ export default function ExamsPage() {
           const isTooEarly = exam.startTime && now < new Date(exam.startTime).getTime();
           const isTooLate = exam.endTime && now > new Date(exam.endTime).getTime();
           const isLocked = isTooEarly || isTooLate;
+          
+          if (isTooLate && exam.status !== 'completed') {
+            return null; // Don't show expired active exams
+          }
           
           return (
           <div key={exam.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow flex flex-col justify-between">

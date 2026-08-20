@@ -4,6 +4,7 @@ import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
 import { io } from '../index.js';
 import { normalizeExamQuestions } from '../utils/question.helper.js';
+import { sanitizeQuestionsForStudent } from './assessment.controller.js';
 
 export const getAllExams = async (req: AuthRequest, res: Response) => {
   try {
@@ -43,6 +44,9 @@ export const getAllExams = async (req: AuthRequest, res: Response) => {
       if (exam.attempts && exam.attempts.length > 0) {
         status = 'completed';
         score = exam.attempts[0].score;
+      }
+      if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+        exam.questions = sanitizeQuestionsForStudent(exam.questions as any) as any;
       }
       const { attempts, ...rest } = exam as any;
       return { ...rest, status, score };
@@ -98,6 +102,11 @@ export const getExamDetails = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+      exam.questions = sanitizeQuestionsForStudent(exam.questions as any) as any;
+    }
+
     res.json({ ...exam, attempts });
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching exam details', error: error.message });
@@ -121,7 +130,11 @@ const createExamSchema = z.object({
     text: z.string(),
     type: z.string(),
     options: z.array(z.string()).optional(),
-    correct: z.any().optional()
+    correct: z.any().optional(),
+    generationLogic: z.any().optional(),
+    solutionSteps: z.any().optional(),
+    solutionExplanation: z.string().optional(),
+    validationStatus: z.string().optional()
   })).optional()
 });
 

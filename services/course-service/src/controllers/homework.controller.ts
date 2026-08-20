@@ -3,6 +3,7 @@ import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
 import { io } from '../index.js';
+import { sanitizeQuestionsForStudent } from './assessment.controller.js';
 
 export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
   try {
@@ -56,6 +57,9 @@ export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
           isLocked = true;
         }
       }
+      if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+        hw.questions = sanitizeQuestionsForStudent(hw.questions as any) as any;
+      }
       const { submissions, Lesson, ...rest } = hw as any;
       return { ...rest, status, score, isLocked };
     });
@@ -87,6 +91,14 @@ export const getHomeworksByCourse = async (req: AuthRequest, res: Response) => {
         _count: { select: { submissions: true } }
       }
     });
+
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+      homeworks.forEach(hw => {
+        hw.questions = sanitizeQuestionsForStudent(hw.questions as any) as any;
+      });
+    }
+
     res.json(homeworks);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching homeworks', error: error.message });
@@ -120,6 +132,11 @@ export const getHomeworkDetails = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+      homework.questions = sanitizeQuestionsForStudent(homework.questions as any) as any;
+    }
+
     res.json(homework);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching homework details', error: error.message });
@@ -136,10 +153,16 @@ const createHomeworkSchema = z.object({
     text: z.string(),
     type: z.string(),
     options: z.array(z.string()).optional(),
-    correct: z.any().optional()
+    correct: z.any().optional(),
+    generationLogic: z.any().optional(),
+    solutionSteps: z.any().optional(),
+    solutionExplanation: z.string().optional(),
+    validationStatus: z.string().optional()
   })).optional(),
   lessonId: z.string().uuid().optional().nullable(),
-  type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional().default('NORMAL')
+  type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional().default('NORMAL'),
+  openAt: z.string().optional().nullable(),
+  closeAt: z.string().optional().nullable()
 });
 
 export const createHomework = async (req: AuthRequest, res: Response) => {
@@ -148,7 +171,7 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
     const requesterId = req.user?.userId;
 
     const validatedData = createHomeworkSchema.parse(req.body);
-    const { title, courseId, questions, lessonId, type } = validatedData;
+    const { title, courseId, questions, lessonId, type, openAt, closeAt } = validatedData;
     
     const course = await db.course.findUnique({ where: { id: courseId } });
     if (!course) return res.status(404).json({ message: 'Course not found' });
@@ -165,7 +188,10 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
         courseId,
         questions: questions || [],
         lessonId,
-        type: lessonId ? 'VIDEO_DEPENDENT' : type
+        type: lessonId ? 'VIDEO_DEPENDENT' : type,
+        openAt: openAt ? new Date(openAt) : null,
+        closeAt: closeAt ? new Date(closeAt) : null,
+        deadline: closeAt ? new Date(closeAt) : null
       }
     });
     
@@ -178,7 +204,9 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
         courseId: homework.courseId,
         lessonId: homework.lessonId,
         teacherId: course.teacherId,
-        questions: homework.questions as any
+        questions: homework.questions as any,
+        openAt: homework.openAt,
+        closeAt: homework.closeAt
       }
     });
 
@@ -204,10 +232,16 @@ const updateHomeworkSchema = z.object({
     text: z.string(),
     type: z.string(),
     options: z.array(z.string()).optional(),
-    correct: z.any().optional()
+    correct: z.any().optional(),
+    generationLogic: z.any().optional(),
+    solutionSteps: z.any().optional(),
+    solutionExplanation: z.string().optional(),
+    validationStatus: z.string().optional()
   })).optional(),
   lessonId: z.string().uuid().optional().nullable(),
-  type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional()
+  type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional(),
+  openAt: z.string().optional().nullable(),
+  closeAt: z.string().optional().nullable()
 });
 
 export const updateHomework = async (req: AuthRequest, res: Response) => {
@@ -217,7 +251,7 @@ export const updateHomework = async (req: AuthRequest, res: Response) => {
     const requesterId = req.user?.userId;
 
     const validatedData = updateHomeworkSchema.parse(req.body);
-    const { title, questions, lessonId, type } = validatedData;
+    const { title, questions, lessonId, type, openAt, closeAt } = validatedData;
     
     const homework = await db.homework.findUnique({ where: { id } });
     if (!homework) return res.status(404).json({ message: 'Homework not found' });
@@ -236,7 +270,12 @@ export const updateHomework = async (req: AuthRequest, res: Response) => {
         ...(title && { title }),
         ...(questions && { questions }),
         ...(lessonId !== undefined && { lessonId }),
-        ...(type !== undefined && { type })
+        ...(type !== undefined && { type }),
+        ...(openAt !== undefined && { openAt: openAt ? new Date(openAt) : null }),
+        ...(closeAt !== undefined && { 
+           closeAt: closeAt ? new Date(closeAt) : null, 
+           deadline: closeAt ? new Date(closeAt) : null 
+        })
       }
     });
 
@@ -247,7 +286,9 @@ export const updateHomework = async (req: AuthRequest, res: Response) => {
         data: {
           ...(title && { title }),
           ...(lessonId !== undefined && { lessonId }),
-          ...(questions && { questions })
+          ...(questions && { questions }),
+          ...(openAt !== undefined && { openAt: openAt ? new Date(openAt) : null }),
+          ...(closeAt !== undefined && { closeAt: closeAt ? new Date(closeAt) : null })
         }
       });
     } catch (err) {
@@ -279,6 +320,14 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
 
     const isEnrolled = await checkUserEnrollment(req.user, homework.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
+
+    const now = new Date();
+    const effectiveCloseAt = homework.closeAt || homework.deadline;
+    if (effectiveCloseAt && now > effectiveCloseAt) {
+      if (now.getTime() - effectiveCloseAt.getTime() > 120000) { // 2 minute grace period
+        return res.status(403).json({ message: 'انتهى موعد تسليم الواجب', code: 'ASSESSMENT_CLOSED' });
+      }
+    }
 
     const existingSubmission = await db.submission.findFirst({
       where: { homeworkId, studentId: userId }

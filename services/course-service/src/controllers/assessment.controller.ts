@@ -3,6 +3,22 @@ import { db, AttemptStatus } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { normalizeAnswer } from '../utils/answerNormalizer.js';
 
+export function sanitizeQuestionsForStudent(questions: any[] | null | undefined): any[] {
+  if (!Array.isArray(questions)) return [];
+  return questions.map(q => {
+    const {
+      correct,
+      correctAnswer,
+      generationLogic,
+      solutionSteps,
+      solutionExplanation,
+      validationStatus,
+      ...safeQuestion
+    } = q;
+    return safeQuestion;
+  });
+}
+
 /**
  * Validates if the user is enrolled or authorized to access the course's assessment
  */
@@ -44,6 +60,13 @@ export const getAllAssessments = async (req: AuthRequest, res: Response) => {
       include: { _count: { select: { attempts: true } } },
       orderBy: { createdAt: 'desc' }
     });
+
+    if (req.user!.role !== 'TEACHER' && req.user!.role !== 'ADMIN') {
+      assessments.forEach(a => {
+        a.questions = sanitizeQuestionsForStudent(a.questions as any);
+      });
+    }
+
     res.json({ data: assessments, total: assessments.length });
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching assessments', error: error.message });
@@ -62,6 +85,10 @@ export const getAssessment = async (req: AuthRequest, res: Response) => {
     
     const authError = await validateEnrollment(req.user!.userId, req.user!.role, assessment.courseId);
     if (authError) return res.status(403).json({ message: 'Unauthorized access', code: authError });
+
+    if (req.user!.role !== 'TEACHER' && req.user!.role !== 'ADMIN') {
+      assessment.questions = sanitizeQuestionsForStudent(assessment.questions as any);
+    }
 
     res.json(assessment);
   } catch (error: any) {
@@ -218,6 +245,13 @@ export const submitAssessment = async (req: AuthRequest, res: Response) => {
       }
 
       const now = new Date();
+      
+      if (attempt.assessment.closeAt && now > attempt.assessment.closeAt) {
+         if (now.getTime() - attempt.assessment.closeAt.getTime() > 120000) { // 2 minute grace period
+           throw new Error('ASSESSMENT_CLOSED');
+         }
+      }
+
       let status: AttemptStatus = 'SUBMITTED';
       if (attempt.expiresAt && now >= attempt.expiresAt) {
         status = 'TIME_EXPIRED';
@@ -270,6 +304,9 @@ export const submitAssessment = async (req: AuthRequest, res: Response) => {
 
     res.json(result);
   } catch (error: any) {
+    if (error.message === 'ASSESSMENT_CLOSED') {
+      return res.status(403).json({ message: 'انتهى موعد تسليم التقييم', code: 'ASSESSMENT_CLOSED' });
+    }
     res.status(500).json({ message: 'Error submitting assessment', error: error.message });
   }
 };
