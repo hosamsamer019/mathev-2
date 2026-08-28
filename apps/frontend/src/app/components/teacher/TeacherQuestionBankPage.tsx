@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Tag, Search, Save, X, Database, Brain, Loader2 } from 'lucide-react';
 import { questionService } from '../../services/question.service';
 import { aiService } from '../../services/ai.service';

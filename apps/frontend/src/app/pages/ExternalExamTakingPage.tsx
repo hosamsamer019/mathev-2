@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useExamAntiCheat } from '../hooks/useExamAntiCheat';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Clock, CheckCircle, AlertCircle, AlertTriangle, 
@@ -63,10 +64,7 @@ export default function ExternalExamTakingPage() {
   // Modals & UX
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [violationCount, setViolationCount] = useState(0);
-
-  // Multiple tab warning
-  const [showMultiTabWarning, setShowMultiTabWarning] = useState(false);
+  const [initialViolationCount, setInitialViolationCount] = useState(0);
 
   // Result state
   const [finalResult, setFinalResult] = useState<any>(null);
@@ -75,13 +73,17 @@ export default function ExternalExamTakingPage() {
   // Prevent duplicate submissions
   const isSubmittingRef = useRef(false);
 
-  // Anti-cheat deduplication: track last-reported violation timestamp
-  // Prevents visibilitychange + blur both firing for one real event from counting as 2 violations
-  const lastViolationTimestampRef = useRef<number>(0);
-  const VIOLATION_DEBOUNCE_MS = 800;
+  // External student identifier from JWT
+  const externalSessionId = (() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload?.externalSessionId ?? null;
+    } catch { return null; }
+  })();
 
-  // BroadcastChannel for multi-tab detection
-  const bcRef = useRef<BroadcastChannel | null>(null);
+  const isAntiCheatEnabled = viewState === 'active';
 
   // 1. Initial Authentication and Data Fetching
   useEffect(() => {
@@ -126,27 +128,6 @@ export default function ExternalExamTakingPage() {
       }
     }
 
-    // Multi-tab detection via BroadcastChannel
-    if (typeof BroadcastChannel !== 'undefined') {
-      const bc = new BroadcastChannel(`${BC_CHANNEL}_${assessmentId}`);
-      bcRef.current = bc;
-
-      // Announce we are active
-      bc.postMessage({ type: 'TAB_OPENED', ts: Date.now() });
-
-      bc.onmessage = (ev) => {
-        if (ev.data?.type === 'TAB_OPENED') {
-          // Another tab opened — show warning banner
-          setShowMultiTabWarning(true);
-          // Acknowledge back so the new tab also knows
-          bc.postMessage({ type: 'TAB_ALREADY_OPEN', ts: Date.now() });
-        }
-        if (ev.data?.type === 'TAB_ALREADY_OPEN') {
-          setShowMultiTabWarning(true);
-        }
-      };
-    }
-
     initExam(assessmentId);
 
     return () => {
@@ -175,7 +156,7 @@ export default function ExternalExamTakingPage() {
       setAttempt(attemptData);
 
       if (attemptData.violationCount) {
-        setViolationCount(attemptData.violationCount);
+        setInitialViolationCount(attemptData.violationCount);
       }
 
       // Check if attempt is already completed/disqualified
@@ -209,10 +190,6 @@ export default function ExternalExamTakingPage() {
 
       // Authoritative timer calculation
       setupTimer(examData, attemptData);
-
-      // Setup anti-cheat listeners
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      window.addEventListener('blur', handleBlur);
 
       setViewState('active');
     } catch (err: any) {
@@ -306,66 +283,21 @@ export default function ExternalExamTakingPage() {
     }
   };
 
-  // 5. Anti-cheat Violation Handling
-  // Deduplication: one real focus-loss should only count as ONE violation
-  const reportViolation = useCallback((type: 'TAB_SWITCH' | 'WINDOW_BLUR' | 'VISIBILITY_HIDDEN' | 'VISIBILITY_VISIBLE') => {
-    if (document.fullscreenElement) return;
-
-    // Get fresh viewState via ref pattern — useCallback captures stale closure otherwise
-    if (!assessmentId) return;
-
-    const now = Date.now();
-
-    // VISIBILITY_VISIBLE is informational only — record but never triggers deduplication cooldown
-    if (type === 'VISIBILITY_VISIBLE') {
-      // Fire and forget — just record the return event on the server
-      examService.reportViolation(assessmentId, 'VISIBILITY_VISIBLE').catch(() => {});
-      return;
-    }
-
-    // Deduplication window: skip if we already reported a counting violation within the window
-    if (now - lastViolationTimestampRef.current < VIOLATION_DEBOUNCE_MS) {
-      return;
-    }
-    lastViolationTimestampRef.current = now;
-
-    examService.reportViolation(assessmentId, type)
-      .then((res: any) => {
-        const nextCount = res.data?.violationCount ?? (violationCount + 1);
-        setViolationCount(nextCount);
-
-        if (nextCount >= 3 || res.data?.status === 'CHEATING') {
-          handleDisqualification();
-        } else {
-          toast.warning(`تحذير: تم رصد مغادرة شاشة الامتحان! مخالفة (${nextCount} من 3). سيتم إلغاء الامتحان فوراً عند المخالفة الثالثة!`);
-        }
-      })
-      .catch((err: any) => {
-        if (err.response?.status === 403 || err.response?.data?.message?.includes('CHEATING')) {
-          handleDisqualification();
-        }
-      });
-  }, [assessmentId, violationCount]);
-
-  const handleVisibilityChange = () => {
-    if (document.hidden) {
-      reportViolation('VISIBILITY_HIDDEN');
-    } else {
-      reportViolation('VISIBILITY_VISIBLE');
-    }
-  };
-
-  const handleBlur = () => {
-    // Only count as WINDOW_BLUR if not already within deduplication window
-    // (catches Alt+Tab which fires both visibilitychange+blur)
-    reportViolation('WINDOW_BLUR');
-  };
-
-  const handleDisqualification = () => {
+  // 5. Anti-cheat — delegated to shared useExamAntiCheat hook
+  const handleDisqualification = useCallback(() => {
     cleanupExam();
     setViewState('disqualified');
     toast.error('تم إلغاء الامتحان لرصد مخالفات متعددة.');
-  };
+  }, []);
+
+  const { violationCount, showMultiTabWarning } = useExamAntiCheat({
+    assessmentId: assessmentId ?? null,
+    attemptId: attempt?.id ?? null,
+    studentIdentifier: externalSessionId,
+    enabled: isAntiCheatEnabled,
+    onDisqualified: handleDisqualification,
+    initialViolationCount,
+  });
 
   // 6. Fullscreen toggle
   const toggleFullscreen = () => {
@@ -447,8 +379,7 @@ export default function ExternalExamTakingPage() {
   const cleanupExam = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    window.removeEventListener('blur', handleBlur);
+    // Anti-cheat listeners are managed by useExamAntiCheat hook
   };
 
   const formatTime = (seconds: number) => {
