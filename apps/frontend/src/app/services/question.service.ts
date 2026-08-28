@@ -32,6 +32,16 @@ export const questionService = {
   createQuestion: (data: CreateQuestionData) =>
     questionApi.post('/', data),
 
+  createQuestionsBatch: async (questions: CreateQuestionData[]) => {
+    try {
+      return await questionApi.post('/batch', { questions });
+    } catch (e) {
+      // Fallback to concurrent chunked creation if batch endpoint is unavailable
+      const results = await Promise.all(questions.map(q => questionApi.post('/', q)));
+      return { data: { count: results.length, questions: results.map(r => r.data) } };
+    }
+  },
+
   updateQuestion: (id: string, data: CreateQuestionData) =>
     questionApi.put(`/${id}`, data),
 

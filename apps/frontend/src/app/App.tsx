@@ -8,6 +8,8 @@ import AdminLoginPage from './components/auth/AdminLoginPage';
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import LandingPage from './components/landing/LandingPage';
+import ExternalExamPage from './pages/ExternalExamPage';
+import ExternalExamTakingPage from './pages/ExternalExamTakingPage';
 import { lazy, Suspense } from 'react';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 
@@ -35,6 +37,10 @@ export default function App() {
                     {/* Landing & Auth */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/external-exam" element={<ExternalExamPage />} />
+                    <Route path="/external-exam/:examCode" element={<ExternalExamPage />} />
+                    <Route path="/external-exam/take/:assessmentId" element={<ExternalExamTakingPage />} />
+                    <Route path="/external-exam/:assessmentId/result" element={<ExternalExamTakingPage />} />
                     <Route path="/register" element={<Navigate to="/login" replace />} />
                     <Route path="/admin/login" element={<AdminLoginPage />} />
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />

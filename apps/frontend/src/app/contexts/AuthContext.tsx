@@ -22,6 +22,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
+  loginGuest: (name: string, phone: string, code: string) => Promise<{ success: boolean; assessmentId?: string; message?: string }>;
   register: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -79,6 +80,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginGuest = async (name: string, phone: string, code: string): Promise<any> => {
+    try {
+      const response = await authApi.post('/external-exam', { 
+        name: name.trim(), 
+        phone: phone?.trim() ? phone.trim() : undefined, 
+        code: code.trim() 
+      });
+      const { token, assessmentId, user: guestUser } = response.data;
+      
+      localStorage.setItem('token', token);
+      setUser(guestUser);
+      localStorage.setItem('edu-user', JSON.stringify(guestUser));
+      return { success: true, assessmentId, user: guestUser };
+    } catch (error: any) {
+      console.error('Guest login failed:', error);
+      const data = error.response?.data;
+      return { 
+        success: false, 
+        message: data?.message || (data?.errors && data.errors[0]?.message) || 'فشل تسجيل الدخول الخارجي',
+        code: data?.code,
+        openAt: data?.openAt || null,
+        closeAt: data?.closeAt || null
+      };
+    }
+  };
+
   const register = async (data: { name: string; email: string; password: string; role: UserRole }): Promise<void> => {
     const response = await authApi.post('/register', data);
     const { token, user: registeredUser } = response.data;
@@ -126,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, checkAuth, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, loginGuest, register, logout, checkAuth, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

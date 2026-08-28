@@ -180,7 +180,7 @@ app.post('/api/ai/chat', aiRateLimiter, verifyToken, async (req: AuthRequest, re
 app.get('/api/ai/analytics', verifyToken, async (req: AuthRequest, res: Response) => {
   try {
     const requesterRole = (req.user?.role || '').toUpperCase();
-    if (requesterRole !== 'ADMIN') {
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -251,24 +251,51 @@ app.get('/api/ai/analytics', verifyToken, async (req: AuthRequest, res: Response
   }
 });
 
+import { AIPerformanceMonitor } from './services/monitor.service.js';
+
+const inFlightGenerations = new Set<string>();
+
+// Production AI Metrics Endpoint
+app.get('/api/ai/metrics', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const role = (req.user?.role || '').toUpperCase();
+    if (role !== 'ADMIN' && role !== 'TEACHER') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const metrics = AIPerformanceMonitor.getMetrics();
+    const recent = AIPerformanceMonitor.getRecentRecords(15);
+    res.json({ metrics, recent });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Failed to fetch AI performance metrics', error: error.message });
+  }
+});
+
 // Smart Homework Generation endpoint
 app.post('/api/ai/generate-questions', aiRateLimiter, verifyToken, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
-    if (!userId || (role !== 'TEACHER' && role !== 'ADMIN')) {
-      return res.status(403).json({ message: 'Forbidden: Only teachers can generate questions' });
-    }
+  const userId = req.user?.userId;
+  const role = req.user?.role;
+  if (!userId || (role !== 'TEACHER' && role !== 'ADMIN')) {
+    return res.status(403).json({ message: 'Forbidden: Only teachers can generate questions' });
+  }
 
-    // Reuse Phase 1 rate limiter to cap costs
+  const requestId = (req.headers['x-request-id'] as string) || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const jobKey = `${userId}:${JSON.stringify(req.body)}`;
+  if (inFlightGenerations.has(jobKey)) {
+    return res.status(429).json({ message: 'جاري تنفيذ طلب التوليد بالفعل، يرجى الانتظار...' });
+  }
+
+  inFlightGenerations.add(jobKey);
+
+  try {
     const isAllowed = await ChatService.checkRateLimit(userId);
     if (!isAllowed) {
+      inFlightGenerations.delete(jobKey);
       return res.status(429).json({ message: 'Rate limit exceeded. Please wait.' });
     }
 
     const { topic, difficulty, count, gradeLevel, subject, subtopic, customInstructions } = generateQuestionsSchema.parse(req.body);
     
-    // GeneratorService retries internally if parsing fails
+    // GeneratorService uses parallel workers with minimal schema and isolated validation
     const result = await GeneratorService.generateMCQ(topic, difficulty, count, {
       gradeLevel,
       subject,
@@ -276,23 +303,24 @@ app.post('/api/ai/generate-questions', aiRateLimiter, verifyToken, async (req: A
       customInstructions,
     });
     
-    // Validate with 3-level validator — assigns validationStatus per question
+    // Validate with 3-level validator
     const validatedData = ValidatorService.validateBatch(result.data);
 
-    // Log token usage for basic cost visibility
-    logger.info(`[Smart Generation] User ${userId} generated ${validatedData.questions.length} questions. Tokens: ${result.tokensUsed}`);
+    logger.info(`[Smart Generation] [${requestId}] User ${userId} generated ${validatedData.questions.length} questions. Tokens: ${result.tokensUsed}`);
     
     if (validatedData.questions.length === 0) {
        return res.status(500).json({ message: 'تعذر إنشاء سؤال صالح رياضيًا. حاول إعادة التوليد.' });
     }
 
-    res.json({ questions: validatedData.questions, tokensUsed: result.tokensUsed });
+    res.json({ questions: validatedData.questions, tokensUsed: result.tokensUsed, requestId });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    logger.error('generate-questions error', { error: error.message });
-    res.status(500).json({ message: 'Failed to generate questions', error: error.message });
+    logger.error('generate-questions error', { error: error.message, requestId });
+    res.status(500).json({ message: 'Failed to generate questions', error: error.message, requestId });
+  } finally {
+    inFlightGenerations.delete(jobKey);
   }
 });
 

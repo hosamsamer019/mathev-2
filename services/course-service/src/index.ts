@@ -20,6 +20,15 @@ dotenv.config();
 validateEnv();
 
 const app = express();
+const trustProxy = process.env.TRUST_PROXY || 'loopback';
+if (trustProxy === 'true' || trustProxy === '1') {
+  app.set('trust proxy', true);
+} else if (trustProxy === 'false' || trustProxy === '0') {
+  app.set('trust proxy', false);
+} else {
+  app.set('trust proxy', trustProxy);
+}
+
 const PORT = process.env.PORT || 4004;
 
 const corsOptions = {

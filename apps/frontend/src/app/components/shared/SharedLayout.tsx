@@ -7,6 +7,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationsPanel from './NotificationsPanel';
+import ScrollToTopButton from '../ui/ScrollToTopButton';
 
 export interface MenuItem {
   path: string;
@@ -182,7 +183,7 @@ export default function SharedLayout({
   );
 
   return (
-    <div className={`min-h-screen flex ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`h-screen flex overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
@@ -193,7 +194,7 @@ export default function SharedLayout({
 
       {/* Sidebar - Desktop */}
       <aside
-        className={`hidden lg:flex flex-col ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-l shadow-lg transition-all duration-300 z-30 flex-shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}
+        className={`hidden lg:flex flex-col h-screen ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-l shadow-lg transition-all duration-300 z-30 flex-shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}
       >
         {/* Collapse Toggle */}
         <button
@@ -203,7 +204,9 @@ export default function SharedLayout({
         >
           {collapsed ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
-        {sidebarContent}
+        <div className="h-full flex flex-col justify-between overflow-y-auto">
+          {sidebarContent}
+        </div>
       </aside>
 
       {/* Sidebar - Mobile */}
@@ -222,10 +225,10 @@ export default function SharedLayout({
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Main Content Column */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Bar */}
-        <header className={`sticky top-0 z-20 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm px-4 lg:px-6 py-3 flex items-center gap-4`}>
+        <header className={`sticky top-0 z-20 flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm px-4 lg:px-6 py-3 flex items-center gap-4`}>
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileOpen(true)}
@@ -282,9 +285,14 @@ export default function SharedLayout({
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto">
+        {/* Primary Scrollable Page Content */}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto overscroll-contain focus:outline-none relative"
+        >
           {children}
+          <ScrollToTopButton containerId="main-content" />
         </main>
       </div>
 

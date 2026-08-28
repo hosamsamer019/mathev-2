@@ -36,8 +36,13 @@ export const examService = {
   getExamsByCourse: (courseId: string) =>
     examApi.get(`/course/${courseId}`),
 
-  getExamDetails: (id: string) =>
-    examApi.get(`/${id}`),
+  getExamDetails: async (id: string) => {
+    try {
+      return await assessmentApi.get(`/${id}`);
+    } catch (e) {
+      return await examApi.get(`/${id}`);
+    }
+  },
 
   createExam: (data: CreateExamData) =>
     examApi.post('/', data),
@@ -58,5 +63,11 @@ export const examService = {
     assessmentApi.put(`/${examId}/attempt/answers`, { answers }),
 
   reportViolation: (examId: string, type: string) =>
-    examApi.post(`/${examId}/violation`, { type }),
+    assessmentApi.post(`/${examId}/attempt/violation`, { type }),
+
+  getAssessmentReview: (examId: string, attemptId: string) =>
+    assessmentApi.get(`/${examId}/attempts/${attemptId}/review`),
+
+  getExternalResults: (examId: string) =>
+    assessmentApi.get(`/teacher/external-results/${examId}`),
 };

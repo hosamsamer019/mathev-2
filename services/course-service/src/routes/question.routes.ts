@@ -4,6 +4,7 @@ import * as questionController from '../controllers/question.controller.js';
 
 const router = Router();
 
+router.post('/batch', verifyToken, questionController.createQuestionsBatch);
 router.post('/', verifyToken, questionController.createQuestion);
 router.get('/', verifyToken, questionController.getQuestions);
 router.put('/:id', verifyToken, questionController.updateQuestion);

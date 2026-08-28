@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Pause, Eye, ChevronRight, FileText, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Play, Pause, Eye, ChevronRight, FileText, CheckCircle, AlertTriangle, XCircle, Maximize, Minimize } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
@@ -28,6 +28,30 @@ export default function VideoPlayerPage() {
   const lastSavedTimeRef = useRef(0);
   const isCompletedRef = useRef(false);
   const activeQuizRef = useRef<any>(null);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(err => {
+        console.error('Error entering fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
   const hasAutoResumed = useRef(false);
   
   const lastRealTimeRef = useRef<number>(0);
@@ -124,7 +148,7 @@ export default function VideoPlayerPage() {
         disablekb: 1,
         rel: 0,
         modestbranding: 1,
-        fs: 0, // Disable fullscreen to keep watermark relative
+        fs: 1, // Enable fullscreen
         playsinline: 1
       },
       events: {
@@ -428,6 +452,8 @@ export default function VideoPlayerPage() {
         if (playerRef.current && typeof playerRef.current.getPlayerState === 'function' && playerRef.current.getPlayerState() === 1) {
           playerRef.current.pauseVideo();
         }
+      } else {
+        setIsBlurred(false);
       }
     };
 
@@ -578,7 +604,7 @@ export default function VideoPlayerPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-black rounded-xl overflow-hidden relative" onContextMenu={e => e.preventDefault()}>
+            <div ref={containerRef} className="bg-black rounded-xl overflow-hidden relative" onContextMenu={e => e.preventDefault()}>
               <div className="relative aspect-video bg-gray-800 flex items-center justify-center">
                 {lesson?.videoUrl ? (
                   isGoogleDriveUrl(lesson.videoUrl) ? (
@@ -682,6 +708,12 @@ export default function VideoPlayerPage() {
                   }
                   @media print {
                     body { display: none !important; opacity: 0 !important; visibility: hidden !important; }
+                  }
+                  #yt-player {
+                    width: 100% !important;
+                    height: 100% !important;
+                    max-width: 100% !important;
+                    aspect-ratio: 16 / 9 !important;
                   }
                 `}</style>
               </div>
@@ -800,6 +832,14 @@ export default function VideoPlayerPage() {
                       </div>
                     </div>
                     <span className="text-white text-sm w-16 font-medium text-right" dir="rtl">{Math.round(progress)}% تم</span>
+                    
+                    <button
+                      onClick={toggleFullscreen}
+                      className="text-white hover:text-indigo-400 focus:outline-none transition-colors"
+                      title="ملء الشاشة"
+                    >
+                      {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                    </button>
                   </div>
                 </div>
               )}

@@ -20,6 +20,11 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
   try {
     if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not configured');
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
+    
+    if (decoded.isGuest) {
+      return res.status(403).json({ message: 'Forbidden: Guest accounts have strictly scoped exam access.' });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {

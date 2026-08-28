@@ -350,11 +350,13 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
       calculatedGrade = (correctCount / questions.length) * 100;
     }
 
+    const gradeToSave = questions.length > 0 ? calculatedGrade : (clientGrade || 0);
+
     const submission = await db.submission.create({
       data: {
         studentId: userId,
         homeworkId,
-        grade: calculatedGrade || clientGrade || 0,
+        grade: gradeToSave,
         url: url || null,
         answers: answers || []
       }

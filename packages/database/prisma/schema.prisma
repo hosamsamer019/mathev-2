@@ -24,6 +24,7 @@ model User {
   gradeLevel     GradeLevel?
   language       String              @default("ar")
   phone          String?
+  isGuest        Boolean             @default(false)
   attendances    Attendance[]
   chatSessions   ChatSession[]
   taughtCourses  Course[]            @relation("TeacherCourses")
@@ -265,6 +266,10 @@ model Assessment {
   randomization   Boolean        @default(false)
   requiresCamera  Boolean        @default(false)
   
+  allowExternalStudents Boolean @default(false)
+  examAccessCode        String?  @unique
+  allowedIps            String?
+  
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -272,6 +277,39 @@ model Assessment {
   lesson          Lesson?        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   teacher         User           @relation("TeacherAssessments", fields: [teacherId], references: [id])
   attempts        AssessmentAttempt[]
+  externalAttempts ExternalExamAttempt[]
+}
+
+model ExternalExamAttempt {
+  id              String        @id @default(uuid())
+  assessmentId    String
+  studentName     String
+  phone           String?
+  accessSessionId String?       @unique
+  ipAddress       String?
+  userAgent       String?
+  answers         Json?
+  score           Float?
+  percentage      Float?
+  status          AttemptStatus @default(STARTED)
+  startedAt       DateTime      @default(now())
+  submittedAt     DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  violationCount     Int               @default(0)
+  cheatingDetected   Boolean           @default(false)
+  cheatingReason     String?
+  cheatingDetectedAt DateTime?
+  violations         Json?
+
+  assessment      Assessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@index([studentName])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model AssessmentAttempt {
@@ -293,6 +331,14 @@ model AssessmentAttempt {
   
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  
+  violationCount     Int               @default(0)
+  cheatingDetected   Boolean           @default(false)
+  cheatingReason     String?
+  cheatingDetectedAt DateTime?
+  violations         Json?
+  ipAddress          String?
+  userAgent          String?
 
   assessment   Assessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   student      User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -524,4 +570,5 @@ enum AttemptStatus {
   SUBMITTED
   TIME_EXPIRED
   GRADED
+  CHEATING
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Brain, Send, Sparkles, RefreshCw, BookOpen, ChevronLeft, History, Star } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { aiApi } from '../../services/api';
+import { MathContent } from '../ui/MathContent';
 
 interface SolverStep {
   step: number;
@@ -85,16 +86,23 @@ export default function AIMathSolverPage() {
       const response = await aiApi.post('/solve', { problem, level: 'high_school' });
       const { solution: explanation } = response.data;
       
-      setSolution({
-        answer: 'تم الحل (انظر التفاصيل)',
-        steps: [
-          {
-            step: 1,
-            title: 'خطوات الحل والشرح التفصيلي',
-            content: explanation || 'لم يتم العثور على حل.',
-          }
-        ]
-      });
+      let parsedSolution;
+      try {
+        parsedSolution = JSON.parse(explanation);
+      } catch (err) {
+        parsedSolution = {
+          answer: 'تم الحل (انظر التفاصيل)',
+          steps: [
+            {
+              step: 1,
+              title: 'خطوات الحل والشرح التفصيلي',
+              content: explanation || 'لم يتم العثور على حل.',
+            }
+          ]
+        };
+      }
+      
+      setSolution(parsedSolution);
     } catch (error) {
       console.error('AI Solver failed:', error);
       alert('حدث خطأ أثناء حل المسألة');
@@ -207,35 +215,23 @@ export default function AIMathSolverPage() {
               {/* Steps */}
               <div className="p-6">
                 <h3 className={`font-bold ${textPrimary} mb-4`}>الحل التفصيلي خطوة بخطوة</h3>
-                <div className="space-y-3">
+                <div className="space-y-6">
                   {solution.steps.map((step) => (
-                    <div key={step.step}>
-                      <button
-                        onClick={() => setActiveStep(activeStep === step.step ? null : step.step)}
-                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
-                          activeStep === step.step
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                            : isDark ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                            activeStep === step.step ? 'bg-purple-600 text-white' : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {step.step}
-                          </div>
-                          <span className={`font-medium ${textPrimary}`}>{step.title}</span>
+                    <div key={step.step} className={`p-6 rounded-2xl border ${isDark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-100 bg-gray-50'}`}>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm">
+                          {step.step}
                         </div>
-                        <ChevronLeft className={`w-4 h-4 ${textSecondary} transition-transform ${activeStep === step.step ? 'rotate-90' : ''}`} />
-                      </button>
-                      {activeStep === step.step && (
-                        <div className={`mx-4 p-4 rounded-b-xl border border-t-0 ${isDark ? 'border-gray-700 bg-gray-700/30' : 'border-gray-100 bg-gray-50'}`}>
-                          <p className={`text-sm ${textSecondary} mb-3`}>{step.content}</p>
-                          {step.formula && (
-                            <div className={`px-4 py-2 rounded-lg font-mono text-sm ${isDark ? 'bg-gray-800 text-purple-400' : 'bg-white text-purple-700 border border-purple-100'}`}>
-                              {step.formula}
-                            </div>
-                          )}
+                        <h4 className={`text-lg font-bold ${textPrimary}`}>{step.title}</h4>
+                      </div>
+                      
+                      <div className="mb-4 leading-relaxed text-right">
+                        <MathContent content={step.content} className={`text-base ${textPrimary}`} />
+                      </div>
+                      
+                      {step.formula && (
+                        <div className="mt-4 p-4 rounded-xl overflow-x-auto text-center" style={{ direction: 'ltr' }}>
+                          <MathContent content={step.formula.startsWith('$$') ? step.formula : `\$\$${step.formula}\$\$`} />
                         </div>
                       )}
                     </div>

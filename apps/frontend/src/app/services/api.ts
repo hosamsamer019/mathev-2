@@ -80,8 +80,15 @@ export const assessmentApi = axios.create({
             return api(originalRequest);
           }
         } catch (refreshError) {
+          const userStr = localStorage.getItem('edu-user');
+          const isExt = userStr ? JSON.parse(userStr)?.role === 'EXTERNAL_STUDENT' || JSON.parse(userStr)?.isGuest : false;
           localStorage.removeItem('token');
-          window.location.href = '/login';
+          localStorage.removeItem('edu-user');
+          if (isExt || window.location.pathname.startsWith('/external-exam')) {
+            window.location.href = '/external-exam?expired=true';
+          } else {
+            window.location.href = '/login';
+          }
         }
       }
       return Promise.reject(error);

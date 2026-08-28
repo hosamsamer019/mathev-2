@@ -68,6 +68,7 @@ export default function StudentsPage() {
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [parentMode, setParentMode] = useState<'none' | 'link' | 'new'>('none');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -101,13 +102,19 @@ export default function StudentsPage() {
 
   const handleAdd = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', password: '', role: 'ONLINE_STUDENT', parentId: '', childId: '', centerGroupId: '', parentName: '', parentEmail: '', parentPassword: '', country: 'EG', educationLevel: '', gradeLevel: '' });
+    setParentMode('none');
+    setFormData({ name: '', email: '', password: '', role: 'ONLINE_STUDENT', parentId: '', childId: '', centerGroupId: '', parentName: '', parentEmail: '', parentPassword: '', parentPhone: '', country: 'EG', educationLevel: '', gradeLevel: '' });
     setValidationErrors({});
     setShowModal(true);
   };
 
   const handleEdit = (user: any) => {
     setEditingUser(user);
+    if (user.parentId) {
+      setParentMode('new');
+    } else {
+      setParentMode('none');
+    }
     setFormData({
       name: user.name || '',
       email: user.email || '',
@@ -116,9 +123,10 @@ export default function StudentsPage() {
       parentId: user.parentId || '',
       childId: '',
       centerGroupId: user.centerGroupId || '',
-      parentName: '',
-      parentEmail: '',
+      parentName: user.parent?.name || '',
+      parentEmail: user.parent?.email || '',
       parentPassword: '',
+      parentPhone: user.parent?.phone || '',
       country: user.country || 'EG',
       educationLevel: user.educationLevel || '',
       gradeLevel: user.gradeLevel || ''
@@ -146,12 +154,26 @@ export default function StudentsPage() {
       setValidationErrors({});
       
       const payload: any = { ...formData };
-      if (!payload.parentId) payload.parentId = null;
-      if (!payload.childId) payload.childId = null;
-      if (!payload.centerGroupId) payload.centerGroupId = null;
-      if (!payload.parentName) payload.parentName = null;
-      if (!payload.parentEmail) payload.parentEmail = null;
-      if (!payload.parentPassword) payload.parentPassword = null;
+      
+      if (parentMode === 'none') {
+        payload.parentId = null;
+        payload.parentName = null;
+        payload.parentEmail = null;
+        payload.parentPassword = null;
+        payload.parentPhone = null;
+      } else if (parentMode === 'link') {
+        payload.parentName = null;
+        payload.parentEmail = null;
+        payload.parentPassword = null;
+        payload.parentPhone = null;
+        if (!payload.parentId) payload.parentId = null;
+      } else if (parentMode === 'new') {
+        payload.parentId = null;
+        if (!payload.parentName) payload.parentName = null;
+        if (!payload.parentEmail) payload.parentEmail = null;
+        if (!payload.parentPassword) payload.parentPassword = null;
+        if (!payload.parentPhone) payload.parentPhone = null;
+      }
       
       // Clean up academic fields if not student
       if (!['ONLINE_STUDENT', 'CENTER_STUDENT'].includes(payload.role)) {
@@ -409,38 +431,96 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {(formData.role === 'ONLINE_STUDENT' || formData.role === 'CENTER_STUDENT') && !editingUser && (
+              {(formData.role === 'ONLINE_STUDENT' || formData.role === 'CENTER_STUDENT') && (
                 <div className="pt-4 border-t border-gray-200 mt-4">
-                  <h3 className="text-md font-semibold text-gray-800 mb-3">بيانات ولي الأمر (اختياري)</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">اسم ولي الأمر</label>
+                  <h3 className="text-md font-semibold text-gray-800 mb-3">ارتباط ولي الأمر</h3>
+                  <div className="flex gap-4 mb-4">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
-                        type="text"
-                        value={formData.parentName}
-                        onChange={(e) => setFormData({...formData, parentName: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        type="radio"
+                        name="parentMode"
+                        checked={parentMode === 'none'}
+                        onChange={() => setParentMode('none')}
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">بريد ولي الأمر</label>
+                      <span className="text-sm text-gray-700">بدون</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
-                        type="email"
-                        value={formData.parentEmail}
-                        onChange={(e) => setFormData({...formData, parentEmail: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        type="radio"
+                        name="parentMode"
+                        checked={parentMode === 'link'}
+                        onChange={() => setParentMode('link')}
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">كلمة مرور ولي الأمر</label>
+                      <span className="text-sm text-gray-700">ربط ولي أمر موجود</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
-                        type="password"
-                        value={formData.parentPassword}
-                        onChange={(e) => setFormData({...formData, parentPassword: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        type="radio"
+                        name="parentMode"
+                        checked={parentMode === 'new'}
+                        onChange={() => setParentMode('new')}
                       />
-                    </div>
+                      <span className="text-sm text-gray-700">بيانات ولي الأمر</span>
+                    </label>
                   </div>
+
+                  {parentMode === 'link' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">معرف ولي الأمر (Parent ID)</label>
+                        <input
+                          type="text"
+                          value={formData.parentId}
+                          onChange={(e) => setFormData({...formData, parentId: e.target.value})}
+                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {parentMode === 'new' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">اسم ولي الأمر</label>
+                        <input
+                          type="text"
+                          value={formData.parentName}
+                          onChange={(e) => setFormData({...formData, parentName: e.target.value})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">بريد ولي الأمر</label>
+                        <input
+                          type="email"
+                          value={formData.parentEmail}
+                          onChange={(e) => setFormData({...formData, parentEmail: e.target.value})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">هاتف ولي الأمر</label>
+                        <input
+                          type="text"
+                          value={formData.parentPhone}
+                          onChange={(e) => setFormData({...formData, parentPhone: e.target.value})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {editingUser && formData.parentId ? 'كلمة مرور ولي الأمر (اتركها فارغة للاحتفاظ بالقديمة)' : 'كلمة مرور ولي الأمر'}
+                        </label>
+                        <input
+                          type="password"
+                          value={formData.parentPassword}
+                          onChange={(e) => setFormData({...formData, parentPassword: e.target.value})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

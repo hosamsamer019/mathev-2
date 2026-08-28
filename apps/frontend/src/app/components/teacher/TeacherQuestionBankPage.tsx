@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, Tag, Search, Save, X, Database, Brain, Loader2 } fr
 import { questionService } from '../../services/question.service';
 import { aiService } from '../../services/ai.service';
 import { QuestionPreview, StructuredQuestion } from '../ui/QuestionPreview';
+import ScrollToTopButton from '../ui/ScrollToTopButton';
 
 export default function TeacherQuestionBankPage() {
   const [questions, setQuestions] = useState<any[]>([]);
@@ -27,6 +28,8 @@ export default function TeacherQuestionBankPage() {
   // AI Generation State
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiStage, setAiStage] = useState<string>('');
+  const [aiElapsed, setAiElapsed] = useState<number>(0);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiForm, setAiForm] = useState({
     topic: '',
@@ -40,6 +43,7 @@ export default function TeacherQuestionBankPage() {
   const [generatedQuestions, setGeneratedQuestions] = useState<StructuredQuestion[] | null>(null);
   const [editingGeneratedQuestion, setEditingGeneratedQuestion] = useState<number | null>(null);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
+  const aiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetchQuestions();
@@ -135,20 +139,51 @@ export default function TeacherQuestionBankPage() {
     setFormData({ ...formData, options: newOptions });
   };
 
+  const [aiProgressCount, setAiProgressCount] = useState<number>(0);
+
   const handleGenerate = async () => {
     if (!aiForm.topic.trim()) {
       setAiError('يرجى كتابة الموضوع');
       return;
     }
+    if (aiLoading) return;
+
     try {
       setAiLoading(true);
       setAiError(null);
+      setAiElapsed(0);
+      setAiProgressCount(0);
+      setAiStage('إعداد الطلب...');
+
+      const startTime = performance.now();
+      aiTimerRef.current = setInterval(() => {
+        setAiElapsed(Math.round((performance.now() - startTime) / 100) / 10);
+      }, 100);
+
+      setTimeout(() => {
+        setAiStage('جاري الاتصال بالذكاء الاصطناعي...');
+      }, 350);
+
+      setTimeout(() => {
+        setAiStage('توليد الأسئلة...');
+        setAiProgressCount(Math.max(1, Math.floor(aiForm.count * 0.4)));
+      }, 900);
+
+      setTimeout(() => {
+        setAiStage('التحقق من صحة الأسئلة...');
+        setAiProgressCount(Math.max(1, Math.floor(aiForm.count * 0.8)));
+      }, 2000);
+
       const res = await aiService.generateQuestions(aiForm);
+      
+      setAiProgressCount(res.data.questions.length);
+      setAiStage('اكتمل التوليد');
       setGeneratedQuestions(res.data.questions);
     } catch (err: any) {
       console.error(err);
       setAiError(err.response?.data?.message || 'فشل في توليد الأسئلة');
     } finally {
+      if (aiTimerRef.current) clearInterval(aiTimerRef.current);
       setAiLoading(false);
     }
   };
@@ -190,27 +225,30 @@ export default function TeacherQuestionBankPage() {
   };
 
   const handleSaveGenerated = async () => {
-    if (!generatedQuestions) return;
+    if (!generatedQuestions || generatedQuestions.length === 0) return;
     try {
       setAiLoading(true);
-      for (const q of generatedQuestions) {
-        await questionService.createQuestion({
-          text: q.questionText,
-          options: q.options?.map(o => o.text) || [],
-          correctAnswer: q.options?.findIndex(o => o.id === q.correctAnswer) ?? 0,
-          tag: aiForm.topic,
-          academicLevel: aiForm.academicLevel,
-          mathExpression: q.mathExpression,
-          diagram: q.diagram,
-          solutionSteps: q.solutionSteps,
-          given: q.given,
-          required: q.required,
-          explanation: q.explanation,
-          solutionExplanation: q.solutionExplanation,
-          generationLogic: q.generationLogic,
-          validationStatus: q.validationStatus,
-        });
-      }
+      setAiStage('جاري حفظ الأسئلة دفعة واحدة في قاعدة البيانات...');
+      
+      const payload = generatedQuestions.map(q => ({
+        text: q.questionText,
+        options: q.options?.map(o => o.text) || [],
+        correctAnswer: q.options?.findIndex(o => o.id === q.correctAnswer) ?? 0,
+        tag: aiForm.topic,
+        academicLevel: aiForm.academicLevel,
+        mathExpression: q.mathExpression,
+        diagram: q.diagram,
+        solutionSteps: q.solutionSteps,
+        given: q.given,
+        required: q.required,
+        explanation: q.explanation,
+        solutionExplanation: q.solutionExplanation,
+        generationLogic: q.generationLogic,
+        validationStatus: q.validationStatus,
+      }));
+
+      await questionService.createQuestionsBatch(payload);
+
       setShowAiModal(false);
       setGeneratedQuestions(null);
       fetchQuestions();
@@ -270,68 +308,71 @@ export default function TeacherQuestionBankPage() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto" onClick={() => setShowForm(false)}>
+          <div 
+            className="bg-white rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl my-auto border border-gray-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50">
+              <h2 className="text-xl font-bold text-gray-900">
                 {editingId ? 'تعديل السؤال' : 'إنشاء سؤال جديد'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
-                <X className="w-6 h-6" />
+              <button onClick={() => setShowForm(false)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div id="question-bank-modal-body" className="p-6 space-y-6 overflow-y-auto flex-1 overscroll-contain relative">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">نص السؤال</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">نص السؤال *</label>
                 <textarea
                   value={formData.text}
                   onChange={(e) => setFormData({ ...formData, text: e.target.value })}
-                  className={`w-full px-4 py-3 border ${formErrors.text ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-indigo-500`}
+                  className={`w-full px-4 py-3 border ${formErrors.text ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none`}
                   rows={3}
-                  placeholder="أدخل نص السؤال هنا..."
+                  placeholder="أدخل نص السؤال هنا (يدعم صيغ الرياضيات KaTeX/LaTeX)..."
                 />
-                {formErrors.text && <p className="text-red-500 text-xs mt-1">{formErrors.text}</p>}
+                {formErrors.text && <p className="text-red-500 text-xs mt-1 font-semibold">{formErrors.text}</p>}
               </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
-                      <select
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        value={formData.academicLevel}
-                        onChange={(e) => setFormData({ ...formData, academicLevel: e.target.value })}
-                      >
-                        <option value="PREP_1">الصف الأول الإعدادي</option>
-                        <option value="PREP_2">الصف الثاني الإعدادي</option>
-                        <option value="PREP_3">الصف الثالث الإعدادي</option>
-                        <option value="SEC_1">الصف الأول الثانوي</option>
-                        <option value="SEC_2">الصف الثاني الثانوي</option>
-                        <option value="SEC_3">الصف الثالث الثانوي</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">التصنيف / الموضوع</label>
-                      <input
-                        type="text"
-                        placeholder="مثال: الجبر، الهندسة، الوحدة الأولى..."
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        value={formData.tag}
-                        onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
-                      />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">الصف الدراسي</label>
+                  <select
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    value={formData.academicLevel}
+                    onChange={(e) => setFormData({ ...formData, academicLevel: e.target.value })}
+                  >
+                    <option value="PREP_1">الصف الأول الإعدادي</option>
+                    <option value="PREP_2">الصف الثاني الإعدادي</option>
+                    <option value="PREP_3">الصف الثالث الإعدادي</option>
+                    <option value="SEC_1">الصف الأول الثانوي</option>
+                    <option value="SEC_2">الصف الثاني الثانوي</option>
+                    <option value="SEC_3">الصف الثالث الثانوي</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">التصنيف / الموضوع</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: الجبر، الهندسة، الوحدة الأولى..."
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    value={formData.tag}
+                    onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+                  />
+                </div>
+              </div>
 
               <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">الخيارات والإجابة الصحيحة</label>
+                <label className="block text-xs font-semibold text-gray-700">الخيارات والإجابة الصحيحة</label>
                 {formData.options.map((opt, i) => (
-                  <div key={i} className="flex gap-4 items-center">
+                  <div key={i} className="flex gap-3 items-center">
                     <input
                       type="radio"
                       name="correctAnswer"
                       checked={formData.correctAnswer === i}
                       onChange={() => setFormData({ ...formData, correctAnswer: i })}
-                      className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
+                      className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                     <div className="flex-1">
                       <input
@@ -339,25 +380,29 @@ export default function TeacherQuestionBankPage() {
                         value={opt}
                         onChange={(e) => updateOption(i, e.target.value)}
                         placeholder={`الخيار ${i + 1}`}
-                        className={`w-full px-4 py-2 border ${formErrors[`opt_${i}`] ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-indigo-500`}
+                        className={`w-full px-4 py-2 border ${formErrors[`opt_${i}`] ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm`}
                       />
-                      {formErrors[`opt_${i}`] && <p className="text-red-500 text-xs mt-1">{formErrors[`opt_${i}`]}</p>}
+                      {formErrors[`opt_${i}`] && <p className="text-red-500 text-xs mt-1 font-semibold">{formErrors[`opt_${i}`]}</p>}
                     </div>
                   </div>
                 ))}
-                {formErrors.correctAnswer && <p className="text-red-500 text-xs mt-1">{formErrors.correctAnswer}</p>}
-                {formErrors.global && <p className="text-red-500 text-xs mt-1">{formErrors.global}</p>}
+                {formErrors.correctAnswer && <p className="text-red-500 text-xs mt-1 font-semibold">{formErrors.correctAnswer}</p>}
+                {formErrors.global && <p className="text-red-500 text-xs mt-1 font-semibold">{formErrors.global}</p>}
               </div>
+
+              <ScrollToTopButton containerId="question-bank-modal-body" className="!bottom-20 !start-8" />
             </div>
 
-            <div className="p-6 border-t border-gray-100 flex gap-4 justify-end bg-gray-50 rounded-b-2xl">
+            <div className="p-4 border-t border-gray-100 flex gap-3 justify-end bg-gray-50 flex-shrink-0">
               <button
+                type="button"
                 onClick={() => setShowForm(false)}
-                className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50"
+                className="px-5 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 إلغاء
               </button>
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 flex items-center gap-2"
@@ -376,19 +421,22 @@ export default function TeacherQuestionBankPage() {
 
       {/* AI Generation Modal */}
       {showAiModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto" onClick={() => setShowAiModal(false)}>
+          <div 
+            className="bg-white rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl my-auto border border-gray-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Brain className="w-6 h-6 text-purple-600" />
                 توليد أسئلة بالذكاء الاصطناعي
               </h2>
-              <button onClick={() => setShowAiModal(false)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
-                <X className="w-6 h-6" />
+              <button onClick={() => setShowAiModal(false)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div id="ai-modal-body" className="p-6 space-y-6 overflow-y-auto flex-1 overscroll-contain relative">
               {!generatedQuestions ? (
                 <>
                   <div className="bg-purple-50 text-purple-800 p-4 rounded-xl text-sm mb-6 border border-purple-100">
@@ -447,6 +495,29 @@ export default function TeacherQuestionBankPage() {
                       />
                     </div>
                   </div>
+                  {aiLoading && (
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-semibold text-purple-900 flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                          {aiStage || 'توليد الأسئلة...'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {aiProgressCount > 0 && (
+                            <span className="text-xs font-semibold text-purple-800 bg-purple-200 px-2 py-0.5 rounded-full">
+                              تم توليد {aiProgressCount} من {aiForm.count} أسئلة
+                            </span>
+                          )}
+                          <span className="text-xs font-mono font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                            الوقت المنقضي: {aiElapsed.toFixed(1)} ثانية
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-purple-200 h-2 rounded-full overflow-hidden">
+                        <div className="bg-purple-600 h-full rounded-full animate-pulse transition-all duration-300" style={{ width: `${Math.min(100, Math.max(15, (aiElapsed / (aiForm.count * 2)) * 100))}%` }}></div>
+                      </div>
+                    </div>
+                  )}
                   {aiError && <p className="text-red-500 text-sm">{aiError}</p>}
                 </>
               ) : (
@@ -532,48 +603,53 @@ export default function TeacherQuestionBankPage() {
                   ))}
                 </div>
               )}
+
+              <ScrollToTopButton containerId="ai-modal-body" className="!bottom-20 !start-8" />
             </div>
 
-            <div className="p-6 border-t border-gray-100 flex gap-4 justify-end bg-gray-50 rounded-b-2xl">
+            <div className="p-4 border-t border-gray-100 flex gap-3 justify-end bg-gray-50 flex-shrink-0">
               <button
+                type="button"
                 onClick={() => setShowAiModal(false)}
-                className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50"
+                className="px-5 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 إلغاء
               </button>
               
               {!generatedQuestions ? (
                 <button
+                  type="button"
                   onClick={handleGenerate}
                   disabled={aiLoading}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 flex items-center gap-2 disabled:opacity-50 transition-all"
                 >
                   {aiLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>جاري التوليد...</span>
                     </>
                   ) : (
                     <>
-                      <Brain className="w-5 h-5" />
+                      <Brain className="w-4 h-4" />
                       <span>توليد الأسئلة</span>
                     </>
                   )}
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={handleSaveGenerated}
                   disabled={aiLoading}
-                  className="px-6 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center gap-2 disabled:opacity-50 transition-all"
                 >
                   {aiLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>جاري الحفظ...</span>
                     </>
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
+                      <Save className="w-4 h-4" />
                       <span>حفظ في البنك</span>
                     </>
                   )}

@@ -248,3 +248,134 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export function getSecureClientIp(req: Request): string {
+  const remoteAddress = req.socket?.remoteAddress || '';
+  const isLoopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remoteAddress);
+
+  if (isLoopback) {
+    const cfIp = req.headers['cf-connecting-ip'];
+    if (cfIp && typeof cfIp === 'string') return cfIp;
+
+    const realIp = req.headers['x-real-ip'];
+    if (realIp && typeof realIp === 'string') return realIp;
+
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor && typeof forwardedFor === 'string') {
+      const parts = forwardedFor.split(',');
+      const clientIp = parts[0].trim();
+      if (clientIp) return clientIp;
+    }
+  }
+
+  return req.ip || remoteAddress || '127.0.0.1';
+}
+
+export const validateGuestExamCode = async (req: Request, res: Response) => {
+  try {
+    const parsed = z.object({
+      name: z.string().trim().min(2, 'الاسم يجب أن يكون ثنائياً على الأقل'),
+      phone: z.string().trim().optional().nullable(),
+      code: z.string().trim().optional(),
+      examCode: z.string().trim().optional()
+    }).refine(data => Boolean(data.code || data.examCode), {
+      message: 'كود الدخول مطلوب'
+    }).parse(req.body);
+
+    const inputCode = (parsed.code || parsed.examCode || '').trim().toUpperCase();
+
+    // Query Assessment by Exam Code
+    const assessment = await db.assessment.findUnique({
+      where: { examAccessCode: inputCode }
+    });
+
+    if (!assessment || !assessment.allowExternalStudents) {
+      return res.status(404).json({ message: 'كود الدخول غير صحيح أو غير متاح حالياً للطلاب الخارجيين' });
+    }
+
+    const now = new Date();
+    if (assessment.openAt && now < new Date(assessment.openAt)) {
+      return res.status(400).json({
+        message: 'الامتحان لم يبدأ بعد',
+        code: 'ASSESSMENT_NOT_OPEN',
+        openAt: assessment.openAt
+      });
+    }
+    if (assessment.closeAt && now >= new Date(assessment.closeAt)) {
+      return res.status(400).json({
+        message: 'لقد انتهى وقت صلاحية كود الامتحان',
+        code: 'ASSESSMENT_CLOSED',
+        closeAt: assessment.closeAt
+      });
+    }
+    if (assessment.status !== 'PUBLISHED') {
+      return res.status(400).json({ message: 'هذا الامتحان غير متاح حالياً' });
+    }
+
+    const studentName = parsed.name.trim();
+    const studentPhone = parsed.phone ? parsed.phone.trim() : null;
+
+    // Check if external attempt already exists
+    let attempt = await db.externalExamAttempt.findFirst({
+      where: {
+        assessmentId: assessment.id,
+        studentName,
+        phone: studentPhone
+      }
+    });
+
+    if (attempt) {
+      if (['SUBMITTED', 'GRADED', 'TIME_EXPIRED', 'CHEATING'].includes(attempt.status) || attempt.cheatingDetected) {
+        return res.status(403).json({ message: 'لقد قمت بتسليم هذا الامتحان بالفعل' });
+      }
+    } else {
+      // Create new external exam attempt
+      const sessionUuid = crypto.randomUUID();
+      attempt = await db.externalExamAttempt.create({
+        data: {
+          assessmentId: assessment.id,
+          studentName,
+          phone: studentPhone,
+          accessSessionId: sessionUuid,
+          status: 'STARTED',
+          answers: []
+        }
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+
+    // Sign scoped Guest JWT
+    const token = jwt.sign(
+      { 
+        isExternalStudent: true, 
+        assessmentId: assessment.id, 
+        externalSessionId: attempt.accessSessionId,
+        role: 'EXTERNAL_STUDENT'
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '3h' }
+    );
+
+    res.json({
+      token,
+      assessmentId: assessment.id,
+      user: {
+        id: 'external',
+        name: attempt.studentName,
+        email: 'external@alsaden.com',
+        role: 'EXTERNAL_STUDENT',
+        isGuest: true
+      }
+    });
+
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ errors: error.errors });
+    }
+    console.error('Guest validation error:', error);
+    res.status(500).json({ message: 'حدث خطأ في معالجة طلبك، يرجى المحاولة مرة أخرى لاحقاً' });
+  }
+};

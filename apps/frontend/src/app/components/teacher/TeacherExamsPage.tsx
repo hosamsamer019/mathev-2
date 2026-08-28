@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldCheck, BarChart3, Brain, Loader2 } from 'lucide-react';
+import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldCheck, BarChart3, Brain, Loader2, X } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -11,6 +11,8 @@ import { homeworkService } from '../../services/homework.service';
 import { questionService } from '../../services/question.service';
 import { MathContent } from '../ui/MathContent';
 import { QuestionPreview, StructuredQuestion } from '../ui/QuestionPreview';
+import FormSectionNavigation from '../ui/FormSectionNavigation';
+import ScrollToTopButton from '../ui/ScrollToTopButton';
 
 const questionTypes = [
   { label: 'اختيار من متعدد (MCQ)', count: 15, color: 'bg-blue-100 text-blue-700' },
@@ -39,6 +41,8 @@ export default function TeacherExamsPage() {
   const [newRequiresCamera, setNewRequiresCamera] = useState(false);
   const [newStartTime, setNewStartTime] = useState('');
   const [newEndTime, setNewEndTime] = useState('');
+  const [newAllowExternalStudents, setNewAllowExternalStudents] = useState(false);
+  const [newAllowedIps, setNewAllowedIps] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -150,6 +154,9 @@ export default function TeacherExamsPage() {
           antiCheat: e.requiresCamera || false,
           randomize: e.randomize || false,
           avgScore: null,
+          allowExternalStudents: e.allowExternalStudents || false,
+          examAccessCode: e.examAccessCode || null,
+          allowedIps: e.allowedIps || null
         }));
         setExams(mapped);
       } else {
@@ -222,7 +229,9 @@ export default function TeacherExamsPage() {
             requiresCamera: newRequiresCamera,
             questions: mappedQuestions,
             startTime: newStartTime ? new Date(newStartTime).toISOString() : undefined,
-            endTime: newEndTime ? new Date(newEndTime).toISOString() : undefined
+            endTime: newEndTime ? new Date(newEndTime).toISOString() : undefined,
+            allowExternalStudents: newAllowExternalStudents,
+            allowedIps: newAllowedIps.trim() || undefined
           };
           await examService.updateExam(editingExamId, examPayload);
           toast.success('تم تعديل الامتحان بنجاح');
@@ -248,7 +257,9 @@ export default function TeacherExamsPage() {
             requiresCamera: newRequiresCamera,
             questions: mappedQuestions,
             startTime: newStartTime ? new Date(newStartTime).toISOString() : undefined,
-            endTime: newEndTime ? new Date(newEndTime).toISOString() : undefined
+            endTime: newEndTime ? new Date(newEndTime).toISOString() : undefined,
+            allowExternalStudents: newAllowExternalStudents,
+            allowedIps: newAllowedIps.trim() || undefined
           };
           await examService.createExam(examPayload);
           toast.success('تم إنشاء الامتحان بنجاح');
@@ -263,6 +274,8 @@ export default function TeacherExamsPage() {
       setNewRequiresCamera(false);
       setNewStartTime('');
       setNewEndTime('');
+      setNewAllowExternalStudents(false);
+      setNewAllowedIps('');
       setQuestions([]);
       fetchExams();
     } catch (err: any) {
@@ -286,6 +299,8 @@ export default function TeacherExamsPage() {
       setNewRequiresCamera(exam.requiresCamera || false);
       setNewStartTime(exam.startTime ? new Date(exam.startTime).toISOString().slice(0,16) : '');
       setNewEndTime(exam.endTime ? new Date(exam.endTime).toISOString().slice(0,16) : '');
+      setNewAllowExternalStudents(exam.allowExternalStudents || false);
+      setNewAllowedIps(exam.allowedIps || '');
       
       const examQuestions = Array.isArray(exam.questions) ? exam.questions.map((q: any) => ({
         text: q.text,
@@ -553,8 +568,8 @@ export default function TeacherExamsPage() {
                     </span>
                     <span className={textSecondary}>{exam.date}</span>
                   </div>
-                  {/* Anti-cheat badges */}
-                  <div className="flex gap-2 mt-3">
+                  {/* Anti-cheat & External badges */}
+                  <div className="flex flex-wrap gap-2 mt-3 items-center">
                     {exam.antiCheat && (
                       <span className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg border border-red-200">
                         <ShieldCheck className="w-3 h-3" /> مكافحة الغش
@@ -569,6 +584,23 @@ export default function TeacherExamsPage() {
                       <span className="flex items-center gap-1 text-xs bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-200">
                         <BarChart3 className="w-3 h-3" /> متوسط: {exam.avgScore}٪
                       </span>
+                    )}
+                    {exam.allowExternalStudents && exam.examAccessCode && (
+                      <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-lg text-xs font-mono font-bold">
+                        <span>كود خارجي: {exam.examAccessCode}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const link = `${window.location.origin}/external-exam?code=${exam.examAccessCode}`;
+                            navigator.clipboard.writeText(link);
+                            toast.success('تم نسخ رابط الامتحان الخارجي');
+                          }}
+                          className="bg-purple-600 text-white hover:bg-purple-700 px-1.5 py-0.5 rounded text-[10px] font-sans font-normal transition-colors"
+                        >
+                          نسخ الرابط
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -632,173 +664,311 @@ export default function TeacherExamsPage() {
 
       {/* Create/Edit Exam Modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowCreate(false)}>
-          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-3xl p-8 w-full max-w-3xl shadow-2xl my-8`} onClick={(e) => e.stopPropagation()}>
-            <h2 className={`text-xl font-bold ${textPrimary} mb-6`}>{editingExamId ? 'تعديل الامتحان' : 'إنشاء امتحان / واجب جديد'}</h2>
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <input
-                  placeholder="عنوان الامتحان"
-                  value={newTitle}
-                  onChange={e => setNewTitle(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border ${formErrors.title ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-                />
-                {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto" 
+          onClick={() => setShowCreate(false)}
+        >
+          <div 
+            id="teacher-exam-modal-container"
+            className={`${isDark ? 'bg-gray-850 text-white' : 'bg-white text-gray-900'} rounded-3xl w-full max-w-3xl shadow-2xl my-auto max-h-[92vh] flex flex-col overflow-hidden border ${isDark ? 'border-gray-700' : 'border-gray-200'}`} 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className={`p-5 sm:p-6 border-b flex-shrink-0 flex items-center justify-between ${isDark ? 'bg-gray-800/80 border-gray-700' : 'bg-gray-50/80 border-gray-100'} backdrop-blur-md`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black tracking-tight">{editingExamId ? 'تعديل الامتحان' : 'إنشاء امتحان / واجب جديد'}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">املأ بيانات الامتحان وحدد الأسئلة والإعدادات</p>
+                </div>
               </div>
-              <div className="space-y-1">
-                {courses.length === 0 ? (
-                  <div className={`p-3 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm text-center`}>
-                    أنشئ كورس أولاً لتمكن من إضافة امتحانات أو واجبات
-                  </div>
-                ) : (
-                  <select
-                    value={newCourseId}
-                    onChange={e => setNewCourseId(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl border ${formErrors.courseId ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-                  >
-                    <option value="" disabled>اختر الكورس</option>
-                    {courses.map(course => (
-                      <option key={course.id} value={course.id}>{course.title}</option>
-                    ))}
-                  </select>
-                )}
-                {formErrors.courseId && <p className="text-red-500 text-xs mt-1">{formErrors.courseId}</p>}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <select 
-                  value={newType}
-                  onChange={e => setNewType(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowCreate(false)} 
+                  className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-800'}`}
                 >
-                  <option value="امتحان">امتحان</option>
-                  <option value="اختبار">اختبار</option>
-                  <option value="واجب">واجب</option>
-                </select>
-                <div className="space-y-1">
-                  <input
-                    type="number"
-                    placeholder="المدة (دقيقة)"
-                    value={newDuration}
-                    onChange={e => setNewDuration(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl border ${formErrors.duration ? 'border-red-500' : (isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-                  />
-                  {formErrors.duration && <p className="text-red-500 text-xs mt-1">{formErrors.duration}</p>}
-                </div>
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+            </div>
+
+            {/* Sticky Section Navigation */}
+            <div className="px-5 py-2.5 border-b flex-shrink-0 bg-gray-50/50 dark:bg-gray-800/50">
+              <FormSectionNavigation
+                containerId="teacher-exam-modal-body"
+                sections={[
+                  { id: 'exam-sec-info', label: 'المعلومات الأساسية' },
+                  { id: 'exam-sec-timing', label: 'النوع والوقت' },
+                  { id: 'exam-sec-questions', label: `الأسئلة (${questions.length})` },
+                  { id: 'exam-sec-advanced', label: 'الإعدادات' },
+                ]}
+                headerOffset={20}
+              />
+            </div>
+
+            {/* Modal Body - Single Predictable Scroll Area */}
+            <div id="teacher-exam-modal-body" className="p-5 sm:p-6 overflow-y-auto flex-1 overscroll-contain space-y-6 relative">
+              {/* Section 1: Basic Info */}
+              <div id="exam-sec-info" className="space-y-4">
+                <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  المعلومات الأساسية
+                </h3>
                 <div className="space-y-1">
-                  <label className={`block text-xs font-medium ${textSecondary} mb-1`}>موعد البداية</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">عنوان الامتحان *</label>
                   <input
-                    type="datetime-local"
-                    value={newStartTime}
-                    onChange={e => setNewStartTime(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                    placeholder="مثال: امتحان التفاضل والتكامل الشامل"
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    className={`w-full px-4 py-2.5 rounded-xl border ${formErrors.title ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : (isDark ? 'bg-gray-750 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
                   />
+                  {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
                 </div>
+
                 <div className="space-y-1">
-                  <label className={`block text-xs font-medium ${textSecondary} mb-1`}>موعد النهاية</label>
-                  <input
-                    type="datetime-local"
-                    value={newEndTime}
-                    onChange={e => setNewEndTime(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
-                  />
-                </div>
-              </div>
-              <div className="border-t border-b py-4 my-4 border-gray-200 dark:border-gray-700 max-h-80 overflow-y-auto pr-2">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className={`text-lg font-bold ${textPrimary}`}>أسئلة الامتحان (MCQ)</h3>
-                  <div className="flex gap-2">
-                    <button onClick={() => {
-                      setAiForm({ topic: '', difficulty: 'متوسط', count: 5, gradeLevel: '', subject: 'رياضيات', customInstructions: '' });
-                      setGeneratedQuestions(null);
-                      setAiError(null);
-                      setShowAiModal(true);
-                    }} className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-purple-200 flex items-center gap-1">
-                      <Brain className="w-4 h-4" /> توليد ذكي (AI)
-                    </button>
-                    <button onClick={() => setShowBankPicker(true)} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-indigo-200">
-                      اختر من البنك
-                    </button>
-                    <button onClick={addQuestion} className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-emerald-200">
-                      + إضافة سؤال
-                    </button>
-                  </div>
-                </div>
-                {questions.length === 0 && <p className={`text-sm text-center py-4 ${textSecondary}`}>لا يوجد أسئلة مضافة بعد</p>}
-                {questions.map((q, qIndex) => (
-                  <div key={qIndex} className={`mb-6 p-4 rounded-xl border ${isDark ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
-                    <div className="flex justify-between mb-3">
-                      <span className={`font-semibold ${textPrimary}`}>السؤال {qIndex + 1}</span>
-                      <button onClick={() => removeQuestion(qIndex)} className="text-red-500 hover:bg-red-50 p-1 rounded">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">الكورس المرتبط *</label>
+                  {courses.length === 0 ? (
+                    <div className={`p-3 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm text-center`}>
+                      أنشئ كورس أولاً لتمكن من إضافة امتحانات أو واجبات
                     </div>
-                    <input
-                      placeholder="نص السؤال"
-                      value={q.text}
-                      onChange={e => updateQuestion(qIndex, 'text', e.target.value)}
-                      className={`w-full mb-3 px-3 py-2 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} text-sm`}
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                      {q.options.map((opt: string, oIndex: number) => (
-                        <div key={oIndex} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name={`correct-${qIndex}`}
-                            checked={q.correct === oIndex}
-                            onChange={() => updateQuestion(qIndex, 'correct', oIndex)}
-                            className="w-4 h-4 text-emerald-600"
-                          />
-                          <input
-                            placeholder={`خيار ${oIndex + 1}`}
-                            value={opt}
-                            onChange={e => updateQuestion(qIndex, 'options', e.target.value, oIndex)}
-                            className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} text-sm`}
-                          />
-                        </div>
+                  ) : (
+                    <select
+                      value={newCourseId}
+                      onChange={e => setNewCourseId(e.target.value)}
+                      className={`w-full px-4 py-2.5 rounded-xl border ${formErrors.courseId ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : (isDark ? 'bg-gray-750 border-gray-600 text-white' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                    >
+                      <option value="" disabled>اختر الكورس</option>
+                      {courses.map(course => (
+                        <option key={course.id} value={course.id}>{course.title}</option>
                       ))}
-                    </div>
-                  </div>
-                ))}
+                    </select>
+                  )}
+                  {formErrors.courseId && <p className="text-red-500 text-xs mt-1">{formErrors.courseId}</p>}
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <p className={`text-sm font-medium ${textPrimary}`}>الإعدادات المتقدمة:</p>
-                <label className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'}`}>
-                  <div>
-                    <p className={`text-sm font-medium ${textPrimary}`}>تفعيل مكافحة الغش</p>
-                    <p className={`text-xs ${textSecondary}`}>رصد الكاميرا والسلوك</p>
+              {/* Section 2: Timing and Type */}
+              <div id="exam-sec-timing" className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  النوع والتوقيت
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">نوع التقييم</label>
+                    <select 
+                      value={newType}
+                      onChange={e => setNewType(e.target.value)}
+                      className={`w-full px-4 py-2.5 rounded-xl border ${isDark ? 'bg-gray-750 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                    >
+                      <option value="امتحان">امتحان</option>
+                      <option value="اختبار">اختبار</option>
+                      <option value="واجب">واجب</option>
+                    </select>
                   </div>
-                  <input type="checkbox" checked={newRequiresCamera} onChange={(e) => setNewRequiresCamera(e.target.checked)} className="w-4 h-4 text-emerald-600 rounded" />
-                </label>
-                <label className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'}`}>
-                  <div>
-                    <p className={`text-sm font-medium ${textPrimary}`}>أسئلة عشوائية</p>
-                    <p className={`text-xs ${textSecondary}`}>ترتيب مختلف لكل طالب</p>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">المدة (بالدقائق)</label>
+                    <input
+                      type="number"
+                      placeholder="60"
+                      value={newDuration}
+                      onChange={e => setNewDuration(e.target.value)}
+                      className={`w-full px-4 py-2.5 rounded-xl border ${formErrors.duration ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : (isDark ? 'bg-gray-750 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200')} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm`}
+                    />
+                    {formErrors.duration && <p className="text-red-500 text-xs mt-1">{formErrors.duration}</p>}
                   </div>
-                  <input type="checkbox" className="w-4 h-4 text-emerald-600 rounded" />
-                </label>
-                <label className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'}`}>
-                  <div>
-                    <p className={`text-sm font-medium ${textPrimary}`}>التصحيح الفوري</p>
-                    <p className={`text-xs ${textSecondary}`}>إظهار النتيجة بعد التسليم</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className={`block text-xs font-semibold ${textSecondary}`}>موعد البداية (اختياري)</label>
+                    <input
+                      type="datetime-local"
+                      value={newStartTime}
+                      onChange={e => setNewStartTime(e.target.value)}
+                      className={`w-full px-4 py-2.5 rounded-xl border ${isDark ? 'bg-gray-750 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono`}
+                    />
                   </div>
-                  <input type="checkbox" className="w-4 h-4 text-emerald-600 rounded" />
-                </label>
+                  <div className="space-y-1">
+                    <label className={`block text-xs font-semibold ${textSecondary}`}>موعد النهاية (اختياري)</label>
+                    <input
+                      type="datetime-local"
+                      value={newEndTime}
+                      onChange={e => setNewEndTime(e.target.value)}
+                      className={`w-full px-4 py-2.5 rounded-xl border ${isDark ? 'bg-gray-750 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono`}
+                    />
+                  </div>
+                </div>
               </div>
-              {formErrors.global && <p className="text-red-500 text-sm text-center">{formErrors.global}</p>}
+
+              {/* Section 3: Questions List */}
+              <div id="exam-sec-questions" className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    أسئلة الامتحان ({questions.length})
+                  </h3>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setAiForm({ topic: '', difficulty: 'متوسط', count: 5, gradeLevel: '', subject: 'رياضيات', customInstructions: '' });
+                        setGeneratedQuestions(null);
+                        setAiError(null);
+                        setShowAiModal(true);
+                      }} 
+                      className="bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-purple-200 flex items-center gap-1 transition-colors"
+                    >
+                      <Brain className="w-3.5 h-3.5" /> توليد ذكي (AI)
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setShowBankPicker(true)} 
+                      className="bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-indigo-200 transition-colors"
+                    >
+                      اختر من البنك
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={addQuestion} 
+                      className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-200 flex items-center gap-1 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> إضافة سؤال
+                    </button>
+                  </div>
+                </div>
+
+                {questions.length === 0 && (
+                  <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                    <p className={`text-xs ${textSecondary}`}>لا توجد أسئلة مضافة بعد. اضغط «إضافة سؤال» أو اختر من البنك أو التوليد الذكي.</p>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {questions.map((q, qIndex) => (
+                    <div key={qIndex} className={`p-4 rounded-2xl border transition-all ${isDark ? 'bg-gray-800/80 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-bold text-xs bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-2.5 py-1 rounded-lg">السؤال {qIndex + 1}</span>
+                        <button 
+                          type="button"
+                          onClick={() => removeQuestion(qIndex)} 
+                          className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 p-1.5 rounded-lg transition-colors"
+                          title="حذف السؤال"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <input
+                        placeholder="نص السؤال (يدعم صيغ الرياضيات KaTeX/LaTeX)"
+                        value={q.text}
+                        onChange={e => updateQuestion(qIndex, 'text', e.target.value)}
+                        className={`w-full mb-3 px-3.5 py-2.5 rounded-xl border ${isDark ? 'bg-gray-750 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300'} text-xs focus:ring-2 focus:ring-emerald-500 outline-none`}
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {q.options.map((opt: string, oIndex: number) => (
+                          <div key={oIndex} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`correct-${qIndex}`}
+                              checked={q.correct === oIndex}
+                              onChange={() => updateQuestion(qIndex, 'correct', oIndex)}
+                              className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            />
+                            <input
+                              placeholder={`خيار ${oIndex + 1}`}
+                              value={opt}
+                              onChange={e => updateQuestion(qIndex, 'options', e.target.value, oIndex)}
+                              className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} text-xs focus:ring-2 focus:ring-emerald-500 outline-none`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 4: Advanced Settings */}
+              <div id="exam-sec-advanced" className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  الإعدادات المتقدمة
+                </h3>
+
+                <div className="space-y-2.5">
+                  <label className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDark ? 'border-gray-700 hover:bg-gray-750' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
+                    <div>
+                      <p className={`text-xs font-bold ${textPrimary}`}>تفعيل مكافحة الغش</p>
+                      <p className={`text-[11px] ${textSecondary}`}>رصد مغادرة التبويب والسلوك المريب</p>
+                    </div>
+                    <input type="checkbox" checked={newRequiresCamera} onChange={(e) => setNewRequiresCamera(e.target.checked)} className="w-4 h-4 text-emerald-600 rounded" />
+                  </label>
+
+                  <label className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDark ? 'border-gray-700 hover:bg-gray-750' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
+                    <div>
+                      <p className={`text-xs font-bold ${textPrimary}`}>أسئلة عشوائية</p>
+                      <p className={`text-[11px] ${textSecondary}`}>ترتيب مختلف للأسئلة لكل طالب</p>
+                    </div>
+                    <input type="checkbox" className="w-4 h-4 text-emerald-600 rounded" />
+                  </label>
+
+                  <label className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDark ? 'border-gray-700 hover:bg-gray-750' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
+                    <div>
+                      <p className={`text-xs font-bold ${textPrimary}`}>التصحيح الفوري</p>
+                      <p className={`text-[11px] ${textSecondary}`}>إظهار النتيجة بعد التسليم مباشرة</p>
+                    </div>
+                    <input type="checkbox" className="w-4 h-4 text-emerald-600 rounded" />
+                  </label>
+
+                  <div className={`p-3.5 rounded-xl border transition-colors ${newAllowExternalStudents ? 'border-purple-300 bg-purple-50/50 dark:bg-purple-950/20' : (isDark ? 'border-gray-700' : 'border-gray-200')}`}>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className={`text-xs font-bold ${textPrimary}`}>السماح للطلاب الخارجيين</p>
+                        <p className={`text-[11px] ${textSecondary}`}>الدخول عبر كود أو رابط مباشر بدون تسجيل حساب</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={newAllowExternalStudents} 
+                        onChange={(e) => setNewAllowExternalStudents(e.target.checked)} 
+                        className="w-4 h-4 text-purple-600 rounded" 
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {formErrors.global && <p className="text-red-500 text-xs font-bold text-center mt-2">{formErrors.global}</p>}
+              </div>
+
+              {/* In-Modal Scroll to Top */}
+              <ScrollToTopButton containerId="teacher-exam-modal-body" className="!bottom-20 !start-8" />
             </div>
-            <div className="flex gap-3 mt-6">
+
+            {/* Modal Sticky Footer Bar */}
+            <div className={`p-4 border-t flex-shrink-0 flex items-center justify-end gap-3 ${isDark ? 'bg-gray-800/90 border-gray-700' : 'bg-gray-50/90 border-gray-100'}`}>
               <button 
+                type="button"
+                onClick={() => setShowCreate(false)} 
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold border transition-colors ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+              >
+                إلغاء
+              </button>
+              <button 
+                type="button"
                 onClick={handleCreateExam} 
                 disabled={isSubmitting || courses.length === 0}
-                className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
+                className="px-6 py-2.5 bg-gradient-to-l from-emerald-600 via-teal-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
               >
-                {isSubmitting ? 'جاري الحفظ...' : (editingExamId ? 'حفظ التعديلات' : 'إنشاء الامتحان')}
-              </button>
-              <button onClick={() => setShowCreate(false)} className={`flex-1 py-3 rounded-xl border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
-                إلغاء
+                {isSubmitting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <span>جاري الحفظ...</span>
+                  </>
+                ) : (
+                  <span>{editingExamId ? 'حفظ التعديلات' : 'إنشاء الامتحان'}</span>
+                )}
               </button>
             </div>
           </div>

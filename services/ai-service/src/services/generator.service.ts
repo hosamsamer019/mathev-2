@@ -1,108 +1,255 @@
 import { OpenRouterClient } from './openrouter.client.js';
+import { ValidatorService, ValidationStatus, ValidatableQuestion } from './validator.service.js';
 import { z } from 'zod';
 
-// ─── Generation Logic Schema ──────────────────────────────────────────────────
-const generationLogicSchema = z.object({
-  questionDesign: z.string(),
-  mathematicalMethod: z.string(),
-  difficultyReason: z.string(),
-  learningObjective: z.string(),
+// ─── Question Schema ──────────────────────────────────────────────────────────
+export const questionItemSchema = z.object({
+  id: z.string().optional(),
+  type: z.string().default('multiple_choice'),
+  subject: z.string().default('رياضيات'),
+  topic: z.string(),
+  subtopic: z.string().optional().nullable(),
+  difficulty: z.string(),
+  gradeLevel: z.string().default('المرحلة الثانوية'),
+  questionText: z.string(),
+  mathExpression: z.string().nullable().optional(),
+  given: z.array(z.string()).optional().nullable(),
+  required: z.string().optional().nullable(),
+  diagram: z.any().nullable().optional(),
+  options: z.array(z.object({
+    id: z.string(),
+    text: z.string()
+  })).length(4),
+  correctAnswer: z.string(),
+  explanation: z.string(),
+  solutionSteps: z.array(z.string()).default([]),
+  solutionExplanation: z.string().optional().nullable(),
+  generationLogic: z.any().optional().nullable(),
+  validationStatus: z.enum(['MATHEMATICALLY_VERIFIED', 'STRUCTURALLY_VALID', 'NEEDS_REVIEW', 'INVALID']).optional(),
+  points: z.number().default(1)
 });
 
-// ─── Full Question Schema ─────────────────────────────────────────────────────
 export const generatedQuestionsSchema = z.object({
-  questions: z.array(z.object({
-    id: z.string().optional(),
-    type: z.string(),
-    subject: z.string(),
-    topic: z.string(),
-    subtopic: z.string().optional(),
-    difficulty: z.string(),
-    gradeLevel: z.string(),
-    questionText: z.string(),
-    mathExpression: z.string().nullable(),
-    given: z.array(z.string()).optional().nullable(),
-    required: z.string().optional().nullable(),
-    diagram: z.any().nullable(),
-    options: z.array(z.object({
-      id: z.string(),
-      text: z.string()
-    })).length(4).optional(),
-    correctAnswer: z.string(),
-    explanation: z.string(),
-    solutionSteps: z.array(z.string()),
-    solutionExplanation: z.string().optional().nullable(),
-    generationLogic: generationLogicSchema.optional().nullable(),
-    points: z.number().default(1)
-  }))
+  questions: z.array(questionItemSchema)
 });
 
 export type GeneratedQuestions = z.infer<typeof generatedQuestionsSchema>;
+export type GeneratedQuestionItem = z.infer<typeof questionItemSchema>;
 
-// ─── Topic-Aware Prompt Rules ─────────────────────────────────────────────────
+// ─── Topic-Specific Rules ─────────────────────────────────────────────────────
 function getTopicRules(topic: string): string {
   const t = topic.toLowerCase();
 
   if (/هندس|مثلث|دائر|زاوي|محيط|مساح|إحداثي|ضلع|وتر/.test(t)) {
-    return `
-قواعد خاصة بالهندسة:
-- يجب تضمين كائن diagram بالرؤوس (vertices) والحواف (edges) إذا كانت الهندسة تحتاج رسمًا.
-- يجب أن تكون الإحداثيات منطقية وتُنتج شكلاً هندسيًا حقيقيًا (لا نقاط متراكبة).
-- أضلاع المثلث يجب أن تحقق متراجحة المثلث.
-- إذا كان المثلث قائم الزاوية (نظرية فيثاغورس)، فيجب أن يكون a²+b²=c² صحيحًا بدقة.
-- تسميات الأضلاع في labels يجب أن تطابق الأطوال الحقيقية المحسوبة من الإحداثيات.
-- لا تستخدم صورًا افتراضية غير قابلة للتحقق.`;
+    return `قواعد هندسة:
+- إذا كان السؤال يحتاج رسمًا، ضع كائن diagram برؤوس (vertices) وأضلاع (edges) وإحداثيات دقيقة.
+- فيثاغورس: a²+b²=c² بدقة تامة. أضلاع المثلث تحقق متراجحة المثلث.`;
   }
 
   if (/لوغاريتم|log/.test(t)) {
-    return `
-قواعد خاصة باللوغاريتمات:
-- الأساس يجب أن يكون أكبر من 0 وليس 1 (لا يوجد log_0 أو log_1).
-- المتغير (الحجة) يجب أن يكون أكبر من 0.
-- يجب أن تعطي أعداد القيم صحيحة وواضحة للطالب.
-- مثال صحيح: log_2(8) = 3 (لأن 2³ = 8).
-- لا تستخدم أساسًا غير موجود أو قيمًا سالبة في الحجة.`;
+    return `قواعد لوغاريتمات:
+- الأساس > 0 و != 1. المتغير > 0.
+- مثال: log_2(8) = 3 لأن 2³ = 8.`;
   }
 
   if (/متتالي|حسابي|هندسي/.test(t)) {
-    return `
-قواعد خاصة بالمتتاليات:
-- أذكر بوضوح: الحد الأول (a1)، الأساس المشترك (d) للحسابية أو النسبة الأساسية (r) للهندسية.
-- الحد المطلوب (n) يجب أن يكون صحيحًا موجبًا.
-- الإجابة الصحيحة يجب أن تتوافق مع الصيغة: a_n = a1 + (n-1)*d أو a_n = a1 * r^(n-1).
-- اجعل الأعداد بسيطة وإجابتها صحيحة.`;
+    return `قواعد متتاليات:
+- حدد الحد الأول (a1) والأساس (d للحسابية أو r للهندسية).
+- الصيغة: a_n = a1 + (n-1)*d أو a_n = a1 * r^(n-1).`;
   }
 
   if (/دال|مجال|نطاق|function/.test(t)) {
-    return `
-قواعد خاصة بالدوال:
-- حدد المجال والمدى بوضوح إذا كانا محدودين.
-- أي قيمة تعويض يجب أن تكون في مجال الدالة.
-- الإجابة يجب أن تتوافق مع قيمة الدالة الحقيقية عند النقطة المحددة.`;
+    return `قواعد دوال:
+- حدد المجال بدقة، وتأكد أن أي قيمة تعويض تنتمي للمجال.`;
   }
 
-  // Default: algebra / arithmetic
-  return `
-قواعد خاصة بالجبر والمعادلات:
-- إذا كانت المعادلة خطية (مثل: 2x + 5 = 17) فالإجابة يجب أن تُحقق المعادلة بالتعويض.
-- لا تستخدم معادلات ذات أكثر من حل واحد إلا إذا أشرت إلى ذلك صراحةً.
-- تحقق أن الإجابة الصحيحة ليست نفس قيمة أي خيار آخر من حيث القيمة العددية.`;
+  return `قواعد جبر ومعادلات:
+- تأكد أن الإجابة الصحيحة تحقق المعادلة بالتعويض المباشر، ولا تتكرر قيمة أي خيار.`;
 }
 
-// ─── Difficulty Rules ─────────────────────────────────────────────────────────
-function getDifficultyRules(difficulty: string): string {
-  const d = difficulty.toLowerCase();
-  if (/سهل|easy/.test(d)) {
-    return 'الصعوبة: سهل — السؤال يتطلب تطبيق خطوة واحدة مباشرة أو معرفة نظرية واحدة.';
-  }
-  if (/صع|hard/.test(d)) {
-    return 'الصعوبة: صعب — يتطلب دمج عدة مفاهيم أو تحويلات متعددة أو استنتاجات غير مباشرة.';
-  }
-  return 'الصعوبة: متوسط — يتطلب خطوتين أو أكثر من التفكير المنطقي المتسلسل.';
+// ─── Clean Prompt Builder ─────────────────────────────────────────────────────
+function buildSystemPrompt(topic: string, difficulty: string, grade: string, subject: string): string {
+  const topicRules = getTopicRules(topic);
+
+  return `أنت خبير رياضيات للمناهج العربية.
+مهمتك توليد سؤال اختيار من متعدد واحد (1) دقيق رياضياً بصيغة JSON فقط:
+{
+  "type": "multiple_choice",
+  "subject": "${subject}",
+  "topic": "${topic}",
+  "difficulty": "${difficulty}",
+  "gradeLevel": "${grade}",
+  "questionText": "نص السؤال باللغة العربية فقط بدون رموز LaTeX",
+  "mathExpression": "صيغة LaTeX الرياضية الخام إن وجدت (بدون $ أو \\( أو \\))",
+  "options": [
+    { "id": "A", "text": "الخيار الأول" },
+    { "id": "B", "text": "الخيار الثاني" },
+    { "id": "C", "text": "الخيار الثالث" },
+    { "id": "D", "text": "الخيار الرابع" }
+  ],
+  "correctAnswer": "A",
+  "explanation": "شرح رياضي موجز ومباشر لخطوات الحل",
+  "solutionSteps": ["الخطوة الأولى", "الخطوة النهائية"],
+  "points": 1
 }
 
-// ─── Generator Service ────────────────────────────────────────────────────────
+${topicRules}
+قواعد أساسية:
+1. الناتج JSON صالح 100% فقط بدون أي نصوص أو markdown خارجي.
+2. 4 خيارات حصرية بالمعرفات A, B, C, D وقيم غير متطابقة.
+3. correctAnswer حرف واحد من A/B/C/D.
+4. للكسور \\frac{a}{b}، للأسس x^2، للجذور \\sqrt{x}.`;
+}
+
+// ─── Robust JSON Parser ───────────────────────────────────────────────────────
+function extractAndParseJson(text: string): any {
+  let cleanText = text.trim();
+
+  // Strip reasoning blocks if any
+  if (cleanText.includes('</think>')) {
+    cleanText = cleanText.split('</think>')[1].trim();
+  }
+
+  // Strip markdown code blocks
+  const codeBlockMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch && codeBlockMatch[1]) {
+    cleanText = codeBlockMatch[1].trim();
+  } else {
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+    }
+  }
+
+  const parsed = JSON.parse(cleanText);
+
+  // If wrapped in questions array, unpack the single question or return object
+  if (parsed.questions && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+    return parsed.questions[0];
+  }
+
+  return parsed;
+}
+
+// ─── Single Question Generator with Isolated Validation & Retry ──────────────
+async function generateSingleQuestionWithRetry(
+  client: OpenRouterClient,
+  topic: string,
+  difficulty: string,
+  grade: string,
+  subject: string,
+  questionIndex: number,
+  customInstructions?: string,
+  maxAttempts = 3
+): Promise<{ question: GeneratedQuestionItem; tokensUsed: number }> {
+  const systemPrompt = buildSystemPrompt(topic, difficulty, grade, subject);
+  const customNote = customInstructions ? `تعليمات المعلم: ${customInstructions}. ` : '';
+
+  let totalTokens = 0;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const userPrompt = `قم بتوليد سؤال رياضيات مختلف ومميز رقم (${questionIndex}) في "${topic}" بمستوى "${difficulty}" للمرحلة "${grade}". ${customNote}JSON فقط.`;
+
+      const boundedTemp = Math.min(0.5, 0.2 + ((questionIndex % 4) * 0.05) + ((attempt - 1) * 0.05));
+
+      const response = await client.chatCompletion({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: boundedTemp,
+        max_tokens: 1800,
+        response_format: { type: 'json_object' }
+      });
+
+      totalTokens += response.usage?.total_tokens || 0;
+      const rawContent = response.choices?.[0]?.message?.content || (response.choices?.[0] as any)?.text || '';
+      if (!rawContent || rawContent.trim() === '') {
+        throw new Error('Empty response from AI model');
+      }
+
+      const parsedRaw = extractAndParseJson(rawContent);
+
+      // Normalize options if returned as string array
+      if (Array.isArray(parsedRaw.options) && parsedRaw.options.length === 4 && typeof parsedRaw.options[0] === 'string') {
+        parsedRaw.options = parsedRaw.options.map((opt: string, idx: number) => ({
+          id: ['A', 'B', 'C', 'D'][idx],
+          text: String(opt)
+        }));
+      }
+
+      if (typeof parsedRaw.correctAnswer === 'number') {
+        parsedRaw.correctAnswer = ['A', 'B', 'C', 'D'][parsedRaw.correctAnswer] || 'A';
+      }
+
+      parsedRaw.topic = parsedRaw.topic || topic;
+      parsedRaw.difficulty = parsedRaw.difficulty || difficulty;
+      parsedRaw.gradeLevel = parsedRaw.gradeLevel || grade;
+      parsedRaw.subject = parsedRaw.subject || subject;
+
+      // Validate structure with Zod
+      const structuredQ = questionItemSchema.parse(parsedRaw);
+
+      // Perform mathematical validation with ValidatorService
+      const validationResult = ValidatorService.validateSingle(structuredQ);
+
+      if (validationResult.status === 'INVALID') {
+        console.warn(`[GeneratorService] Question #${questionIndex} attempt ${attempt} INVALID: ${validationResult.issues.join(', ')}. Retrying...`);
+        lastError = new Error(`Validation failed: ${validationResult.issues.join(', ')}`);
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+
+      structuredQ.validationStatus = validationResult.status;
+      return { question: structuredQ, tokensUsed: totalTokens };
+    } catch (err: any) {
+      console.warn(`[GeneratorService] Question #${questionIndex} attempt ${attempt} error: ${err.message}`);
+      lastError = err;
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, 300 * attempt));
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to generate valid question #${questionIndex}`);
+}
+
+// ─── Controlled Concurrency Worker Pool ───────────────────────────────────────
+async function runParallelGeneration<T>(
+  tasks: (() => Promise<T>)[],
+  concurrencyLimit = 5
+): Promise<(T | null)[]> {
+  const results: (T | null)[] = new Array(tasks.length).fill(null);
+  let currentIndex = 0;
+
+  async function worker() {
+    while (currentIndex < tasks.length) {
+      const index = currentIndex++;
+      try {
+        results[index] = await tasks[index]();
+      } catch (err: any) {
+        console.error(`[GeneratorService] Task at index ${index} failed:`, err.message);
+        results[index] = null;
+      }
+    }
+  }
+
+  const workerCount = Math.min(concurrencyLimit, tasks.length);
+  const workers = Array.from({ length: workerCount }, () => worker());
+  await Promise.all(workers);
+
+  return results;
+}
+
+// ─── Public Generator Service ─────────────────────────────────────────────────
 export class GeneratorService {
+  /**
+   * Generates multiple MCQs using controlled parallel workers.
+   * Concurrency is capped at 5 for maximum throughput without exceeding rate limits.
+   */
   static async generateMCQ(
     topic: string,
     difficulty: string,
@@ -115,134 +262,75 @@ export class GeneratorService {
     }
   ): Promise<{ data: GeneratedQuestions; tokensUsed: number }> {
     const client = new OpenRouterClient();
-    const topicRules = getTopicRules(topic);
-    const difficultyRules = getDifficultyRules(difficulty);
-    const grade = extraContext?.gradeLevel || 'المستوى المناسب للموضوع';
+    const grade = extraContext?.gradeLevel || 'الصف الأول الثانوي';
     const subject = extraContext?.subject || 'رياضيات';
-    const customNote = extraContext?.customInstructions ? `\nتعليمات إضافية من المعلم: ${extraContext.customInstructions}` : '';
+    const customInstructions = extraContext?.customInstructions;
 
-    const systemPrompt = `أنت مؤلف أسئلة رياضيات متخصص ومحترف للمناهج العربية.
-مهمتك توليد ${count} أسئلة في موضوع "${topic}" (${subject}) بمستوى صعوبة "${difficulty}" للمرحلة: ${grade}.
+    console.log(`[GeneratorService] Starting parallel generation of ${count} questions (Concurrency: 5)...`);
+    const tStart = performance.now();
 
-الأسئلة يجب أن تكون دقيقة رياضياً وقابلة للتحقق المستقل.
-يجب أن تعيد الإجابة بصيغة JSON فقط — كائن يحتوي على مصفوفة "questions" — بدون أي نص قبله أو بعده.
+    // Create tasks for each question index
+    const tasks = Array.from({ length: count }, (_, i) => {
+      const questionIndex = i + 1;
+      return () => generateSingleQuestionWithRetry(
+        client,
+        topic,
+        difficulty,
+        grade,
+        subject,
+        questionIndex,
+        customInstructions
+      );
+    });
 
-كل سؤال يجب أن يتبع هذا المخطط بالضبط:
-{
-  "type": "multiple_choice",
-  "subject": "${subject}",
-  "topic": "${topic}",
-  "subtopic": "الموضوع الفرعي إن وجد",
-  "difficulty": "${difficulty}",
-  "gradeLevel": "${grade}",
-  "questionText": "نص السؤال باللغة العربية فقط — بدون أي معادلات LaTeX داخله",
-  "mathExpression": "التعبير الرياضي الرئيسي بصيغة LaTeX الخام (بدون \\( أو \\) أو $$ أو \\[ أو \\])",
-  "given": ["المعطى الأول", "المعطى الثاني"],
-  "required": "ما هو المطلوب إيجاده بوضوح",
-  "diagram": null,
-  "options": [
-    { "id": "A", "text": "الخيار الأول" },
-    { "id": "B", "text": "الخيار الثاني" },
-    { "id": "C", "text": "الخيار الثالث" },
-    { "id": "D", "text": "الخيار الرابع" }
-  ],
-  "correctAnswer": "A",
-  "explanation": "شرح موجز لطريقة الحل",
-  "solutionExplanation": "شرح تربوي واضح لطريقة الحل خطوة بخطوة بالعربية. هذا ليس تفكيرًا خفيًا — هو شرح يُقرأه المعلم والطالب.",
-  "solutionSteps": [
-    "الخطوة الأولى بصيغة LaTeX الخام",
-    "الخطوة الثانية",
-    "الخطوة النهائية"
-  ],
-  "generationLogic": {
-    "questionDesign": "لماذا تم تصميم السؤال بهذه الطريقة؟ (من منظور تربوي)",
-    "mathematicalMethod": "ما هي المهارة أو النظرية الرياضية التي يتوقع من الطالب تطبيقها؟",
-    "difficultyReason": "لماذا هذا السؤال بمستوى ${difficulty}؟",
-    "learningObjective": "الهدف التعليمي المحدد الذي يقيسه السؤال"
-  },
-  "points": 1
-}
+    // Execute with controlled worker pool (max concurrency = 5)
+    const taskResults = await runParallelGeneration(tasks, 5);
 
-${difficultyRules}
-${topicRules}
+    const questions: GeneratedQuestionItem[] = [];
+    let totalTokensUsed = 0;
 
-قواعد هامة جداً للجميع:
-1. لا تستخدم \\( أو \\) أو \\[ أو \\] أو $$ في أي حقل. اكتب تعبيرات LaTeX خالصة مباشرة.
-2. للكسور: \\frac{البسط}{المقام} — مثال: \\frac{x+2}{3}
-3. للأسس: x^{2} أو x^2
-4. للجذور: \\sqrt{25} أو \\sqrt[3]{8}
-5. يجب أن يكون هناك 4 خيارات بالضبط بالمعرفات A, B, C, D.
-6. correctAnswer يجب أن يكون حرفًا من A/B/C/D موجودًا في الخيارات.
-7. لا يجوز أن يكون خياران لهما نفس القيمة العددية.
-8. generationLogic هو تفسير تربوي موجز للمعلم — لا يحتوي على تفكير خفي داخلي.
-9. solutionExplanation هو شرح الحل الرياضي — يختلف عن generationLogic.
-10. لا تضع أي نص توضيحي قبل JSON أو بعده.${customNote}`;
+    for (const res of taskResults) {
+      if (res?.question) {
+        questions.push(res.question);
+        totalTokensUsed += res.tokensUsed || 0;
+      }
+    }
 
-    const userPrompt = `قم بتوليد ${count} سؤال في موضوع "${topic}" بمستوى "${difficulty}". 
-يجب أن يكون الناتج كائن JSON صالح بنسبة 100%، يبدأ بـ { وينتهي بـ }.`;
-
-    let attempts = 0;
-    while (attempts < 3) {
-      attempts++;
-      try {
-        const result = await client.chatCompletion({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.3,
-          response_format: { type: 'json_object' },
-        });
-
-        const text = result.choices?.[0]?.message?.content || '';
-        const tokensUsed = result.usage?.total_tokens || 0;
-
-        if (!text) throw new Error('No content from OpenRouter');
-
-        let jsonString = text.trim();
-
-        // Strip <think>...</think> blocks from reasoning models
-        if (jsonString.includes('</think>')) {
-          jsonString = jsonString.split('</think>')[1].trim();
-        }
-
-        // Strip markdown code fences
-        const jsonMatch = jsonString.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (jsonMatch && jsonMatch[1]) {
-          jsonString = jsonMatch[1].trim();
-        } else {
-          const braceMatch = jsonString.match(/\{[\s\S]*\}/);
-          if (braceMatch) jsonString = braceMatch[0];
-        }
-
-        const parsed = JSON.parse(jsonString);
-
-        // Normalize options format if LLM returns strings instead of objects
-        if (parsed.questions && Array.isArray(parsed.questions)) {
-          parsed.questions = parsed.questions.map((q: any) => {
-            if (q.options && Array.isArray(q.options) && q.options.length > 0 && typeof q.options[0] === 'string') {
-              q.options = q.options.map((opt: string, i: number) => ({
-                id: ['A', 'B', 'C', 'D'][i],
-                text: opt
-              }));
-            }
-            if (typeof q.correctAnswer === 'number') {
-              q.correctAnswer = ['A', 'B', 'C', 'D'][q.correctAnswer];
-            }
-            return q;
-          });
-        }
-
-        const validated = generatedQuestionsSchema.parse(parsed);
-        return { data: validated, tokensUsed };
-      } catch (error) {
-        console.warn(`[GeneratorService] Attempt ${attempts} failed:`, error);
-        if (attempts >= 3) {
-          throw new Error('Failed to generate valid JSON questions after 3 attempts.');
+    // If any question failed, attempt one final repair pass for missing slots
+    if (questions.length < count) {
+      const missingCount = count - questions.length;
+      console.warn(`[GeneratorService] Attempting recovery for ${missingCount} missing question(s)...`);
+      for (let m = 0; m < missingCount; m++) {
+        try {
+          const recovered = await generateSingleQuestionWithRetry(
+            client,
+            topic,
+            difficulty,
+            grade,
+            subject,
+            questions.length + 1,
+            customInstructions
+          );
+          if (recovered?.question) {
+            questions.push(recovered.question);
+            totalTokensUsed += recovered.tokensUsed || 0;
+          }
+        } catch {
+          // ignore recovery error
         }
       }
     }
 
-    throw new Error('Unexpected error in GeneratorService');
+    const duration = Math.round(performance.now() - tStart);
+    console.log(`[GeneratorService] Finished ${questions.length}/${count} questions in ${duration}ms (${(duration / 1000).toFixed(2)}s)`);
+
+    if (questions.length === 0) {
+      throw new Error('Failed to generate any valid questions');
+    }
+
+    return {
+      data: { questions },
+      tokensUsed: totalTokensUsed
+    };
   }
 }

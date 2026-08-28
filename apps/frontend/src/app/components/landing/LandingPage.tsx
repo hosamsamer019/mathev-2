@@ -7,6 +7,7 @@ import {
   GraduationCap, Target, Cpu, Lock
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import ScrollToTopButton from '../ui/ScrollToTopButton';
 
 const features = [
   {
@@ -163,18 +164,25 @@ export default function LandingPage() {
             <a href="#pricing" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">الأسعار</a>
             <a href="#testimonials" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">آراء المستخدمين</a>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => navigate('/external-exam')}
+              className="text-xs sm:text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 font-bold px-3 sm:px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-1"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              دخول امتحان بكود
+            </button>
             <button
               onClick={() => navigate('/login')}
-              className="text-sm text-brand-600 font-medium hover:text-brand-700 transition-colors px-4 py-2 rounded-lg hover:bg-brand-50"
+              className="text-sm text-brand-600 font-medium hover:text-brand-700 transition-colors px-3 py-2 rounded-lg hover:bg-brand-50"
             >
               تسجيل الدخول
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="text-sm bg-gradient-to-l from-brand-600 to-brand-accent-600 text-white px-5 py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity shadow-md"
+              className="text-sm bg-gradient-to-l from-brand-600 to-brand-accent-600 text-white px-4 sm:px-5 py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity shadow-md"
             >
-              ابدأ مجاناً
+              ابدأ الآن
             </button>
           </div>
         </div>
@@ -550,6 +558,7 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      <ScrollToTopButton />
     </div>
   );
 }

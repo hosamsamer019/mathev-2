@@ -32,7 +32,12 @@ export default function ExamsPage() {
   const COURSE_ID = 'clqzxyzcourse0001';
 
   useEffect(() => {
-    fetchExams();
+    const currentUser = JSON.parse(localStorage.getItem('edu-user') || '{}');
+    if (currentUser?.isGuest && currentUser?.guestAssessmentId) {
+      handleSelectExam(currentUser.guestAssessmentId);
+    } else {
+      fetchExams();
+    }
   }, []);
 
   const fetchExams = async () => {
@@ -134,8 +139,9 @@ export default function ExamsPage() {
         syncDraft();
       }, 30000); // 30 sec
 
-      // Tab switch detection
-      document.addEventListener('visibilitychange', handleTabSwitch);
+      // Tab switch and blur detection
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('blur', handleBlur);
 
     } catch (err: any) {
       console.error('API exam start failed:', err);
@@ -149,16 +155,34 @@ export default function ExamsPage() {
     }
   };
 
-  const handleTabSwitch = () => {
-    if (document.hidden && selectedExam && examState === 'running') {
-      examService.reportViolation(selectedExam, 'TAB_SWITCH')
-        .then(() => toast.warning('تحذير: تم تسجيل خروجك من صفحة الامتحان!'))
-        .catch((err: any) => {
-          if (err.response?.data?.message?.includes('Disqualified')) {
-            handleDisqualification();
-          }
-        });
+  const handlePageLeave = (eventType: 'TAB_SWITCH' | 'BLUR') => {
+    if (document.fullscreenElement) return;
+    if (examState !== 'running' || !selectedExam) return;
+
+    examService.reportViolation(selectedExam, eventType)
+      .then((res: any) => {
+        const violationCount = res.data?.violationCount || 0;
+        if (violationCount >= 3) {
+          handleDisqualification();
+        } else {
+          toast.warning(`تنبيه: لقد خرجت من شاشة الامتحان! هذه هي المخالفة رقم (${violationCount} من 3). سيتم إلغاء امتحانك في المخالفة الثالثة!`);
+        }
+      })
+      .catch((err: any) => {
+        if (err.response?.status === 403 || err.response?.data?.message?.includes('Disqualified') || err.response?.data?.message?.includes('cheating')) {
+          handleDisqualification();
+        }
+      });
+  };
+
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      handlePageLeave('TAB_SWITCH');
     }
+  };
+
+  const handleBlur = () => {
+    handlePageLeave('BLUR');
   };
 
   const syncDraft = () => {
@@ -190,7 +214,8 @@ export default function ExamsPage() {
   const cleanupExam = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (syncRef.current) clearInterval(syncRef.current);
-    document.removeEventListener('visibilitychange', handleTabSwitch);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('blur', handleBlur);
     stopCamera();
   };
 

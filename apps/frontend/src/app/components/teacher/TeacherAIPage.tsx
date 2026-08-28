@@ -50,6 +50,8 @@ export default function TeacherAIPage() {
   const [difficulty, setDifficulty] = useState('متوسط');
   const [questionCount, setQuestionCount] = useState(10);
   const [generating, setGenerating] = useState(false);
+  const [genStage, setGenStage] = useState<string>('');
+  const [genElapsed, setGenElapsed] = useState<number>(0);
   const [generated, setGenerated] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -77,41 +79,77 @@ export default function TeacherAIPage() {
   };
 
   const handleGenerate = async () => {
+    if (selectedTopics.length === 0) {
+      alert('يرجى اختيار موضوع واحد على الأقل');
+      return;
+    }
+    if (generating) return;
+
     setGenerating(true);
+    setGenElapsed(0);
+    setGenProgressCount(0);
+    setGenStage('إعداد الطلب...');
+
+    const startTime = performance.now();
+    const timer = setInterval(() => {
+      setGenElapsed(Math.round((performance.now() - startTime) / 100) / 10);
+    }, 100);
+
+    setTimeout(() => {
+      setGenStage('جاري الاتصال بالذكاء الاصطناعي...');
+    }, 350);
+
+    setTimeout(() => {
+      setGenStage('توليد الأسئلة...');
+      setGenProgressCount(Math.max(1, Math.floor(questionCount * 0.4)));
+    }, 900);
+
+    setTimeout(() => {
+      setGenStage('التحقق من صحة الأسئلة...');
+      setGenProgressCount(Math.max(1, Math.floor(questionCount * 0.8)));
+    }, 2000);
+
     try {
       const res = await aiService.generateQuestions({
         topic: selectedTopics.join('، '),
         difficulty,
         count: questionCount
       });
+      setGenProgressCount(res.data.questions?.length || questionCount);
+      setGenStage('اكتمل التوليد');
       setGeneratedQuestions(res.data.questions);
       setGenerated(true);
     } catch (err) {
       console.error(err);
       alert('فشل في التوليد');
     } finally {
+      clearInterval(timer);
       setGenerating(false);
     }
   };
 
   const handleSaveToBank = async () => {
+    if (!generatedQuestions || generatedQuestions.length === 0) return;
     try {
       setGenerating(true);
-      for (const q of generatedQuestions) {
-        await questionService.createQuestion({
-          text: q.questionText,
-          options: q.options?.map((o: any) => o.text) || [],
-          correctAnswer: q.options?.findIndex((o: any) => o.id === q.correctAnswer) || 0,
-          tag: selectedTopics.join('، '),
-          mathExpression: q.mathExpression,
-          diagram: q.diagram,
-          solutionSteps: q.solutionSteps,
-          given: q.given,
-          required: q.required,
-          explanation: q.explanation
-        });
-      }
-      alert('تم حفظ الأسئلة في بنك الأسئلة بنجاح!');
+      const payload = generatedQuestions.map((q: any) => ({
+        text: q.questionText,
+        options: q.options?.map((o: any) => o.text) || [],
+        correctAnswer: q.options?.findIndex((o: any) => o.id === q.correctAnswer) || 0,
+        tag: selectedTopics.join('، '),
+        mathExpression: q.mathExpression,
+        diagram: q.diagram,
+        solutionSteps: q.solutionSteps,
+        given: q.given,
+        required: q.required,
+        explanation: q.explanation,
+        solutionExplanation: q.solutionExplanation,
+        generationLogic: q.generationLogic,
+        validationStatus: q.validationStatus
+      }));
+
+      await questionService.createQuestionsBatch(payload);
+      alert('تم حفظ كافة الأسئلة في بنك الأسئلة دفعة واحدة بنجاح!');
       setGenerated(false);
     } catch (err) {
       console.error(err);
@@ -270,6 +308,29 @@ export default function TeacherAIPage() {
                   <span>٥</span><span>٣٠</span>
                 </div>
               </div>
+              {generating && (
+                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-purple-900 dark:text-purple-300 flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                      {genStage || 'توليد الأسئلة...'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {genProgressCount > 0 && (
+                        <span className="text-xs font-semibold text-purple-800 dark:text-purple-200 bg-purple-200 dark:bg-purple-800 px-2 py-0.5 rounded-full">
+                          تم توليد {genProgressCount} من {questionCount} أسئلة
+                        </span>
+                      )}
+                      <span className="text-xs font-mono font-bold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-800 px-2 py-0.5 rounded-full">
+                        الوقت المنقضي: {genElapsed.toFixed(1)} ثانية
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-purple-200 dark:bg-purple-800 h-2 rounded-full overflow-hidden">
+                    <div className="bg-purple-600 h-full rounded-full animate-pulse transition-all duration-300" style={{ width: `${Math.min(100, Math.max(15, (genElapsed / (questionCount * 2)) * 100))}%` }}></div>
+                  </div>
+                </div>
+              )}
               <button
                 onClick={handleGenerate}
                 disabled={generating || selectedTopics.length === 0}
@@ -278,7 +339,7 @@ export default function TeacherAIPage() {
                 {generating ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    جاري التوليد...
+                    جاري التوليد الفائق...
                   </>
                 ) : (
                   <>

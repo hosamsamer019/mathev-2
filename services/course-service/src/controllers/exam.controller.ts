@@ -4,7 +4,7 @@ import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
 import { io } from '../index.js';
 import { normalizeExamQuestions } from '../utils/question.helper.js';
-import { sanitizeQuestionsForStudent } from './assessment.controller.js';
+import { sanitizeQuestionsForStudent, generateExamAccessCode } from './assessment.controller.js';
 
 export const getAllExams = async (req: AuthRequest, res: Response) => {
   try {
@@ -37,6 +37,14 @@ export const getAllExams = async (req: AuthRequest, res: Response) => {
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    // Fetch corresponding assessments to include allowExternalStudents, examAccessCode, allowedIps
+    const examIds = exams.map(e => e.id);
+    const assessments = await db.assessment.findMany({
+      where: { id: { in: examIds } },
+      select: { id: true, allowExternalStudents: true, examAccessCode: true, allowedIps: true }
+    });
+    const assessmentMap = new Map(assessments.map(a => [a.id, a]));
     
     const mappedExams = exams.map(exam => {
       let status = 'available';
@@ -49,7 +57,15 @@ export const getAllExams = async (req: AuthRequest, res: Response) => {
         exam.questions = sanitizeQuestionsForStudent(exam.questions as any) as any;
       }
       const { attempts, ...rest } = exam as any;
-      return { ...rest, status, score };
+      const assessData = assessmentMap.get(exam.id);
+      return {
+        ...rest,
+        status,
+        score,
+        allowExternalStudents: assessData?.allowExternalStudents ?? false,
+        examAccessCode: assessData?.examAccessCode ?? null,
+        allowedIps: assessData?.allowedIps ?? null
+      };
     });
     
     const total = await db.exam.count({ where: whereClause });
@@ -102,12 +118,23 @@ export const getExamDetails = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    const assessData = await db.assessment.findUnique({
+      where: { id },
+      select: { allowExternalStudents: true, examAccessCode: true, allowedIps: true }
+    });
+
     const requesterRole = (req.user?.role || '').toUpperCase();
     if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
       exam.questions = sanitizeQuestionsForStudent(exam.questions as any) as any;
     }
 
-    res.json({ ...exam, attempts });
+    res.json({
+      ...exam,
+      allowExternalStudents: assessData?.allowExternalStudents ?? false,
+      examAccessCode: assessData?.examAccessCode ?? null,
+      allowedIps: assessData?.allowedIps ?? null,
+      attempts
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching exam details', error: error.message });
   }
@@ -118,13 +145,15 @@ import { z } from 'zod';
 
 const createExamSchema = z.object({
   title: z.string().min(2),
-  courseId: z.string().uuid(),
+  courseId: z.string().min(1),
   duration: z.number().min(5).optional(),
   requiresCamera: z.boolean().optional(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
   randomization: z.boolean().optional(),
   passingScore: z.number().optional(),
+  allowExternalStudents: z.boolean().optional(),
+  allowedIps: z.string().optional().nullable(),
   questions: z.array(z.object({
     id: z.union([z.number(), z.string()]),
     text: z.string(),
@@ -144,7 +173,7 @@ export const createExam = async (req: AuthRequest, res: Response) => {
     const requesterId = req.user?.userId;
 
     const validatedData = createExamSchema.parse(req.body);
-    const { title, courseId, duration, questions, requiresCamera, startTime, endTime, randomization, passingScore } = validatedData;
+    const { title, courseId, duration, questions, requiresCamera, startTime, endTime, randomization, passingScore, allowExternalStudents, allowedIps } = validatedData;
     
     const course = await db.course.findUnique({ where: { id: courseId } });
     if (!course) return res.status(404).json({ message: 'Course not found' });
@@ -169,6 +198,8 @@ export const createExam = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    const examAccessCode = allowExternalStudents ? generateExamAccessCode() : null;
+
     // Mirror to unified Assessment table
     await db.assessment.create({
       data: {
@@ -182,7 +213,11 @@ export const createExam = async (req: AuthRequest, res: Response) => {
         passingScore: exam.passingScore,
         randomization: exam.randomization,
         openAt: exam.startTime,
-        closeAt: exam.endTime
+        closeAt: exam.endTime,
+        allowExternalStudents: !!allowExternalStudents,
+        examAccessCode,
+        allowedIps: allowedIps || null,
+        status: 'PUBLISHED'
       }
     });
 
@@ -192,7 +227,12 @@ export const createExam = async (req: AuthRequest, res: Response) => {
     const { notifyCourseStudents } = await import('../utils/notification.helper.js');
     await notifyCourseStudents(courseId, 'امتحان جديد', `تم نشر امتحان جديد: ${title}`);
 
-    res.status(201).json(exam);
+    res.status(201).json({
+      ...exam,
+      allowExternalStudents: !!allowExternalStudents,
+      examAccessCode,
+      allowedIps: allowedIps || null
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
@@ -208,7 +248,7 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
     const requesterId = req.user?.userId;
 
     const validatedData = createExamSchema.parse(req.body);
-    const { title, courseId, duration, questions, requiresCamera, startTime, endTime, randomization, passingScore } = validatedData;
+    const { title, courseId, duration, questions, requiresCamera, startTime, endTime, randomization, passingScore, allowExternalStudents, allowedIps } = validatedData;
     
     // Ensure the exam exists
     const existing = await db.exam.findUnique({ where: { id }, include: { course: true } });
@@ -244,20 +284,51 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
       data: updateData
     });
 
+    let existingAssess = await db.assessment.findUnique({ where: { id } });
+    let examAccessCode = existingAssess?.examAccessCode;
+    if (allowExternalStudents && !examAccessCode) {
+      examAccessCode = generateExamAccessCode();
+    }
+
     // Mirror to unified Assessment table
     try {
-      await db.assessment.update({
-        where: { id },
-        data: {
-          ...(updateData.title && { title: updateData.title }),
-          ...(updateData.duration && { durationMinutes: updateData.duration }),
-          ...(updateData.questions && { questions: updateData.questions as any }),
-          ...(updateData.passingScore && { passingScore: updateData.passingScore }),
-          ...(updateData.randomization !== undefined && { randomization: updateData.randomization }),
-          ...(updateData.startTime !== undefined && { openAt: updateData.startTime }),
-          ...(updateData.endTime !== undefined && { closeAt: updateData.endTime })
-        }
-      });
+      if (existingAssess) {
+        await db.assessment.update({
+          where: { id },
+          data: {
+            ...(updateData.title && { title: updateData.title }),
+            ...(updateData.duration && { durationMinutes: updateData.duration }),
+            ...(updateData.questions && { questions: updateData.questions as any }),
+            ...(updateData.passingScore && { passingScore: updateData.passingScore }),
+            ...(updateData.randomization !== undefined && { randomization: updateData.randomization }),
+            ...(updateData.startTime !== undefined && { openAt: updateData.startTime }),
+            ...(updateData.endTime !== undefined && { closeAt: updateData.endTime }),
+            ...(allowExternalStudents !== undefined && { allowExternalStudents: !!allowExternalStudents }),
+            ...(allowedIps !== undefined && { allowedIps: allowedIps || null }),
+            ...(examAccessCode !== undefined && { examAccessCode })
+          }
+        });
+      } else {
+        await db.assessment.create({
+          data: {
+            id: updatedExam.id,
+            title: updatedExam.title,
+            type: 'EXAM',
+            courseId: updatedExam.courseId,
+            teacherId: existing.course.teacherId,
+            durationMinutes: updatedExam.duration,
+            questions: updatedExam.questions as any,
+            passingScore: updatedExam.passingScore,
+            randomization: updatedExam.randomization,
+            openAt: updatedExam.startTime,
+            closeAt: updatedExam.endTime,
+            allowExternalStudents: !!allowExternalStudents,
+            examAccessCode,
+            allowedIps: allowedIps || null,
+            status: 'PUBLISHED'
+          }
+        });
+      }
     } catch (err) {}
 
     io.to(`course:${updatedExam.courseId}`).emit('exam_updated', updatedExam);
@@ -266,7 +337,12 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
     const { notifyCourseStudents } = await import('../utils/notification.helper.js');
     await notifyCourseStudents(updatedExam.courseId, 'تحديث امتحان', `تم تحديث الامتحان: ${updatedExam.title}`);
 
-    res.json(updatedExam);
+    res.json({
+      ...updatedExam,
+      allowExternalStudents: !!allowExternalStudents,
+      examAccessCode,
+      allowedIps: allowedIps || null
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });

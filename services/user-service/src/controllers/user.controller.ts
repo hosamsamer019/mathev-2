@@ -170,6 +170,14 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
           gradeLevel: true,
           language: true,
           parentId: true,
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true
+            }
+          },
           centerGroupId: true,
           attendances: {
             select: { status: true }
@@ -238,6 +246,7 @@ const createUserSchema = z.object({
   parentName: z.string().optional().nullable(),
   parentEmail: z.string().email().optional().nullable(),
   parentPassword: z.string().min(6).optional().nullable(),
+  parentPhone: z.string().optional().nullable(),
   childId: z.string().uuid().optional().nullable(),
   academicLevel: z.enum(['PREP_1', 'PREP_2', 'PREP_3', 'SEC_1', 'SEC_2', 'SEC_3']).optional().nullable(),
   country: z.string().optional().nullable(),
@@ -254,6 +263,10 @@ const updateUserSchema = z.object({
   parentId: z.string().uuid().optional().nullable(),
   childId: z.string().uuid().optional().nullable(),
   centerGroupId: z.string().uuid().optional().nullable(),
+  parentName: z.string().optional().nullable(),
+  parentEmail: z.string().email().optional().nullable(),
+  parentPassword: z.string().min(6).optional().nullable(),
+  parentPhone: z.string().optional().nullable(),
   academicLevel: z.enum(['PREP_1', 'PREP_2', 'PREP_3', 'SEC_1', 'SEC_2', 'SEC_3']).optional().nullable(),
   country: z.string().optional().nullable(),
   educationLevel: z.string().optional().nullable(),
@@ -274,7 +287,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     }
 
     const validatedData = createUserSchema.parse(req.body);
-    const { name, email, password, role, parentId, centerGroupId, parentName, parentEmail, parentPassword, childId, academicLevel, country, educationLevel, gradeLevel, language } = validatedData;
+    const { name, email, password, role, parentId, centerGroupId, parentName, parentEmail, parentPassword, parentPhone, childId, academicLevel, country, educationLevel, gradeLevel, language } = validatedData;
     
     // Authorization Check
     if (role === 'ADMIN' || role === 'TEACHER') {
@@ -300,41 +313,46 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    let resolvedParentId = parentId;
+    const user = await db.$transaction(async (tx) => {
+      let resolvedParentId = parentId;
 
-    if (parentName && parentEmail && parentPassword) {
-      const existingParent = await db.user.findUnique({ where: { email: parentEmail } });
-      if (existingParent) {
-        resolvedParentId = existingParent.id;
-      } else {
-        const hashedParentPassword = await bcrypt.hash(parentPassword, 10);
-        const newParent = await db.user.create({
-          data: {
-            name: parentName,
-            email: parentEmail,
-            password: hashedParentPassword,
-            role: 'PARENT'
-          }
-        });
-        resolvedParentId = newParent.id;
+      if (parentName && parentEmail && parentPassword) {
+        const existingParent = await tx.user.findUnique({ where: { email: parentEmail } });
+        if (existingParent) {
+          resolvedParentId = existingParent.id;
+        } else {
+          const hashedParentPassword = await bcrypt.hash(parentPassword, 10);
+          const newParent = await tx.user.create({
+            data: {
+              name: parentName,
+              email: parentEmail,
+              password: hashedParentPassword,
+              phone: parentPhone || null,
+              role: 'PARENT'
+            }
+          });
+          resolvedParentId = newParent.id;
+        }
       }
-    }
 
-    const user = await db.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role as any,
-        academicLevel: academicLevel as any,
-        country: (country || null) as any,
-        educationLevel: (educationLevel || null) as any,
-        gradeLevel: (gradeLevel || null) as any,
-        ...(language ? { language } : {}),
-        ...(resolvedParentId ? { parent: { connect: { id: resolvedParentId } } } : {}),
-        ...(childId ? { children: { connect: { id: childId } } } : {}),
-        ...(role === 'CENTER_STUDENT' && centerGroupId ? { centerGroup: { connect: { id: centerGroupId } } } : {}),
-      }
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: role as any,
+          academicLevel: academicLevel as any,
+          country: (country || null) as any,
+          educationLevel: (educationLevel || null) as any,
+          gradeLevel: (gradeLevel || null) as any,
+          ...(language ? { language } : {}),
+          ...(resolvedParentId ? { parent: { connect: { id: resolvedParentId } } } : {}),
+          ...(childId ? { children: { connect: { id: childId } } } : {}),
+          ...(role === 'CENTER_STUDENT' && centerGroupId ? { centerGroup: { connect: { id: centerGroupId } } } : {}),
+        }
+      });
+
+      return newUser;
     });
 
     res.status(201).json({ message: 'User created successfully', user: sanitizeUser(user) });
@@ -366,7 +384,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     }
 
     const validatedData = updateUserSchema.parse(req.body);
-    const { name, email, role, parentId, centerGroupId, password, childId, academicLevel, country, educationLevel, gradeLevel, language } = validatedData;
+    const { name, email, role, parentId, centerGroupId, password, childId, academicLevel, country, educationLevel, gradeLevel, language, parentName, parentEmail, parentPassword, parentPhone } = validatedData;
     
     // Strict Academic Profile Authorization check
     if (requesterRole !== 'ADMIN') {
@@ -386,31 +404,87 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const updateData: any = {
-      name,
-      email,
-      role,
-      academicLevel,
-      country,
-      educationLevel,
-      gradeLevel,
-      language,
-      ...(requesterRole === 'ADMIN' && role ? { role } : {}),
-      ...(parentId !== undefined ? { parentId } : {}),
-      ...(childId !== undefined ? { children: { connect: { id: childId } } } : {}),
-      ...(centerGroupId !== undefined ? { centerGroupId } : {}),
-    };
+    const user = await db.$transaction(async (tx) => {
+      const userToUpdate = await tx.user.findUnique({
+        where: { id },
+        include: { parent: true }
+      });
+      if (!userToUpdate) throw new Error('User not found');
 
-    if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
-    }
+      let resolvedParentId = parentId;
 
-    // Clean up undefined fields
-    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+      if (parentName && parentEmail) {
+        const existingParent = await tx.user.findFirst({
+          where: { email: parentEmail }
+        });
 
-    const user = await db.user.update({
-      where: { id },
-      data: updateData
+        if (existingParent) {
+          const parentUpdateData: any = {
+            name: parentName,
+            phone: parentPhone || existingParent.phone
+          };
+          if (parentPassword) {
+            parentUpdateData.password = await bcrypt.hash(parentPassword, 10);
+          }
+          await tx.user.update({
+            where: { id: existingParent.id },
+            data: parentUpdateData
+          });
+          resolvedParentId = existingParent.id;
+        } else {
+          const hashedParentPassword = await bcrypt.hash(parentPassword || '123456', 10);
+          const newParent = await tx.user.create({
+            data: {
+              name: parentName,
+              email: parentEmail,
+              password: hashedParentPassword,
+              phone: parentPhone || null,
+              role: 'PARENT'
+            }
+          });
+          resolvedParentId = newParent.id;
+        }
+      } else if (userToUpdate.parentId && (parentName || parentPhone)) {
+        const parentUpdateData: any = {};
+        if (parentName) parentUpdateData.name = parentName;
+        if (parentPhone) parentUpdateData.phone = parentPhone;
+        if (parentPassword) parentUpdateData.password = await bcrypt.hash(parentPassword, 10);
+        
+        await tx.user.update({
+          where: { id: userToUpdate.parentId },
+          data: parentUpdateData
+        });
+      }
+
+      const updateData: any = {
+        name,
+        email,
+        academicLevel,
+        country,
+        educationLevel,
+        gradeLevel,
+        language,
+        ...(requesterRole === 'ADMIN' && role ? { role } : {}),
+        ...(centerGroupId !== undefined ? { centerGroupId } : {}),
+      };
+
+      if (password) {
+        updateData.password = await bcrypt.hash(password, 10);
+      }
+
+      if (resolvedParentId === null || resolvedParentId === '') {
+        updateData.parentId = null;
+      } else if (resolvedParentId) {
+        updateData.parentId = resolvedParentId;
+      }
+
+      Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+      const updated = await tx.user.update({
+        where: { id },
+        data: updateData
+      });
+      return updated;
     });
 
     res.json({ message: 'User updated successfully', user: sanitizeUser(user) });

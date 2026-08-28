@@ -177,3 +177,54 @@ export const deleteQuestion = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error deleting question' });
   }
 };
+
+const batchQuestionsSchema = z.object({
+  questions: z.array(questionSchema).min(1, 'At least 1 question is required')
+});
+
+export const createQuestionsBatch = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only teachers can create questions in the bank' });
+    }
+
+    const { questions } = batchQuestionsSchema.parse(req.body);
+    const creatorId = req.user.userId;
+
+    const created = await db.$transaction(
+      questions.map(data => 
+        db.questionBank.create({
+          data: {
+            creatorId,
+            text: data.text,
+            type: data.type,
+            options: data.options,
+            correctAnswer: data.correctAnswer,
+            topic: data.tag || null,
+            academicLevel: data.academicLevel as any,
+            country: (data.country || null) as any,
+            educationLevel: (data.educationLevel || null) as any,
+            gradeLevel: (data.gradeLevel || null) as any,
+            mathExpression: data.mathExpression,
+            diagram: data.diagram,
+            solutionSteps: data.solutionSteps,
+            given: data.given,
+            required: data.required,
+            explanation: data.explanation
+          }
+        })
+      )
+    );
+
+    res.status(201).json({
+      count: created.length,
+      questions: created.map(q => ({ ...q, tag: q.topic }))
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ errors: error.errors });
+    }
+    console.error('createQuestionsBatch error:', error);
+    res.status(500).json({ message: 'Error batch creating questions', error: error.message });
+  }
+};

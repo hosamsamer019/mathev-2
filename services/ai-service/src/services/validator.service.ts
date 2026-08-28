@@ -15,7 +15,7 @@ export interface ValidationResult {
 }
 
 // ─── Question shape used by validation ────────────────────────────────────────
-interface ValidatableQuestion {
+export interface ValidatableQuestion {
   type: string;
   topic: string;
   difficulty: string;
@@ -532,6 +532,13 @@ export function validateQuestion(q: ValidatableQuestion): ValidationResult {
 // PUBLIC API — Validate a batch (legacy compatible interface)
 // ─────────────────────────────────────────────────────────────────────────────
 export class ValidatorService {
+  /**
+   * Validates a single question with 3-level validation.
+   */
+  static validateSingle(q: ValidatableQuestion): ValidationResult {
+    return validateQuestion(q);
+  }
+
   /**
    * Validates a batch of generated questions.
    * Each question receives a validationStatus field.

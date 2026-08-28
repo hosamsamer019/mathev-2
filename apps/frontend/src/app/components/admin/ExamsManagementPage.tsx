@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Edit, Trash2, X, ExternalLink, Copy, Check } from 'lucide-react';
 import { examService } from '../../services/exam.service';
+import { courseService } from '../../services/course.service';
 import { MathContent } from '../ui/MathContent';
 
 export default function ExamsManagementPage() {
@@ -15,11 +16,14 @@ export default function ExamsManagementPage() {
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [questionForm, setQuestionForm] = useState<{ text: string, type: string, options: string[], correct: any }>({ text: '', type: 'multiple_choice', options: ['', '', '', ''], correct: 0 });
   const [exams, setExams] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [externalAttempts, setExternalAttempts] = useState<any[]>([]);
+  const [attemptsTab, setAttemptsTab] = useState<'registered'|'external'>('registered');
 
   // Form State
   const [formData, setFormData] = useState<any>({ 
-    title: '', courseId: '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: ''
+    title: '', courseId: '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: '', allowExternalStudents: false, allowedIps: ''
   });
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -27,11 +31,22 @@ export default function ExamsManagementPage() {
 
   useEffect(() => {
     fetchExams();
+    fetchCourses();
   }, []);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const res = await courseService.getCourses();
+      const courseList = res.data?.data ? res.data.data : Array.isArray(res.data) ? res.data : [];
+      setCourses(courseList);
+    } catch (err) {
+      console.error('Failed to fetch courses', err);
+    }
   };
 
   const fetchExams = async () => {
@@ -70,12 +85,14 @@ export default function ExamsManagementPage() {
     setEditingExam(exam);
     setFormData({
       title: exam.title || '',
-      courseId: exam.courseId || '',
+      courseId: exam.courseId || (courses.length > 0 ? courses[0].id : ''),
       duration: exam.duration || 60,
       passingScore: exam.passingScore || 50,
       randomization: exam.randomization || false,
       startTime: exam.startTime ? new Date(exam.startTime).toISOString().slice(0, 16) : '',
-      endTime: exam.endTime ? new Date(exam.endTime).toISOString().slice(0, 16) : ''
+      endTime: exam.endTime ? new Date(exam.endTime).toISOString().slice(0, 16) : '',
+      allowExternalStudents: exam.allowExternalStudents || false,
+      allowedIps: exam.allowedIps || ''
     });
     setValidationErrors({});
     setShowModal(true);
@@ -85,16 +102,42 @@ export default function ExamsManagementPage() {
     try {
       setIsSaving(true);
       setValidationErrors({});
+
+      const errors: Record<string, string> = {};
+      if (!formData.title || !formData.title.trim()) {
+        errors.title = 'عنوان الامتحان مطلوب';
+      }
+      if (!formData.courseId || !formData.courseId.trim()) {
+        errors.courseId = 'يرجى اختيار الدورة';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        showToast('يرجى ملء الحقول المطلوبة', 'error');
+        setIsSaving(false);
+        return;
+      }
+
+      const payload = {
+        ...formData,
+        duration: Number(formData.duration) || 60,
+        passingScore: Number(formData.passingScore) || 50,
+        startTime: formData.startTime ? new Date(formData.startTime).toISOString() : null,
+        endTime: formData.endTime ? new Date(formData.endTime).toISOString() : null,
+        allowExternalStudents: Boolean(formData.allowExternalStudents),
+        allowedIps: formData.allowedIps?.trim() || null
+      };
+
       if (editingExam) {
-        await examService.updateExam(editingExam.id, formData);
+        await examService.updateExam(editingExam.id, payload);
         showToast('تم التعديل بنجاح', 'success');
       } else {
-        await examService.createExam(formData);
-        showToast('تمت الإضافة بنجاح', 'success');
+        await examService.createExam(payload);
+        showToast('تمت إضافة الامتحان بنجاح', 'success');
       }
       setShowModal(false);
       setEditingExam(null);
-      setFormData({ title: '', courseId: '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: '' });
+      setFormData({ title: '', courseId: courses.length > 0 ? courses[0].id : '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: '', allowExternalStudents: false, allowedIps: '' });
       fetchExams();
     } catch (err: any) {
       console.error(err);
@@ -108,7 +151,7 @@ export default function ExamsManagementPage() {
         setValidationErrors(errors);
         showToast('يرجى مراجعة الحقول المطلوبة', 'error');
       } else {
-        showToast(err.response?.data?.message || 'حدث خطأ', 'error');
+        showToast(err.response?.data?.message || 'حدث خطأ أثناء الحفظ', 'error');
       }
     } finally {
       setIsSaving(false);
@@ -118,8 +161,13 @@ export default function ExamsManagementPage() {
   const handleViewAttempts = async (id: string) => {
     try {
       setLoading(true);
-      const res = await examService.getExamDetails(id);
-      setSelectedExamDetails(res.data);
+      const [detailsRes, externalRes] = await Promise.all([
+        examService.getExamDetails(id),
+        examService.getExternalResults(id).catch(() => ({ data: [] }))
+      ]);
+      setSelectedExamDetails(detailsRes.data);
+      setExternalAttempts(Array.isArray(externalRes.data) ? externalRes.data : []);
+      setAttemptsTab('registered');
       setShowAttemptsModal(true);
     } catch (err: any) {
       showToast('فشل في جلب تفاصيل الامتحان', 'error');
@@ -232,10 +280,21 @@ export default function ExamsManagementPage() {
         <button
           onClick={() => {
             setEditingExam(null);
-            setFormData({ title: '', courseId: '', duration: 60, passingScore: 50, randomization: false, startTime: '', endTime: '' });
+            setFormData({
+              title: '',
+              courseId: courses.length > 0 ? courses[0].id : '',
+              duration: 60,
+              passingScore: 50,
+              randomization: false,
+              startTime: '',
+              endTime: '',
+              allowExternalStudents: false,
+              allowedIps: ''
+            });
+            setValidationErrors({});
             setShowModal(true);
           }}
-          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
+          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 font-medium shadow-sm transition-colors"
         >
           <Plus className="w-5 h-5" />
           <span>إضافة امتحان</span>
@@ -258,7 +317,28 @@ export default function ExamsManagementPage() {
             
             {exams.map((exam) => (
               <tr key={exam.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 text-gray-900">{exam.title}</td>
+                <td className="py-3 px-4 text-gray-900">
+                  <div className="font-semibold">{exam.title}</div>
+                  {exam.allowExternalStudents && exam.examAccessCode && (
+                    <div className="mt-1 flex items-center gap-2 flex-wrap">
+                      <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded font-mono font-bold">
+                        كود: {exam.examAccessCode}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const link = `${window.location.origin}/external-exam?code=${exam.examAccessCode}`;
+                          navigator.clipboard.writeText(link);
+                          showToast('تم نسخ رابط الامتحان الخارجي', 'success');
+                        }}
+                        className="text-[11px] bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium transition-colors"
+                      >
+                        <Copy className="w-3 h-3" />
+                        نسخ الرابط
+                      </button>
+                    </div>
+                  )}
+                </td>
                 <td className="py-3 px-4 text-gray-600">{exam.course?.title || exam.courseId}</td>
                 <td className="py-3 px-4 text-gray-600">{exam._count?.attempts || 0}</td>
                 <td className="py-3 px-4">
@@ -294,8 +374,8 @@ export default function ExamsManagementPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">{editingExam ? 'تعديل امتحان' : 'إضافة امتحان جديد'}</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -305,26 +385,40 @@ export default function ExamsManagementPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الامتحان</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">عنوان الامتحان *</label>
                 <input
                   type="text"
+                  placeholder="مثال: امتحان التفاضل والتكامل الشامل"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 border ${validationErrors?.title ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
-                {validationErrors.title && <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>}
+                {validationErrors?.title && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.title}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">معرف الدورة (Course ID)</label>
-                <input
-                  type="text"
-                  placeholder="Enter Course ID"
-                  value={formData.courseId}
-                  onChange={(e) => setFormData({...formData, courseId: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.courseId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
-                />
-                {validationErrors.courseId && <p className="text-red-500 text-xs mt-1">{validationErrors.courseId}</p>}
+                <label className="block text-sm font-medium text-gray-700 mb-1">الدورة (الكورس) *</label>
+                {courses.length > 0 ? (
+                  <select
+                    value={formData.courseId}
+                    onChange={(e) => setFormData({...formData, courseId: e.target.value})}
+                    className={`w-full px-4 py-2 border ${validationErrors?.courseId ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500 bg-white`}
+                  >
+                    <option value="">-- اختر الدورة التعليمية --</option>
+                    {courses.map(c => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="أدخل معرف الدورة (Course ID)"
+                    value={formData.courseId}
+                    onChange={(e) => setFormData({...formData, courseId: e.target.value})}
+                    className={`w-full px-4 py-2 border ${validationErrors?.courseId ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  />
+                )}
+                {validationErrors?.courseId && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.courseId}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -379,6 +473,56 @@ export default function ExamsManagementPage() {
                 />
                 <label htmlFor="randomization" className="text-sm font-medium text-gray-700">ترتيب أسئلة عشوائي</label>
               </div>
+
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="allowExternalStudents"
+                  checked={formData.allowExternalStudents}
+                  onChange={(e) => setFormData({...formData, allowExternalStudents: e.target.checked})}
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                />
+                <label htmlFor="allowExternalStudents" className="text-sm font-medium text-gray-700">السماح للطلاب الخارجيين بالدخول</label>
+              </div>
+
+              {formData.allowExternalStudents && (
+                <div className="mt-3 space-y-3">
+                  {editingExam?.examAccessCode && (
+                    <div className="p-3.5 bg-purple-50 rounded-xl border border-purple-200">
+                      <span className="text-xs text-purple-800 font-semibold block mb-1">كود دخول ورابط الامتحان الخارجي:</span>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="font-mono font-bold text-purple-700 text-lg tracking-wider">{editingExam.examAccessCode}</span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(editingExam.examAccessCode);
+                              showToast('تم نسخ كود الامتحان بنجاح', 'success');
+                            }}
+                            className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-bold transition-colors"
+                          >
+                            نسخ الكود
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const link = `${window.location.origin}/external-exam?code=${editingExam.examAccessCode}`;
+                              navigator.clipboard.writeText(link);
+                              showToast('تم نسخ رابط الامتحان بنجاح', 'success');
+                            }}
+                            className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 font-bold transition-colors"
+                          >
+                            نسخ الرابط
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-gray-500 font-mono break-all bg-white/80 p-1.5 rounded border border-purple-100">
+                        {window.location.origin}/external-exam?code={editingExam.examAccessCode}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3 mt-6">
                 <button
@@ -527,42 +671,162 @@ export default function ExamsManagementPage() {
 
       {showAttemptsModal && selectedExamDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">محاولات الطلاب: {selectedExamDetails.title}</h2>
               <button onClick={() => setShowAttemptsModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
-            {selectedExamDetails.attempts?.length === 0 ? (
-               <p className="text-gray-500 text-center py-4">لا توجد محاولات حتى الآن.</p>
-            ) : (
-               <table className="w-full">
-                 <thead>
-                   <tr className="border-b bg-gray-50">
-                     <th className="py-2 px-4 text-right">الطالب</th>
-                     <th className="py-2 px-4 text-right">الدرجة</th>
-                     <th className="py-2 px-4 text-right">التاريخ</th>
-                     <th className="py-2 px-4 text-right">المخالفات</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {selectedExamDetails.attempts?.map((attempt: any) => (
-                     <tr key={attempt.id} className="border-b hover:bg-gray-50">
-                       <td className="py-2 px-4">{attempt.student?.name || 'غير معروف'}</td>
-                       <td className="py-2 px-4 font-bold text-indigo-600">{Math.round(attempt.score)}%</td>
-                       <td className="py-2 px-4 text-sm text-gray-600">{new Date(attempt.createdAt).toLocaleString('ar')}</td>
-                       <td className="py-2 px-4 text-sm">
-                          {attempt.violations && attempt.violations.length > 0 ? (
-                            <span className="text-red-600 font-bold">{attempt.violations.length} مخالفات</span>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-5 border-b border-gray-200">
+              <button
+                onClick={() => setAttemptsTab('registered')}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                  attemptsTab === 'registered'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                طلاب مسجلون ({selectedExamDetails.attempts?.length || 0})
+              </button>
+              <button
+                onClick={() => setAttemptsTab('external')}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                  attemptsTab === 'external'
+                    ? 'border-orange-500 text-orange-700 bg-orange-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                طلاب خارجيون ({externalAttempts.length})
+              </button>
+            </div>
+
+            {/* Registered Students Tab */}
+            {attemptsTab === 'registered' && (
+              selectedExamDetails.attempts?.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">لا توجد محاولات حتى الآن.</p>
+              ) : (
+                <table className="w-full text-right border-collapse">
+                  <thead>
+                    <tr className="border-b bg-gray-50 text-gray-700 text-sm font-semibold">
+                      <th className="py-3 px-4">الطالب</th>
+                      <th className="py-3 px-4">الدرجة</th>
+                      <th className="py-3 px-4">التاريخ</th>
+                      <th className="py-3 px-4">المخالفات / حالة الغش</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedExamDetails.attempts?.map((attempt: any) => (
+                      <tr key={attempt.id} className="border-b hover:bg-gray-50 text-gray-700 text-sm">
+                        <td className="py-3 px-4">
+                          <div className="font-semibold">{attempt.student?.name || 'غير معروف'}</div>
+                          {attempt.student?.phone && (
+                            <div className="text-xs text-gray-500 font-mono mt-0.5">{attempt.student.phone}</div>
+                          )}
+                          {attempt.ipAddress && (
+                            <div className="text-xs text-purple-600 font-mono mt-1">IP: {attempt.ipAddress}</div>
+                          )}
+                          {attempt.userAgent && (
+                            <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]" title={attempt.userAgent}>
+                              {attempt.userAgent}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-bold">
+                          {attempt.status === 'CHEATING' ? (
+                            <span className="text-red-600">0% (ملغى للغش)</span>
+                          ) : (
+                            <span className="text-indigo-600">{Math.round(attempt.percentage || 0)}%</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-500">
+                          {new Date(attempt.createdAt).toLocaleString('ar-EG')}
+                        </td>
+                        <td className="py-3 px-4 text-xs font-medium">
+                          {attempt.status === 'CHEATING' ? (
+                            <div className="text-red-600 font-bold">
+                              <div>رصد غش ({attempt.violationCount} مخالفات)</div>
+                              {attempt.cheatingReason && (
+                                <div className="text-xs font-normal text-red-500 mt-1 max-w-xs">{attempt.cheatingReason}</div>
+                              )}
+                            </div>
+                          ) : attempt.violationCount > 0 ? (
+                            <span className="text-yellow-600 font-bold">{attempt.violationCount} مخالفات</span>
                           ) : (
                             <span className="text-green-600">لا يوجد</span>
                           )}
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            )}
+
+            {/* External Students Tab */}
+            {attemptsTab === 'external' && (
+              externalAttempts.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">لا توجد محاولات من طلاب خارجيين حتى الآن.</p>
+              ) : (
+                <table className="w-full text-right border-collapse">
+                  <thead>
+                    <tr className="border-b bg-orange-50 text-gray-700 text-sm font-semibold">
+                      <th className="py-3 px-4">الاسم</th>
+                      <th className="py-3 px-4">الهاتف</th>
+                      <th className="py-3 px-4">IP المُرصود</th>
+                      <th className="py-3 px-4">الدرجة</th>
+                      <th className="py-3 px-4">الحالة</th>
+                      <th className="py-3 px-4">التاريخ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {externalAttempts.map((attempt: any) => (
+                      <tr key={attempt.id} className="border-b hover:bg-orange-50 text-gray-700 text-sm">
+                        <td className="py-3 px-4">
+                          <div className="font-semibold">{attempt.studentName}</div>
+                          {attempt.userAgent && (
+                            <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[180px]" title={attempt.userAgent}>
+                              {attempt.userAgent}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-xs font-mono text-gray-500">{attempt.phone || '—'}</td>
+                        <td className="py-3 px-4">
+                          {attempt.ipAddress ? (
+                            <span className="text-xs text-orange-700 font-mono bg-orange-100 px-1.5 py-0.5 rounded">{attempt.ipAddress}</span>
+                          ) : '—'}
+                        </td>
+                        <td className="py-3 px-4 font-bold">
+                          {attempt.status === 'CHEATING' ? (
+                            <span className="text-red-600">0% (ملغى)</span>
+                          ) : (
+                            <span className="text-indigo-600">{Math.round(attempt.percentage || 0)}%</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            attempt.status === 'GRADED' ? 'bg-green-100 text-green-800' :
+                            attempt.status === 'CHEATING' ? 'bg-red-100 text-red-800' :
+                            attempt.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {attempt.status === 'GRADED' ? 'تم التصحيح' :
+                             attempt.status === 'CHEATING' ? 'ملغى (غش)' :
+                             attempt.status === 'SUBMITTED' ? 'مُسلَّم' :
+                             attempt.status === 'IN_PROGRESS' ? 'جارٍ' :
+                             attempt.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-500">
+                          {new Date(attempt.createdAt).toLocaleString('ar-EG')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
             )}
           </div>
         </div>
