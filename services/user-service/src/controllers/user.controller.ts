@@ -353,7 +353,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       });
 
       return newUser;
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     res.status(201).json({ message: 'User created successfully', user: sanitizeUser(user) });
   } catch (error: any) {
@@ -485,7 +485,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
         data: updateData
       });
       return updated;
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     res.json({ message: 'User updated successfully', user: sanitizeUser(user) });
   } catch (error: any) {

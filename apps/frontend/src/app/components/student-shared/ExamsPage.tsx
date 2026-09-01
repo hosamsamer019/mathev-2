@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Clock, CheckCircle, AlertCircle, Camera, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { examService } from '../../services/exam.service';
@@ -131,23 +131,23 @@ export default function ExamsPage() {
 
     try {
       const res = await examService.startAttempt(selectedExam!);
-      const attempt = res.data;
+      const attemptData = res.data?.attempt || res.data;
 
       // Capture attempt ID for IDOR-safe violation reporting and BroadcastChannel scoping
-      setAttemptId(attempt?.id ?? attempt?.attempt?.id ?? null);
+      setAttemptId(attemptData?.id ?? null);
 
       // Restore existing violation count from server in case of refresh
-      if (attempt?.violationCount) {
-        setInitialViolationCount(attempt.violationCount);
+      if (attemptData?.violationCount) {
+        setInitialViolationCount(attemptData.violationCount);
       }
 
-      // If attempt already finished (refresh after submit), redirect to results
-      if (['SUBMITTED', 'GRADED', 'TIME_EXPIRED', 'CHEATING'].includes(attempt?.status)) {
-        if (attempt.status === 'CHEATING') {
+      // If attempt already finished or cheated (refresh after submit/cheating), handle state
+      if (['SUBMITTED', 'GRADED', 'TIME_EXPIRED', 'CHEATING'].includes(attemptData?.status) || attemptData?.cheatingDetected) {
+        if (attemptData?.status === 'CHEATING' || attemptData?.cheatingDetected) {
           setExamState('disqualified');
           return;
         }
-        const normalized = normalizeAssessmentResult(attempt);
+        const normalized = normalizeAssessmentResult(attemptData);
         setScore(normalized.percentage);
         setExamState('submitted');
         return;
@@ -155,10 +155,10 @@ export default function ExamsPage() {
 
       // Use server-authoritative expiresAt if available, else calculate
       let endTime: number;
-      if (attempt?.expiresAt) {
-        endTime = new Date(attempt.expiresAt).getTime();
+      if (attemptData?.expiresAt) {
+        endTime = new Date(attemptData.expiresAt).getTime();
       } else {
-        const startedAt = attempt?.createdAt ? new Date(attempt.createdAt).getTime() : Date.now();
+        const startedAt = attemptData?.createdAt ? new Date(attemptData.createdAt).getTime() : Date.now();
         const durationMs = (currentExam.duration || 60) * 60 * 1000;
         endTime = startedAt + durationMs;
       }
@@ -168,9 +168,9 @@ export default function ExamsPage() {
       setTimeLeft(remaining);
 
       // Restore saved answers from server if available
-      if (Array.isArray(attempt?.answers) && attempt.answers.length > 0) {
+      if (Array.isArray(attemptData?.answers) && attemptData.answers.length > 0) {
         const restored: Record<string, string> = {};
-        attempt.answers.forEach((a: any) => {
+        attemptData.answers.forEach((a: any) => {
           if (a.questionId && a.answer !== undefined) {
             restored[a.questionId] = String(a.answer);
           }
@@ -216,7 +216,12 @@ export default function ExamsPage() {
       questionId: qId,
       answer: val
     }));
-    examService.syncAttempt(selectedExam, formatted).catch(() => {});
+    examService.syncAttempt(selectedExam, formatted).catch((err: any) => {
+      if (err.response?.data?.code === 'EXAM_TIME_EXPIRED') {
+        toast.error('انتهى وقت الامتحان — جاري تسليم الإجابات...');
+        handleAutoSubmit();
+      }
+    });
   };
 
   const handleAutoSubmit = () => {

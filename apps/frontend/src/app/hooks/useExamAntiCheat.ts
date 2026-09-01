@@ -26,6 +26,12 @@ export function useExamAntiCheat({
   const [showMultiTabWarning, setShowMultiTabWarning] = useState(false);
   const lastViolationTimestampRef = useRef<number>(0);
   const bcRef = useRef<BroadcastChannel | null>(null);
+  const onDisqualifiedRef = useRef(onDisqualified);
+
+  // Keep latest onDisqualified callback in ref
+  useEffect(() => {
+    onDisqualifiedRef.current = onDisqualified;
+  }, [onDisqualified]);
 
   // Sync initial count if it changes externally (e.g. data loaded from API)
   useEffect(() => {
@@ -40,12 +46,11 @@ export function useExamAntiCheat({
 
     // VISIBILITY_VISIBLE is informational only — record but never triggers deduplication cooldown
     if (type === 'VISIBILITY_VISIBLE') {
-      // Fire and forget
       examService.reportViolation(assessmentId, type).catch(() => {});
       return;
     }
 
-    // Deduplication window: skip if we already reported a counting violation within the window
+    // Deduplication window: skip if we already reported a counting violation within the window (800ms)
     if (now - lastViolationTimestampRef.current < VIOLATION_DEBOUNCE_MS) {
       return;
     }
@@ -53,24 +58,28 @@ export function useExamAntiCheat({
 
     examService.reportViolation(assessmentId, type)
       .then((res: any) => {
-        const nextCount = res.data?.violationCount ?? (violationCount + 1);
-        setViolationCount(nextCount);
-
-        if (nextCount >= 3 || res.data?.status === 'CHEATING') {
-          onDisqualified();
-        } else {
-          toast.warning(`تحذير: تم رصد مغادرة شاشة الامتحان! مخالفة (${nextCount} من 3). سيتم إلغاء الامتحان فوراً عند المخالفة الثالثة!`);
-        }
+        const serverCount = res.data?.violationCount;
+        setViolationCount(prev => {
+          const nextCount = serverCount ?? (prev + 1);
+          if (nextCount >= 3 || res.data?.status === 'CHEATING' || res.data?.isDisqualified) {
+            onDisqualifiedRef.current();
+          } else {
+            toast.warning(`تحذير: تم رصد مغادرة شاشة الامتحان! مخالفة (${nextCount} من 3). سيتم إلغاء الامتحان فوراً عند المخالفة الثالثة!`);
+          }
+          return nextCount;
+        });
       })
       .catch((err: any) => {
         if (err.response?.status === 403 || err.response?.data?.message?.includes('CHEATING') || err.response?.data?.message?.includes('cheating')) {
-          onDisqualified();
+          onDisqualifiedRef.current();
         }
       });
-  }, [assessmentId, enabled, violationCount, onDisqualified]);
+  }, [assessmentId, enabled]);
 
   useEffect(() => {
-    if (!enabled || !assessmentId || !studentIdentifier) return;
+    if (!enabled || !assessmentId) return;
+
+    const effectiveIdentifier = studentIdentifier || attemptId || 'active-student';
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -91,8 +100,8 @@ export function useExamAntiCheat({
     // Multi-tab detection via BroadcastChannel
     if (typeof BroadcastChannel !== 'undefined') {
       const channelName = attemptId 
-        ? `${BC_CHANNEL}_${assessmentId}_${attemptId}_${studentIdentifier}`
-        : `${BC_CHANNEL}_${assessmentId}_${studentIdentifier}`;
+        ? `${BC_CHANNEL}_${assessmentId}_${attemptId}_${effectiveIdentifier}`
+        : `${BC_CHANNEL}_${assessmentId}_${effectiveIdentifier}`;
         
       const bc = new BroadcastChannel(channelName);
       bcRef.current = bc;

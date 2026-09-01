@@ -184,14 +184,19 @@ export const startAssessment = async (req: AuthRequest, res: Response) => {
 
     const studentId = req.user!.userId;
 
+    const assessment = await db.assessment.findUnique({ where: { id: assessmentId } });
+    if (!assessment) return res.status(404).json({ message: 'Assessment not found' });
+
+    const authError = await validateEnrollment(studentId, req.user!.role, assessment.courseId, req.user!.isGuest, assessment.id);
+    if (authError) {
+      let message = 'Unauthorized';
+      if (authError === 'NOT_ENROLLED') message = 'Student is not enrolled in this assessment\'s course';
+      if (authError === 'STUDENT_ROLE_REQUIRED') message = 'Student role is required';
+      return res.status(403).json({ message, code: authError });
+    }
+
     // Use Prisma transaction to prevent race conditions during start
     const result = await db.$transaction(async (tx) => {
-      const assessment = await tx.assessment.findUnique({ where: { id: assessmentId } });
-      if (!assessment) throw new Error('Assessment not found');
-      
-      const authError = await validateEnrollment(studentId, req.user!.role, assessment.courseId, req.user!.isGuest, assessment.id);
-      if (authError) throw new Error(`AUTH_ERROR:${authError}`);
-
       const now = new Date();
 
       if (assessment.openAt && now < assessment.openAt) {
@@ -238,7 +243,7 @@ export const startAssessment = async (req: AuthRequest, res: Response) => {
         }
       });
       return { attempt: newAttempt, isNew: true };
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     res.json(result);
   } catch (error: any) {
@@ -364,11 +369,10 @@ export const submitAssessment = async (req: AuthRequest, res: Response) => {
       if (attempt.status === 'CHEATING' || attempt.cheatingDetected) {
         throw new Error('CHEATING_LOCKOUT');
       }
-      // For external students: idempotently return the existing finalized attempt
-      // so the frontend can recover the result screen after auto-submit fires.
+      // Idempotently return the existing finalized attempt
+      // so the frontend can recover the result screen after auto-submit or re-submit.
       if (['SUBMITTED', 'GRADED', 'TIME_EXPIRED'].includes(attempt.status)) {
-        if (isExternal) return attempt;
-        throw new Error('ATTEMPT_ALREADY_FINISHED');
+        return attempt;
       }
 
       const now = new Date();
@@ -462,10 +466,13 @@ export const submitAssessment = async (req: AuthRequest, res: Response) => {
         });
       }
       return updated;
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     res.json(result);
   } catch (error: any) {
+    if (error.message === 'Attempt not found') {
+      return res.status(404).json({ message: 'Attempt not found' });
+    }
     if (error.message === 'CHEATING_LOCKOUT') {
       return res.status(403).json({ message: 'Cannot submit, cheating attempt has been locked' });
     }
@@ -897,7 +904,7 @@ export const reportAssessmentViolation = async (req: AuthRequest, res: Response)
       }
 
       return updatedAttempt;
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     res.json({
       violationCount: result.violationCount,
@@ -907,6 +914,9 @@ export const reportAssessmentViolation = async (req: AuthRequest, res: Response)
 
   } catch (error: any) {
     console.error('reportAssessmentViolation error:', error);
+    if (error.message === 'Attempt not found') {
+      return res.status(404).json({ message: 'Attempt not found' });
+    }
     if (error.message === 'ATTEMPT_ALREADY_FINISHED_OR_LOCKED') {
       return res.status(403).json({ message: 'Cannot report violation, attempt already finished or terminated' });
     }
