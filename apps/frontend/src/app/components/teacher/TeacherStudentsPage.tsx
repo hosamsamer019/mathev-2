@@ -35,7 +35,7 @@ export default function TeacherStudentsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await userService.getUsers({});
+      const res = await userService.getUsers({ limit: 1000 });
       const allUsers = Array.isArray(res.data) ? res.data : [];
       // Filter for only student roles
       const studentData = allUsers.filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT');
@@ -71,7 +71,37 @@ export default function TeacherStudentsPage() {
   };
 
   const handleExport = async () => {
-    alert('عذراً، ميزة تصدير البيانات قيد التطوير حالياً (قريباً).');
+    try {
+      const headers = ['اسم الطالب', 'الصف', 'نوع التسجيل', 'متوسط الأداء', 'الامتحانات', 'الواجبات', 'نسبة الحضور', 'الحالة'];
+      
+      const csvRows = filtered.map(s => {
+        return [
+          `"${s.name}"`,
+          `"${s.grade}"`,
+          `"${s.type}"`,
+          `"${s.avg}٪"`,
+          `"${s.exams}٪"`,
+          `"${s.homework}٪"`,
+          `"${s.attendance}${s.attendance !== 'لا توجد بيانات' ? '٪' : ''}"`,
+          `"${s.status}"`
+        ].join(',');
+      });
+      
+      const csvContent = [headers.join(','), ...csvRows].join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `تقرير_الطلاب_${new Date().toLocaleDateString('ar-EG')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Export failed', err);
+      alert('حدث خطأ أثناء تصدير البيانات');
+    }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {

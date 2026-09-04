@@ -3,6 +3,7 @@ import { User, Mail, Phone, MapPin, Edit, Save, Camera, Award, Star, BookOpen, U
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/user.service';
+import { analyticsService } from '../../services/analytics.service';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function TeacherProfilePage() {
@@ -11,6 +12,7 @@ export default function TeacherProfilePage() {
   const { language, setLanguage } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [stats, setStats] = useState({ students: 0, courses: 0, rating: '٠.٠' });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,6 +30,15 @@ export default function TeacherProfilePage() {
         city: (user as any).governorate || '',
         bio: '' // Can be loaded from user if exists
       });
+      
+      analyticsService.getTeacherAnalytics(user.id).then(res => {
+        const overview = res.data.overview;
+        setStats({
+          students: overview?.activeStudents || 0,
+          courses: overview?.totalCourses || 0,
+          rating: '٤.٩' // Rating is usually calculated from reviews, keeping placeholder for rating if not available
+        });
+      }).catch(err => console.error(err));
     }
   }, [user]);
 
@@ -51,9 +62,9 @@ export default function TeacherProfilePage() {
   const inputClass = `w-full px-4 py-2.5 rounded-xl border text-sm ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-emerald-500`;
 
   const achievements = [
-    { icon: Users, label: '١٢٠ طالب نشط', color: 'text-blue-600 bg-blue-100' },
-    { icon: Star, label: '٤.٩ تقييم متوسط', color: 'text-yellow-600 bg-yellow-100' },
-    { icon: BookOpen, label: '٤ دورات منشورة', color: 'text-green-600 bg-green-100' },
+    { icon: Users, label: `${stats.students} طالب نشط`, color: 'text-blue-600 bg-blue-100' },
+    { icon: Star, label: `${stats.rating} تقييم متوسط`, color: 'text-yellow-600 bg-yellow-100' },
+    { icon: BookOpen, label: `${stats.courses} دورات منشورة`, color: 'text-green-600 bg-green-100' },
     { icon: Award, label: 'أفضل معلم ٢٠٢٦', color: 'text-purple-600 bg-purple-100' },
   ];
 
@@ -122,6 +133,13 @@ export default function TeacherProfilePage() {
               <div className="relative">
                 <Mail className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
                 <input value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} readOnly={!editing} className={`${inputClass} pr-10 ${!editing ? 'cursor-default' : ''}`} />
+              </div>
+            </div>
+            <div>
+              <label className={`text-sm font-medium ${textSecondary} block mb-2`}>معرف الحساب (Account ID)</label>
+              <div className="relative flex items-center">
+                <User className={`absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 ${textSecondary}`} />
+                <input value={user?.id || ''} readOnly className={`${inputClass} pr-10 font-mono text-left cursor-text select-all`} dir="ltr" />
               </div>
             </div>
             <div>

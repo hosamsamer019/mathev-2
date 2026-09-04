@@ -228,6 +228,21 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                معرف الحساب (Account ID)
+              </label>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-900 font-mono text-sm bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 select-all cursor-text flex-1">
+                    {user?.id}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mr-8 mt-1">يمكن استخدام هذا المعرف لربط حساب الطالب مع ولي الأمر.</p>
+              </div>
+            </div>
+
             {editing && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

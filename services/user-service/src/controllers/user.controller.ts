@@ -127,18 +127,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
     }
 
     const requesterRole = (req.user?.role || '').toUpperCase();
-    if (requesterRole === 'TEACHER') {
-      whereClause = {
-        ...whereClause,
-        enrollments: {
-          some: {
-            course: {
-              teacherId: req.user?.userId
-            }
-          }
-        }
-      };
-    } else if (requesterRole === 'PARENT') {
+    if (requesterRole === 'PARENT') {
       whereClause = {
         ...whereClause,
         OR: [
@@ -146,7 +135,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
           { parentId: req.user?.userId }
         ]
       };
-    } else if (requesterRole !== 'ADMIN') {
+    } else if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
       // Students and others can only see their own record
       whereClause = {
         ...whereClause,

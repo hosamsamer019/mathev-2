@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Download, TrendingUp, Users, Award, BookOpen, Loader2 } from 'lucide-react';
 import { analyticsService } from '../../services/analytics.service';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
 
 export default function ReportsPage() {
   const [data, setData] = useState<any>(null);
@@ -35,16 +37,14 @@ export default function ReportsPage() {
     if (!reportRef.current) return;
     setExporting(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
-      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = await toPng(reportRef.current, { cacheBust: true, style: { background: 'white' } });
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = (reportRef.current.offsetHeight * pdfWidth) / reportRef.current.offsetWidth;
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`تقرير_المنصة_${new Date().toLocaleDateString('ar-EG')}.pdf`);
     } catch (err) {
+      console.error('PDF Export Error:', err);
       showToast('فشل تصدير PDF', 'error');
     } finally {
       setExporting(false);
@@ -156,9 +156,7 @@ export default function ReportsPage() {
                 data={formattedRoleData}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
+                outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -167,7 +165,7 @@ export default function ReportsPage() {
                 ))}
               </Pie>
               <Tooltip />
-              <Legend />
+              <Legend formatter={(value, entry: any) => <span className="text-gray-700 font-medium mr-1">{value} ({entry.payload.value})</span>} />
             </PieChart>
           </ResponsiveContainer>
         </div>

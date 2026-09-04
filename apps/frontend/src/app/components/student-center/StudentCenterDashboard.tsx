@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Home, Video, FileText, ClipboardCheck, MessageCircle, User, Brain, Target } from 'lucide-react';
+import { Home, Video, FileText, ClipboardCheck, MessageCircle, User, Brain, Target, BookOpen, BarChart3 } from 'lucide-react';
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
-import LessonsPage from './LessonsPage';
 import HomeworkPage from '../student-shared/HomeworkPage';
 import ExamsPage from '../student-shared/ExamsPage';
 import ChatbotPage from '../student-shared/ChatbotPage';
@@ -13,11 +12,20 @@ import { useState, useEffect } from 'react';
 import { userService } from '../../services/user.service';
 import { homeworkService } from '../../services/homework.service';
 
+import StudentHomePage from './StudentHomePage';
+import CoursesPage from './CoursesPage';
+import CourseDetailsPage from './CourseDetailsPage';
+import VideosPage from './VideosPage';
+import VideoPlayerPage from './VideoPlayerPage';
+import ResultsPage from './ResultsPage';
+
 const menuItems: MenuItem[] = [
   { path: '/student/center/home', icon: Home, label: 'الرئيسية' },
-  { path: '/student/center/lessons', icon: Video, label: 'الدروس والفيديوهات' },
+  { path: '/student/center/courses', icon: BookOpen, label: 'دوراتي' },
+  { path: '/student/center/videos', icon: Video, label: 'الدروس والفيديوهات' },
   { path: '/student/center/homework', icon: FileText, label: 'الواجبات', badge: 1 },
   { path: '/student/center/exams', icon: ClipboardCheck, label: 'الامتحانات' },
+  { path: '/student/center/results', icon: BarChart3, label: 'نتائجي' },
   { path: '/student/center/solver', icon: Brain, label: 'حل المسائل AI' },
   { path: '/student/center/learning-path', icon: Target, label: 'مسار التعلم' },
   { path: '/student/center/chatbot', icon: MessageCircle, label: 'المساعد الذكي' },
@@ -60,11 +68,15 @@ export default function StudentCenterDashboard() {
       logoutPath="/login"
     >
       <Routes>
-        <Route path="/" element={<Navigate to="/student/center/lessons" replace />} />
-        <Route path="/home" element={<LessonsPage />} />
-        <Route path="/lessons" element={<LessonsPage />} />
+        <Route path="/" element={<Navigate to="/student/center/home" replace />} />
+        <Route path="/home" element={<StudentHomePage />} />
+        <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
+        <Route path="/videos" element={<VideosPage />} />
+        <Route path="/videos/:videoId" element={<VideoPlayerPage />} />
         <Route path="/homework" element={<HomeworkPage />} />
         <Route path="/exams" element={<ExamsPage />} />
+        <Route path="/results" element={<ResultsPage />} />
         <Route path="/solver" element={<AIMathSolverPage />} />
         <Route path="/learning-path" element={<AdaptiveLearningPage />} />
         <Route path="/chatbot" element={<ChatbotPage />} />

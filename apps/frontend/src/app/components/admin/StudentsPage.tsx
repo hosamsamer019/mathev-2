@@ -60,6 +60,7 @@ export default function StudentsPage() {
     parentName: '',
     parentEmail: '',
     parentPassword: '',
+    parentPhone: '',
     country: 'EG',
     educationLevel: '',
     gradeLevel: ''
@@ -181,6 +182,9 @@ export default function StudentsPage() {
         payload.educationLevel = null;
         payload.gradeLevel = null;
       }
+      if (!payload.centerGroupId) payload.centerGroupId = null;
+      if (!payload.childId) payload.childId = null;
+      if (!payload.parentId) payload.parentId = null;
 
       if (editingUser) {
         await userService.updateUser(editingUser.id, payload);
@@ -537,18 +541,7 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {formData.role === 'CENTER_STUDENT' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">معرف مجموعة السنتر (Center Group ID)</label>
-                  <input
-                    type="text"
-                    placeholder="Enter Center Group ID"
-                    value={formData.centerGroupId}
-                    onChange={(e) => setFormData({...formData, centerGroupId: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-              )}
+
 
               <div className="flex gap-3 mt-6">
                 <button

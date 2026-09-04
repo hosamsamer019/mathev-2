@@ -27,7 +27,7 @@ const router = Router();
 router.get('/', verifyToken, getCourses);
 router.get('/available', verifyToken, getAvailableCourses);
 router.post('/:id/enroll', verifyToken, enrollCourse);
-router.get('/lessons', getLessons);
+router.get('/lessons', verifyToken, getLessons);
 router.get('/lessons/:id', verifyToken, getLessonDetails);
 router.get('/:id', verifyToken, getCourseDetails);
 router.post('/lessons/:id/quiz/:quizId/submit', verifyToken, submitLessonQuiz);

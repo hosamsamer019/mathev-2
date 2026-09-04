@@ -118,12 +118,47 @@ export const getAvailableCourses = async (req: AuthRequest, res: Response) => {
       }
     };
 
+    const orConditions: any[] = [];
+    
     if (student.country && student.educationLevel && student.gradeLevel) {
-      whereClause.country = student.country;
-      whereClause.educationLevel = student.educationLevel;
-      whereClause.gradeLevel = student.gradeLevel;
-    } else if (student.academicLevel) {
-      whereClause.academicLevel = student.academicLevel;
+      orConditions.push({
+        country: student.country,
+        educationLevel: student.educationLevel,
+        gradeLevel: student.gradeLevel
+      });
+      const reverseMap: Record<string, Record<string, string>> = {
+        'MIDDLE': { 'FIRST_GRADE': 'PREP_1', 'SECOND_GRADE': 'PREP_2', 'THIRD_GRADE': 'PREP_3' },
+        'SECONDARY': { 'FIRST_GRADE': 'SEC_1', 'SECOND_GRADE': 'SEC_2', 'THIRD_GRADE': 'SEC_3' }
+      };
+      const mappedAcLevel = reverseMap[student.educationLevel]?.[student.gradeLevel];
+      if (mappedAcLevel) {
+        orConditions.push({ academicLevel: mappedAcLevel });
+      }
+      orConditions.push({ category: student.gradeLevel });
+    }
+
+    if (student.academicLevel) {
+      orConditions.push({ academicLevel: student.academicLevel });
+      const levelMap: Record<string, { edu: string, grade: string }> = {
+        'PREP_1': { edu: 'MIDDLE', grade: 'FIRST_GRADE' },
+        'PREP_2': { edu: 'MIDDLE', grade: 'SECOND_GRADE' },
+        'PREP_3': { edu: 'MIDDLE', grade: 'THIRD_GRADE' },
+        'SEC_1': { edu: 'SECONDARY', grade: 'FIRST_GRADE' },
+        'SEC_2': { edu: 'SECONDARY', grade: 'SECOND_GRADE' },
+        'SEC_3': { edu: 'SECONDARY', grade: 'THIRD_GRADE' }
+      };
+      const mapped = levelMap[student.academicLevel];
+      if (mapped) {
+        orConditions.push({
+          educationLevel: mapped.edu,
+          gradeLevel: mapped.grade
+        });
+        orConditions.push({ category: mapped.grade });
+      }
+    }
+
+    if (orConditions.length > 0) {
+      whereClause.OR = orConditions;
     }
 
     const courses = await db.course.findMany({

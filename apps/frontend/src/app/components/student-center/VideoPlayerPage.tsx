@@ -646,7 +646,7 @@ export default function VideoPlayerPage() {
       )}
       <div className="container mx-auto p-6">
         <button
-          onClick={() => navigate('/student/online/videos')}
+          onClick={() => navigate('/student/center/videos')}
           className="text-white hover:text-gray-300 mb-4 flex items-center gap-2"
         >
           <ChevronRight className="w-4 h-4" />
@@ -1088,3 +1088,4 @@ export default function VideoPlayerPage() {
     </div>
   );
 }
+

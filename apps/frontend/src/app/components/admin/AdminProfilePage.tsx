@@ -85,6 +85,12 @@ export default function AdminProfilePage() {
               </div>
             )}
           </div>
+          <div>
+            <label className="block text-sm text-gray-500 mb-1">معرف الحساب (Account ID)</label>
+            <div className="flex items-center gap-2 text-gray-900 dark:text-white font-mono bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded border border-gray-200 dark:border-gray-600 select-all cursor-text">
+              <UserIcon className="w-5 h-5 text-gray-400" /> {user?.id}
+            </div>
+          </div>
         </div>
       </div>
 
