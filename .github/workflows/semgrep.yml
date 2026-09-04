@@ -19,12 +19,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - run: semgrep ci --error --sarif --output=semgrep.sarif
-        env:
-          SEMGREP_RULES: p/ci p/security-audit p/secrets
-
+      - run: semgrep scan --config p/ci --config p/security-audit --config p/secrets --sarif --output semgrep.sarif
+      
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
-        if: always()
+        if: always() && hashFiles('semgrep.sarif') != ''

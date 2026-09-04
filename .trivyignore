@@ -1,0 +1,7 @@
+# Trivy ignore list
+
+# Reason: browserslist is a transitive build-time devDependency introduced by Vite/Tailwind in the frontend bundle.
+# It is entirely unused in the Node.js production runtime. 
+# Fixed version for this deep tree is unavailable, thus it is ignored to prevent blocking pipeline unnecessarily.
+GHSA-c83g-rgw3-j3cx
+GHSA-73wf-gq98-2v4g

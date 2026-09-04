@@ -20,21 +20,23 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm run install:all
+      - name: Enable Corepack & Install Dependencies
+        run: |
+          corepack enable pnpm
+          pnpm install
 
       - name: Lint Frontend
-        run: npm run test --prefix apps/frontend
+        run: pnpm --filter frontend run test
         continue-on-error: false
 
       - name: TypeScript Check (Services)
         run: |
-          npm run build --prefix services/auth-service
-          npm run build --prefix services/user-service
-          npm run build --prefix services/ai-service
-          npm run build --prefix services/course-service
-          npm run build --prefix services/analytics-service
-          npm run build --prefix services/video-worker
+          pnpm --filter auth-service run build
+          pnpm --filter user-service run build
+          pnpm --filter ai-service run build
+          pnpm --filter course-service run build
+          pnpm --filter analytics-service run build
+          pnpm --filter video-worker run build
         continue-on-error: false
 
       - name: Prisma Validation
