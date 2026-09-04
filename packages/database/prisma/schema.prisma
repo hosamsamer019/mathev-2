@@ -43,7 +43,7 @@ model User {
   videoUploads   VideoUpload[]
 
   // Unified Assessments
-  teacherAssessments Assessment[]       @relation("TeacherAssessments")
+  teacherAssessments Assessment[]        @relation("TeacherAssessments")
   assessmentAttempts AssessmentAttempt[]
 }
 
@@ -75,8 +75,8 @@ model Course {
   exams          Exam[]
   homeworks      Homework[]
   lessons        Lesson[]
-  
-  assessments    Assessment[]
+
+  assessments Assessment[]
 
   @@index([teacherId])
 }
@@ -95,19 +95,19 @@ model CourseEnrollment {
 }
 
 model Lesson {
-  id        String          @id @default(uuid())
-  title     String
-  videoUrl  String?
-  createdAt DateTime        @default(now())
+  id          String          @id @default(uuid())
+  title       String
+  videoUrl    String?
+  createdAt   DateTime        @default(now())
   publishedAt DateTime?
-  courseId  String
-  updatedAt DateTime        @updatedAt
-  pdfUrl    String?
-  Homework  Homework[]
-  course    Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  quizzes   LessonQuiz[]
-  progress  VideoProgress[]
-  
+  courseId    String
+  updatedAt   DateTime        @updatedAt
+  pdfUrl      String?
+  Homework    Homework[]
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  quizzes     LessonQuiz[]
+  progress    VideoProgress[]
+
   assessments Assessment[]
 
   @@index([courseId])
@@ -212,16 +212,16 @@ model Payment {
 }
 
 model VideoProgress {
-  id                   String   @id @default(uuid())
-  studentId            String
-  lessonId             String
-  watched              Boolean  @default(false)
-  progress             Float    @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  lastTimestamp        Float    @default(0)
-  answeredQuizzes      Json?
-  
+  id              String   @id @default(uuid())
+  studentId       String
+  lessonId        String
+  watched         Boolean  @default(false)
+  progress        Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastTimestamp   Float    @default(0)
+  answeredQuizzes Json?
+
   status               String    @default("NOT_STARTED")
   firstOpenedAt        DateTime?
   firstActivityAt      DateTime?
@@ -232,51 +232,51 @@ model VideoProgress {
   completedAt          DateTime?
   completionSource     String    @default("NONE")
 
-  currentRiskLevel     String    @default("NONE")
-  currentRiskCode      String?
-  riskDetectedAt       DateTime?
+  currentRiskLevel String    @default("NONE")
+  currentRiskCode  String?
+  riskDetectedAt   DateTime?
 
-  lesson               Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student              User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  riskHistory          StudentRiskHistory[]
+  lesson      Lesson               @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student     User                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  riskHistory StudentRiskHistory[]
 
   @@unique([studentId, lessonId])
 }
 
 model Assessment {
-  id              String         @id @default(uuid())
-  title           String
-  description     String?
-  type            AssessmentType // ASSIGNMENT, QUIZ, EXAM
-  courseId        String
-  lessonId        String?
-  teacherId       String
-  
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  type        AssessmentType // ASSIGNMENT, QUIZ, EXAM
+  courseId    String
+  lessonId    String?
+  teacherId   String
+
   openAt          DateTime?
   closeAt         DateTime?
   durationMinutes Int?
-  
-  status          String         @default("PUBLISHED")
-  totalPoints     Float          @default(100)
-  
-  questions       Json?          
-  
-  passingScore    Float?
-  showResult      Boolean        @default(true)
-  randomization   Boolean        @default(false)
-  requiresCamera  Boolean        @default(false)
-  
-  allowExternalStudents Boolean @default(false)
-  examAccessCode        String?  @unique
-  allowedIps            String?
-  
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
 
-  course          Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lesson          Lesson?        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  teacher         User           @relation("TeacherAssessments", fields: [teacherId], references: [id])
-  attempts        AssessmentAttempt[]
+  status      String @default("PUBLISHED")
+  totalPoints Float  @default(100)
+
+  questions Json?
+
+  passingScore   Float?
+  showResult     Boolean @default(true)
+  randomization  Boolean @default(false)
+  requiresCamera Boolean @default(false)
+
+  allowExternalStudents Boolean @default(false)
+  examAccessCode        String? @unique
+  allowedIps            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course           Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson           Lesson?               @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  teacher          User                  @relation("TeacherAssessments", fields: [teacherId], references: [id])
+  attempts         AssessmentAttempt[]
   externalAttempts ExternalExamAttempt[]
 }
 
@@ -298,13 +298,13 @@ model ExternalExamAttempt {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  violationCount     Int               @default(0)
-  cheatingDetected   Boolean           @default(false)
+  violationCount     Int       @default(0)
+  cheatingDetected   Boolean   @default(false)
   cheatingReason     String?
   cheatingDetectedAt DateTime?
   violations         Json?
 
-  assessment      Assessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
 
   @@index([assessmentId])
   @@index([studentName])
@@ -313,37 +313,38 @@ model ExternalExamAttempt {
 }
 
 model AssessmentAttempt {
-  id           String        @id @default(uuid())
+  id           String @id @default(uuid())
   assessmentId String
   studentId    String
-  
-  status       AttemptStatus 
-  
-  startedAt    DateTime      @default(now())
-  expiresAt    DateTime?
-  submittedAt  DateTime?
-  
-  score        Float?
-  totalPoints  Float?
-  percentage   Float?
-  
-  answers      Json?         
-  
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  
-  violationCount     Int               @default(0)
-  cheatingDetected   Boolean           @default(false)
+
+  status AttemptStatus
+
+  startedAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  submittedAt DateTime?
+
+  score       Float?
+  totalPoints Float?
+  percentage  Float?
+
+  answers Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  violationCount     Int       @default(0)
+  cheatingDetected   Boolean   @default(false)
   cheatingReason     String?
   cheatingDetectedAt DateTime?
   violations         Json?
   ipAddress          String?
   userAgent          String?
 
-  assessment   Assessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  student      User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, assessmentId])
+  @@index([assessmentId])
 }
 
 model StudentRiskHistory {
@@ -356,7 +357,7 @@ model StudentRiskHistory {
   resolvedAt     DateTime?
   resolutionCode String?
 
-  videoProgress  VideoProgress @relation(fields: [studentId, lessonId], references: [studentId, lessonId], onDelete: Cascade)
+  videoProgress VideoProgress @relation(fields: [studentId, lessonId], references: [studentId, lessonId], onDelete: Cascade)
 }
 
 model LessonQuiz {
@@ -401,33 +402,33 @@ model Notification {
 }
 
 model QuestionBank {
-  id             String          @id @default(uuid())
-  text           String
-  type           String          @default("MCQ")
-  options        Json
-  correctAnswer  Int?
-  explanation    String?
-  tag            String?
-  subject        String?
-  topic          String?
-  difficulty     String?
-  academicLevel  AcademicLevel?
-  country        CountryCode?
-  educationLevel EducationLevel?
-  gradeLevel     GradeLevel?
-  mathExpression String?
-  diagram        Json?
-  solutionSteps  Json?
-  given          Json?
-  required       String?
-  generationLogic   Json?      // { questionDesign, mathematicalMethod, difficultyReason, learningObjective }
-  solutionExplanation String?  // Concise pedagogical solution narrative
-  validationStatus   String?   // STRUCTURALLY_VALID | MATHEMATICALLY_VERIFIED | NEEDS_REVIEW | INVALID
-  source         String          @default("MANUAL")
-  creatorId      String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  creator        User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  id                  String          @id @default(uuid())
+  text                String
+  type                String          @default("MCQ")
+  options             Json
+  correctAnswer       Int?
+  explanation         String?
+  tag                 String?
+  subject             String?
+  topic               String?
+  difficulty          String?
+  academicLevel       AcademicLevel?
+  country             CountryCode?
+  educationLevel      EducationLevel?
+  gradeLevel          GradeLevel?
+  mathExpression      String?
+  diagram             Json?
+  solutionSteps       Json?
+  given               Json?
+  required            String?
+  generationLogic     Json? // { questionDesign, mathematicalMethod, difficultyReason, learningObjective }
+  solutionExplanation String? // Concise pedagogical solution narrative
+  validationStatus    String? // STRUCTURALLY_VALID | MATHEMATICALLY_VERIFIED | NEEDS_REVIEW | INVALID
+  source              String          @default("MANUAL")
+  creatorId           String
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  creator             User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 }
 
 model SavedMathSolution {

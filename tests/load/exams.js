@@ -26,26 +26,38 @@ export function setup() {
     password,
   }), { headers: headers() });
 
-  return { token: loginRes.json('token') };
+  // Assume the assessment ID is passed via env, otherwise default to a known test ID
+  // Note: K6 requires passing -e ASSESSMENT_ID=...
+  const assessmentId = __ENV.ASSESSMENT_ID || 'test-assessment-id';
+
+  return { token: loginRes.json('token'), assessmentId };
 }
 
 export default function (data) {
   if (!data.token) return;
 
-  const mockExamId = 'mock-exam-uuid';
+  const assessmentId = data.assessmentId;
   
-  // 1. Fetch exam questions (simulated)
-  const examRes = http.get(`${COURSE_URL}/api/exams/${mockExamId}`, { headers: headers(data.token) });
-  check(examRes, { 'exam fetched': (r) => r.status === 200 || r.status === 404 });
+  // 1. Start assessment
+  const startRes = http.post(`${COURSE_URL}/api/assessments/${assessmentId}/start`, JSON.stringify({}), { headers: headers(data.token) });
+  check(startRes, { 'assessment started or recovered': (r) => r.status === 200 || r.status === 201 || r.status === 403 });
 
-  sleep(randomIntBetween(30, 60)); // Simulate taking the exam
+  if (startRes.status === 404) return; // If the test assessment doesn't exist in DB
 
-  // 2. Submit exam answers
-  const submitRes = http.post(`${COURSE_URL}/api/exams/${mockExamId}/submit`, JSON.stringify({
-    answers: { q1: 'A', q2: 'B' }
-  }), { headers: headers(data.token) });
-  
-  check(submitRes, { 'exam submitted': (r) => r.status === 200 || r.status === 404 });
+  // 2. Fetch exam questions
+  const examRes = http.get(`${COURSE_URL}/api/assessments/${assessmentId}`, { headers: headers(data.token) });
+  check(examRes, { 'exam fetched': (r) => r.status === 200 });
+
+  sleep(randomIntBetween(5, 15)); // Simulate taking the exam
+
+  // 3. Save answers multiple times (simulating concurrency and real behavior)
+  const answers = [{ questionId: 'q1', answer: 'A' }, { questionId: 'q2', answer: 'B' }];
+  const saveRes = http.put(`${COURSE_URL}/api/assessments/${assessmentId}/attempt/answers`, JSON.stringify({ answers }), { headers: headers(data.token) });
+  check(saveRes, { 'answers saved': (r) => r.status === 200 || r.status === 403 });
 
   sleep(randomIntBetween(3, 10));
+
+  // 4. Submit exam
+  const submitRes = http.post(`${COURSE_URL}/api/assessments/${assessmentId}/attempt/submit`, JSON.stringify({ answers }), { headers: headers(data.token) });
+  check(submitRes, { 'exam submitted': (r) => r.status === 200 || r.status === 403 });
 }

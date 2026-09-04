@@ -13,7 +13,7 @@ if (!process.env.DIRECT_URL && process.env.POSTGRES_URL_NON_POOLING) {
 const prismaClientSingleton = () => {
   let url = process.env.DATABASE_URL;
   if (url && process.env.NODE_ENV === 'production') {
-    url = url.includes('?') ? `${url}&connection_limit=1` : `${url}?connection_limit=1`;
+    url = url.includes('?') ? `${url}&connection_limit=5` : `${url}?connection_limit=5`;
   }
   return new PrismaClient({
     datasources: {

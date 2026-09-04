@@ -352,12 +352,14 @@ export const submitAssessment = async (req: AuthRequest, res: Response) => {
     const result = await db.$transaction(async (tx) => {
       let attempt: any;
       if (isExternal) {
+        await tx.$executeRaw`SELECT "id" FROM "ExternalExamAttempt" WHERE "accessSessionId" = ${req.user?.externalSessionId} FOR UPDATE`;
         attempt = await tx.externalExamAttempt.findUnique({
           where: { accessSessionId: req.user?.externalSessionId },
           include: { assessment: true }
         });
       } else {
         const studentId = req.user!.userId;
+        await tx.$executeRaw`SELECT "id" FROM "AssessmentAttempt" WHERE "studentId" = ${studentId} AND "assessmentId" = ${assessmentId} FOR UPDATE`;
         attempt = await tx.assessmentAttempt.findUnique({
           where: { studentId_assessmentId: { studentId, assessmentId } },
           include: { assessment: true }
@@ -826,11 +828,13 @@ export const reportAssessmentViolation = async (req: AuthRequest, res: Response)
     const result = await db.$transaction(async (tx) => {
       let attempt: any;
       if (isExternal) {
+        await tx.$executeRaw`SELECT "id" FROM "ExternalExamAttempt" WHERE "accessSessionId" = ${req.user?.externalSessionId} FOR UPDATE`;
         attempt = await tx.externalExamAttempt.findUnique({
           where: { accessSessionId: req.user?.externalSessionId }
         });
       } else {
         const studentId = req.user!.userId;
+        await tx.$executeRaw`SELECT "id" FROM "AssessmentAttempt" WHERE "studentId" = ${studentId} AND "assessmentId" = ${assessmentId} FOR UPDATE`;
         attempt = await tx.assessmentAttempt.findUnique({
           where: { studentId_assessmentId: { studentId, assessmentId } }
         });

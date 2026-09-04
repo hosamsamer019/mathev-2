@@ -1,0 +1,114 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  trivy:
+    name: Trivy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner in repo mode (Non-blocking)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'UNKNOWN,LOW,MEDIUM'
+          exit-code: '0'
+
+      - name: Run Trivy vulnerability scanner in repo mode (Blocking)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          
+      - name: Build Frontend Docker image
+        run: docker build -t frontend-image -f apps/frontend/Dockerfile .
+      - name: Build Auth Service Docker image
+        run: docker build -t auth-service-image --build-arg SERVICE_NAME=auth-service -f services/Dockerfile .
+      - name: Build User Service Docker image
+        run: docker build -t user-service-image --build-arg SERVICE_NAME=user-service -f services/Dockerfile .
+      - name: Build Course Service Docker image
+        run: docker build -t course-service-image --build-arg SERVICE_NAME=course-service -f services/Dockerfile .
+      - name: Build AI Service Docker image
+        run: docker build -t ai-service-image --build-arg SERVICE_NAME=ai-service -f services/Dockerfile .
+      - name: Build Analytics Service Docker image
+        run: docker build -t analytics-service-image --build-arg SERVICE_NAME=analytics-service -f services/Dockerfile .
+      - name: Build Video Worker Docker image
+        run: docker build -t video-worker-image --build-arg SERVICE_NAME=video-worker -f services/Dockerfile .
+
+      - name: Scan Frontend Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'frontend-image'
+          scan-type: 'image'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+      - name: Scan Auth Service Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'auth-service-image'
+          scan-type: 'image'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+      - name: Scan User Service Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'user-service-image'
+          scan-type: 'image'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+      - name: Scan Course Service Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'course-service-image'
+          scan-type: 'image'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+      - name: Scan AI Service Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ai-service-image'
+          scan-type: 'image'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+      - name: Scan Analytics Service Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'analytics-service-image'
+          scan-type: 'image'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+      - name: Scan Video Worker Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'video-worker-image'
+          scan-type: 'image'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        if: always()

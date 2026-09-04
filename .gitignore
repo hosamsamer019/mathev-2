@@ -17,3 +17,9 @@ uploads/
 
 k6.zip
 k6_bin/
+
+*.pem
+*.key
+*.pub
+credentials.json
+secret.json
