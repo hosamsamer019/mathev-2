@@ -6,14 +6,14 @@ export const validate = (schema: AnyZodObject) => {
     try {
       req.body = await schema.parseAsync(req.body);
       next();
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ZodError) {
         return res.status(400).json({
           message: 'Validation failed',
           errors: error.errors
         });
       }
-      next(error);
+      next(error instanceof Error ? error : new Error(String(error)));
     }
   };
 };

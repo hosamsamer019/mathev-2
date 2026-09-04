@@ -4,7 +4,6 @@ WORKDIR /app
 
 # Copy root package files
 COPY package*.json ./
-COPY turbo.json ./
 
 # Copy frontend workspace
 COPY apps/frontend/package.json ./apps/frontend/

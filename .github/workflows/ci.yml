@@ -23,7 +23,7 @@ jobs:
       - name: Enable Corepack & Install Dependencies
         run: |
           corepack enable pnpm
-          pnpm install
+          pnpm install --frozen-lockfile
 
       - name: Lint Frontend
         run: pnpm --filter frontend run test

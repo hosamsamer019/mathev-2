@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner in repo mode (Non-blocking)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: 'fs'
           ignore-unfixed: true
@@ -28,7 +28,7 @@ jobs:
           exit-code: '0'
 
       - name: Run Trivy vulnerability scanner in repo mode (Blocking)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: 'fs'
           ignore-unfixed: true
@@ -51,7 +51,7 @@ jobs:
         run: docker build -t video-worker-image --build-arg SERVICE_NAME=video-worker -f services/Dockerfile .
 
       - name: Scan Frontend Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'frontend-image'
           scan-type: 'image'
@@ -59,7 +59,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
       - name: Scan Auth Service Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'auth-service-image'
           scan-type: 'image'
@@ -67,7 +67,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
       - name: Scan User Service Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'user-service-image'
           scan-type: 'image'
@@ -75,7 +75,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
       - name: Scan Course Service Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'course-service-image'
           scan-type: 'image'
@@ -83,7 +83,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
       - name: Scan AI Service Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'ai-service-image'
           scan-type: 'image'
@@ -91,7 +91,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
       - name: Scan Analytics Service Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'analytics-service-image'
           scan-type: 'image'
@@ -99,7 +99,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '1'
       - name: Scan Video Worker Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: 'video-worker-image'
           scan-type: 'image'

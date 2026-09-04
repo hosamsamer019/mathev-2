@@ -9,7 +9,6 @@ RUN apk add --no-cache python3 make g++
 
 # Copy root configurations
 COPY package*.json ./
-COPY turbo.json ./
 
 # Copy packages and specific service
 COPY packages/ ./packages/
@@ -36,7 +35,6 @@ ENV NODE_ENV=production
 
 # Install only production dependencies for the workspace
 COPY package*.json ./
-COPY turbo.json ./
 COPY packages/ ./packages/
 COPY services/${SERVICE_NAME}/package*.json ./services/${SERVICE_NAME}/
 
