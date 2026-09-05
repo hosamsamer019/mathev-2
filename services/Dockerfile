@@ -7,15 +7,22 @@ ARG SERVICE_NAME
 # Install dependencies needed for node-gyp (often required by bcrypt/prisma)
 RUN apk add --no-cache python3 make g++
 
-# Copy root configurations
+# Copy root configurations (including package-lock.json for deterministic installs)
 COPY package*.json ./
 
 # Copy packages and specific service
 COPY packages/ ./packages/
 COPY services/${SERVICE_NAME}/ ./services/${SERVICE_NAME}/
 
-# Install all dependencies (workspaces will link packages)
-RUN npm install
+# Install all dependencies.
+# --workspaces=false: prevents npm from erroring on missing sibling workspace
+# members (other services are not copied into this Docker stage).
+RUN npm install --workspaces=false --include=dev
+
+# Install dependencies for the packages used by this service
+RUN npm install --prefix packages/shared --workspaces=false && \
+    npm install --prefix packages/database --workspaces=false && \
+    npm install --prefix services/${SERVICE_NAME} --workspaces=false
 
 # Build shared packages and the specific service
 RUN npm run build --prefix packages/shared && \
@@ -33,13 +40,17 @@ ARG SERVICE_NAME
 # Set production environment
 ENV NODE_ENV=production
 
-# Install only production dependencies for the workspace
+# Copy manifests for root and the specific service/packages
 COPY package*.json ./
-COPY packages/ ./packages/
+COPY packages/shared/package*.json ./packages/shared/
+COPY packages/database/package*.json ./packages/database/
 COPY services/${SERVICE_NAME}/package*.json ./services/${SERVICE_NAME}/
 
-# Use npm ci for reliable production builds if package-lock is present, else npm install --production
-RUN npm install --omit=dev
+# Install production-only dependencies without workspace linking
+RUN npm install --workspaces=false --omit=dev && \
+    npm install --prefix packages/shared --workspaces=false --omit=dev && \
+    npm install --prefix packages/database --workspaces=false --omit=dev && \
+    npm install --prefix services/${SERVICE_NAME} --workspaces=false --omit=dev
 
 # Copy built assets from builder
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
