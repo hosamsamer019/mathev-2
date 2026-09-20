@@ -133,9 +133,6 @@ export default function ExternalExamTakingPage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
-      bcRef.current?.close();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleBlur);
     };
   }, [assessmentId]);
 
@@ -290,7 +287,7 @@ export default function ExternalExamTakingPage() {
     toast.error('تم إلغاء الامتحان لرصد مخالفات متعددة.');
   }, []);
 
-  const { violationCount, showMultiTabWarning } = useExamAntiCheat({
+  const { violationCount, showMultiTabWarning, setShowMultiTabWarning } = useExamAntiCheat({
     assessmentId: assessmentId ?? null,
     attemptId: attempt?.id ?? null,
     studentIdentifier: externalSessionId,
