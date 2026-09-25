@@ -1,15 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bell, CheckCircle, AlertCircle, Info, BookOpen, X, Loader2 } from 'lucide-react';
-import { notificationApi } from '../../services/api';
-
-interface Notification {
-  id: string;
-  type: 'success' | 'warning' | 'info' | 'course' | string;
-  title: string;
-  message: string;
-  createdAt: string;
-  read: boolean;
-}
+import { notificationService, Notification } from '../../services/notification.service';
 
 const iconMap: Record<string, any> = {
   success: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
@@ -21,9 +12,10 @@ const iconMap: Record<string, any> = {
 interface NotificationsPanelProps {
   onClose: () => void;
   isDark: boolean;
+  onUnreadCountChange?: () => void;
 }
 
-export default function NotificationsPanel({ onClose, isDark }: NotificationsPanelProps) {
+export default function NotificationsPanel({ onClose, isDark, onUnreadCountChange }: NotificationsPanelProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +25,7 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
 
   const fetchNotifications = async () => {
     try {
-      const res = await notificationApi.get('');
+      const res = await notificationService.getNotifications({ limit: 50 });
       setNotifications(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch notifications', err);
@@ -45,8 +37,9 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
   const markAsRead = async (id: string, currentlyRead: boolean) => {
     if (currentlyRead) return;
     try {
-      await notificationApi.put(`/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      await notificationService.markAsRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n));
+      onUnreadCountChange?.();
     } catch (err) {
       console.error('Failed to mark as read', err);
     }
@@ -54,8 +47,9 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
 
   const markAllAsRead = async () => {
     try {
-      await notificationApi.put('/read-all');
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await notificationService.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true, readAt: new Date().toISOString() })));
+      onUnreadCountChange?.();
     } catch (err) {
       console.error('Failed to mark all as read', err);
     }
@@ -104,7 +98,8 @@ export default function NotificationsPanel({ onClose, isDark }: NotificationsPan
         ) : notifications.length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-sm">لا توجد إشعارات حالياً</div>
         ) : notifications.map((notification) => {
-          const { icon: Icon, color, bg } = iconMap[notification.type] || iconMap['info'];
+          const typeKey = notification.type || 'info';
+          const { icon: Icon, color, bg } = iconMap[typeKey] || iconMap['info'];
           return (
             <div
               key={notification.id}

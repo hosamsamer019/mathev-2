@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LogOut, Bell, Sun, Moon, ChevronLeft, ChevronRight,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { notificationService } from '../../services/notification.service';
 import NotificationsPanel from './NotificationsPanel';
 import ScrollToTopButton from '../ui/ScrollToTopButton';
 
@@ -77,6 +78,23 @@ export default function SharedLayout({
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const res = await notificationService.getUnreadCount();
+      setUnreadCount(typeof res.data?.unreadCount === 'number' ? res.data.unreadCount : 0);
+    } catch {
+      // Graceful fallback on network/auth errors
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const colors = colorPresets[gradientFrom] || colorPresets['indigo-600'];
 
@@ -264,12 +282,21 @@ export default function SharedLayout({
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`p-2 rounded-lg relative transition-colors ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                aria-label="الإشعارات"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 end-1 w-2 h-2 bg-red-500 rounded-full" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -end-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
               {showNotifications && (
-                <NotificationsPanel onClose={() => setShowNotifications(false)} isDark={isDark} />
+                <NotificationsPanel
+                  onClose={() => setShowNotifications(false)}
+                  isDark={isDark}
+                  onUnreadCountChange={fetchUnreadCount}
+                />
               )}
             </div>
 
