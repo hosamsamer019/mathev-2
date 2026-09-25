@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar, CheckCircle, Clock, XCircle, Save, Search, Users,
-  Filter, CheckSquare, AlertCircle, RotateCcw, BookOpen, RefreshCw, Check, AlertTriangle
+  Filter, CheckSquare, AlertCircle, RotateCcw, BookOpen, RefreshCw, Check, AlertTriangle, GraduationCap
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { userService } from '../../services/user.service';
@@ -16,6 +16,7 @@ interface StudentItem {
   role: string;
   gradeLevel?: string;
   educationLevel?: string;
+  academicYear?: string;
   type: string;
   courseIds: string[];
 }
@@ -24,6 +25,40 @@ interface CourseItem {
   id: string;
   title: string;
   gradeLevel?: string;
+}
+
+const GRADE_LABELS: Record<string, string> = {
+  'PRIMARY_1': 'الصف الأول الابتدائي',
+  'PRIMARY_2': 'الصف الثاني الابتدائي',
+  'PRIMARY_3': 'الصف الثالث الابتدائي',
+  'PRIMARY_4': 'الصف الرابع الابتدائي',
+  'PRIMARY_5': 'الصف الخامس الابتدائي',
+  'PRIMARY_6': 'الصف السادس الابتدائي',
+  'PREPARATORY_1': 'الصف الأول الإعدادي',
+  'PREPARATORY_2': 'الصف الثاني الإعدادي',
+  'PREPARATORY_3': 'الصف الثالث الإعدادي',
+  'SECONDARY_1': 'الصف الأول الثانوي',
+  'SECONDARY_2': 'الصف الثاني الثانوي',
+  'SECONDARY_3': 'الصف الثالث الثانوي',
+  'PREP_1': 'الصف الأول الإعدادي',
+  'PREP_2': 'الصف الثاني الإعدادي',
+  'PREP_3': 'الصف الثالث الإعدادي',
+  'SEC_1': 'الصف الأول الثانوي',
+  'SEC_2': 'الصف الثاني الثانوي',
+  'SEC_3': 'الصف الثالث الثانوي',
+};
+
+function deriveAcademicYear(student: any): string {
+  if (student.academicYear) return student.academicYear;
+  if (student.createdAt) {
+    const d = new Date(student.createdAt);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      return month >= 8 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+    }
+  }
+  return '2026/2027';
 }
 
 export default function TeacherAttendancePage() {
@@ -43,11 +78,12 @@ export default function TeacherAttendancePage() {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
   const [originalMap, setOriginalMap] = useState<Record<string, AttendanceStatus>>({});
 
-  // UI States
+  // UI Filter States
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [loadingAttendance, setLoadingAttendance] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PRESENT' | 'LATE' | 'ABSENT' | 'UNSET'>('ALL');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string; details?: string } | null>(null);
 
@@ -75,7 +111,6 @@ export default function TeacherAttendancePage() {
         ? courseRes.data
         : [];
       setCourses(courseList);
-      // Default to select all courses
       setSelectedCourseIds(courseList.map(c => c.id));
 
       // Fetch all students
@@ -83,23 +118,30 @@ export default function TeacherAttendancePage() {
       const userList = Array.isArray(usersRes.data) ? usersRes.data : [];
       const studentList: StudentItem[] = userList
         .filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT')
-        .map((u: any) => ({
-          id: u.id,
-          name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'طالب',
-          email: u.email,
-          role: u.role,
-          gradeLevel: u.gradeLevel || u.grade || 'غير محدد',
-          educationLevel: u.educationLevel || '',
-          type: u.role === 'CENTER_STUDENT' ? 'سنتر' : 'أونلاين',
-          courseIds: u.enrollments ? u.enrollments.map((e: any) => e.courseId) : []
-        }));
+        .map((u: any) => {
+          const rawGrade = u.gradeLevel || u.academicLevel || u.grade || '';
+          const displayGrade = GRADE_LABELS[rawGrade] || rawGrade || 'غير محدد';
+          const acadYear = deriveAcademicYear(u);
+          return {
+            id: u.id,
+            name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'طالب',
+            email: u.email,
+            role: u.role,
+            gradeLevel: displayGrade,
+            educationLevel: u.educationLevel || '',
+            academicYear: acadYear,
+            type: u.role === 'CENTER_STUDENT' ? 'سنتر' : 'أونلاين',
+            courseIds: u.enrollments ? u.enrollments.map((e: any) => e.courseId) : []
+          };
+        });
 
       setAllStudents(studentList);
     } catch (err: any) {
-      console.error('Error loading courses/students:', err);
+      console.error('[TeacherAttendance] Error loading courses/students:', err.response?.status, err.response?.data || err.message);
       setFeedback({
         type: 'error',
-        message: 'فشل في تحميل بيانات الطلاب والمجموعات. يرجى المحاولة مرة أخرى.'
+        message: 'فشل في تحميل بيانات الطلاب والمجموعات. يرجى المحاولة مرة أخرى.',
+        details: err.response?.data?.message || err.message
       });
     } finally {
       setLoadingData(false);
@@ -127,12 +169,25 @@ export default function TeacherAttendancePage() {
       setAttendanceMap(newMap);
       setOriginalMap(newMap);
     } catch (err: any) {
-      console.error('Error fetching date attendance:', err);
-      // Keep existing map if fetch fails, but inform user
+      console.error('[TeacherAttendance] Error fetching date attendance:', err.response?.status, err.response?.data || err.message);
+      // Keep existing map if fetch fails
     } finally {
       setLoadingAttendance(false);
     }
   };
+
+  // Available Academic Years for dropdown
+  const availableAcademicYears = useMemo(() => {
+    const years = new Set<string>();
+    years.add('2026/2027');
+    years.add('2025/2026');
+    for (const s of allStudents) {
+      if (s.academicYear) {
+        years.add(s.academicYear);
+      }
+    }
+    return Array.from(years).sort().reverse();
+  }, [allStudents]);
 
   // 3. Deduplicate active students across selected groups/courses
   const activeRoster = useMemo(() => {
@@ -140,16 +195,12 @@ export default function TeacherAttendancePage() {
       return [];
     }
 
-    // Deduplicate by student.id
     const studentMap = new Map<string, StudentItem>();
     for (const student of allStudents) {
-      // If no courses defined or "all" selected, include all students
       if (selectedCourseIds.length === 0 || selectedCourseIds.length === courses.length) {
         studentMap.set(student.id, student);
       } else {
-        // If student has courseIds, match with selectedCourseIds
         const hasMatchingCourse = student.courseIds.some(cId => selectedCourseIds.includes(cId));
-        // Also fallback if enrollment info is not populated on user object
         if (hasMatchingCourse || student.courseIds.length === 0) {
           studentMap.set(student.id, student);
         }
@@ -158,26 +209,33 @@ export default function TeacherAttendancePage() {
     return Array.from(studentMap.values());
   }, [allStudents, selectedCourseIds, courses]);
 
-  // 4. Filtered students based on search and status filter
+  // 4. Filtered students based on search query, academic year, and status filter
   const visibleStudents = useMemo(() => {
     return activeRoster.filter(student => {
-      // Search match
+      // 1. Search filter
       const query = searchQuery.trim().toLowerCase();
       const matchesSearch =
         !query ||
         student.name.toLowerCase().includes(query) ||
         student.email.toLowerCase().includes(query) ||
-        student.gradeLevel?.toLowerCase().includes(query);
+        (student.gradeLevel && student.gradeLevel.toLowerCase().includes(query));
 
       if (!matchesSearch) return false;
 
-      // Status match
+      // 2. Academic Year filter
+      if (selectedAcademicYear !== 'ALL') {
+        if (student.academicYear !== selectedAcademicYear) {
+          return false;
+        }
+      }
+
+      // 3. Status filter
       const currentStatus = attendanceMap[student.id];
       if (statusFilter === 'ALL') return true;
       if (statusFilter === 'UNSET') return !currentStatus;
       return currentStatus === statusFilter;
     });
-  }, [activeRoster, searchQuery, statusFilter, attendanceMap]);
+  }, [activeRoster, searchQuery, selectedAcademicYear, statusFilter, attendanceMap]);
 
   // 5. Live Summary Statistics
   const summary = useMemo(() => {
@@ -205,7 +263,6 @@ export default function TeacherAttendancePage() {
   const handleBulkSetStatus = (status: AttendanceStatus) => {
     setAttendanceMap(prev => {
       const next = { ...prev };
-      // Apply to all students in active roster (or visible ones)
       for (const s of visibleStudents) {
         next[s.id] = status;
       }
@@ -245,7 +302,7 @@ export default function TeacherAttendancePage() {
 
   // 8. Bulk Save Handler
   const handleSaveAttendance = async () => {
-    // Build payload of students with selected status
+    // Build payload of students with selected status from all selected groups (activeRoster)
     const recordsToSave: Array<{ studentId: string; status: AttendanceStatus }> = [];
 
     for (const student of activeRoster) {
@@ -284,11 +341,23 @@ export default function TeacherAttendancePage() {
         });
       }
     } catch (err: any) {
-      console.error('Save attendance error:', err);
+      const statusCode = err.response?.status;
+      const errMsg = err.response?.data?.message || err.message;
+      console.error(`[TeacherAttendance] Save error (Status ${statusCode}):`, errMsg);
+
+      let userMsg = 'حدث خطأ أثناء حفظ الحضور. تم الاحتفاظ بتعديلاتك، يرجى المحاولة مرة أخرى.';
+      if (statusCode === 401) {
+        userMsg = 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجدداً.';
+      } else if (statusCode === 403) {
+        userMsg = 'غير مصرح لك بتسجيل الحضور لهؤلاء الطلاب.';
+      } else if (statusCode === 404) {
+        userMsg = 'خدمة تسجيل الحضور غير متوفرة حالياً (404).';
+      }
+
       setFeedback({
         type: 'error',
-        message: 'حدث خطأ أثناء حفظ الحضور. تم الاحتفاظ بتعديلاتك، يرجى المحاولة مرة أخرى.',
-        details: err.response?.data?.message || err.message
+        message: userMsg,
+        details: errMsg
       });
     } finally {
       setSaving(false);
@@ -483,24 +552,44 @@ export default function TeacherAttendancePage() {
         </div>
       )}
 
-      {/* Controls Bar: Search, Status Filters, & Fast Bulk Actions */}
+      {/* Controls Bar: Search by Name, Academic Year Filter, Status Filters, & Fast Bulk Actions */}
       <div className={`p-4 rounded-2xl border ${cardBg} space-y-4`}>
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          {/* Search Input */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          {/* Search by Student Name */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="بحث عن طالب بالاسم أو البريد..."
+              placeholder="بحث باسم الطالب أو البريد..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className={`w-full pr-10 pl-4 py-2 text-sm rounded-xl border outline-none transition-all ${inputBg}`}
             />
           </div>
 
+          {/* Academic Year Selector */}
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${textSecondary} whitespace-nowrap flex items-center gap-1`}>
+              <GraduationCap className="w-4 h-4 text-emerald-600" />
+              السنة الدراسية:
+            </span>
+            <select
+              value={selectedAcademicYear}
+              onChange={e => setSelectedAcademicYear(e.target.value)}
+              className={`text-xs font-semibold py-2 px-3 rounded-xl border outline-none transition-all ${inputBg}`}
+            >
+              <option value="ALL">كل السنوات الدراسية</option>
+              {availableAcademicYears.map(year => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Status View Filter */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
-            <span className={`text-xs font-bold ${textSecondary} ml-2 whitespace-nowrap`}>عرض:</span>
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
+            <span className={`text-xs font-bold ${textSecondary} ml-1 whitespace-nowrap`}>الحالة:</span>
             {[
               { id: 'ALL', label: 'الكل' },
               { id: 'PRESENT', label: 'حاضر' },
@@ -528,7 +617,7 @@ export default function TeacherAttendancePage() {
         {/* Fast Bulk Status Buttons */}
         <div className="pt-3 border-t border-gray-100 dark:border-gray-700/60 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-xs font-bold ${textSecondary} ml-1`}>تحديد سريع للكل:</span>
+            <span className={`text-xs font-bold ${textSecondary} ml-1`}>تحديد سريع للقائمة المعروضة:</span>
             <button
               onClick={() => handleBulkSetStatus('PRESENT')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300 hover:bg-green-200 transition-colors border border-green-200 dark:border-green-800/60"
@@ -573,8 +662,8 @@ export default function TeacherAttendancePage() {
       ) : visibleStudents.length === 0 ? (
         <div className={`p-12 rounded-2xl border ${cardBg} text-center space-y-3`}>
           <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className={`text-base font-bold ${textPrimary}`}>لا يوجد طلاب يطابقون معايير البحث أو التحديد</p>
-          <p className={`text-xs ${textSecondary}`}>جرب تغيير فلتر المجموعات أو مسح نص البحث</p>
+          <p className={`text-base font-bold ${textPrimary}`}>لا يوجد طلاب يطابقون معايير البحث أو السنة الدراسية المحددة</p>
+          <p className={`text-xs ${textSecondary}`}>جرب تغيير فلتر المجموعات، السنة الدراسية، أو مسح نص البحث</p>
         </div>
       ) : (
         <div className={`rounded-2xl border overflow-hidden ${cardBg}`}>
@@ -587,6 +676,7 @@ export default function TeacherAttendancePage() {
                   <th className="py-3.5 px-6">اسم الطالب</th>
                   <th className="py-3.5 px-4">نوع الطالب</th>
                   <th className="py-3.5 px-4">الصف / المرحلة</th>
+                  <th className="py-3.5 px-4">السنة الدراسية</th>
                   <th className="py-3.5 px-6 text-center w-80">تسجيل الحالة</th>
                 </tr>
               </thead>
@@ -627,6 +717,9 @@ export default function TeacherAttendancePage() {
                       </td>
                       <td className="py-4 px-4 text-xs font-medium text-gray-500 dark:text-gray-400">
                         {student.gradeLevel || 'غير محدد'}
+                      </td>
+                      <td className="py-4 px-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                        {student.academicYear || '2026/2027'}
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-750 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -690,7 +783,9 @@ export default function TeacherAttendancePage() {
                       </div>
                       <div>
                         <p className={`text-sm font-bold ${textPrimary}`}>{student.name}</p>
-                        <p className="text-[11px] text-gray-400">{student.gradeLevel || 'غير محدد'}</p>
+                        <p className="text-[11px] text-gray-400">
+                          {student.gradeLevel || 'غير محدد'} • {student.academicYear || '2026/2027'}
+                        </p>
                       </div>
                     </div>
                     <span

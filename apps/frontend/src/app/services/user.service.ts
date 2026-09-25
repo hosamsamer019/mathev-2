@@ -1,4 +1,4 @@
-import { userApi } from './api';
+import { userApi, attendanceApi } from './api';
 import { User, UserRole } from '../contexts/AuthContext';
 
 export interface UpdateProfileData {
@@ -59,42 +59,42 @@ export const userService = {
   },
 
   getAttendance: async (): Promise<any> => {
-    const response = await userApi.get('/attendance/my-attendance');
+    const response = await attendanceApi.get('/my-attendance');
     return response.data;
   },
 
   getStudentAttendanceById: async (studentId: string): Promise<any> => {
-    const response = await userApi.get(`/attendance/student/${studentId}`);
+    const response = await attendanceApi.get(`/student/${studentId}`);
     return response.data;
   },
 
   getAttendancePercentage: async (studentId: string): Promise<any> => {
-    const response = await userApi.get(`/attendance/${studentId}/percentage`);
+    const response = await attendanceApi.get(`/${studentId}/percentage`);
     return response.data;
   },
 
   markAttendance: async (payload: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; date?: string }): Promise<any> => {
-    const response = await userApi.post('/attendance', payload);
+    const response = await attendanceApi.post('/', payload);
     return response.data;
   },
 
   updateAttendance: async (id: string, payload: { status?: 'PRESENT' | 'ABSENT' | 'LATE'; date?: string }): Promise<any> => {
-    const response = await userApi.put(`/attendance/${id}`, payload);
+    const response = await attendanceApi.put(`/${id}`, payload);
     return response.data;
   },
 
   deleteAttendance: async (id: string): Promise<any> => {
-    const response = await userApi.delete(`/attendance/${id}`);
+    const response = await attendanceApi.delete(`/${id}`);
     return response.data;
   },
 
   bulkMarkAttendance: async (payload: { records: Array<{ studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE' }>; date?: string }): Promise<any> => {
-    const response = await userApi.post('/attendance/bulk', payload);
+    const response = await attendanceApi.post('/bulk', payload);
     return response.data;
   },
 
   getAttendanceByDate: async (date: string): Promise<any> => {
-    const response = await userApi.get('/attendance/by-date', { params: { date } });
+    const response = await attendanceApi.get('/by-date', { params: { date } });
     return response.data;
   },
 
