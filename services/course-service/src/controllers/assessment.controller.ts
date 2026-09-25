@@ -16,6 +16,8 @@ export function sanitizeQuestionsForStudent(questions: any[] | null | undefined)
       solutionSteps,
       solutionExplanation,
       validationStatus,
+      imageStorageKey,
+      imageAssetId,
       ...safeQuestion
     } = q;
     return safeQuestion;
@@ -581,6 +583,7 @@ export const getAssessmentReview = async (req: AuthRequest, res: Response) => {
       const reviewQ: any = {
         id: q.id,
         questionText: q.questionText || q.text,
+        imageUrl: q.imageUrl || null,
         mathExpression: q.mathExpression || null,
         diagram: q.diagram || null,
         given: q.given || null,

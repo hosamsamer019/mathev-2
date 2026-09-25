@@ -552,6 +552,16 @@ export default function ExternalExamTakingPage() {
                       <MathContent content={q.questionText || q.text || ''} />
                     </div>
 
+                    {q.imageUrl && (
+                      <div className="my-3 flex justify-center">
+                        <img
+                          src={q.imageUrl}
+                          alt={`صورة سؤال ${i + 1}`}
+                          className="max-h-48 max-w-full rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm object-contain bg-white dark:bg-gray-800 p-1"
+                        />
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium">
                       <div className="p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                         <span className="text-gray-500 block mb-1">إجابتك:</span>

@@ -4,7 +4,7 @@ import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
 import { io } from '../index.js';
 import { normalizeExamQuestions } from '../utils/question.helper.js';
-import { sanitizeQuestionsForStudent, generateExamAccessCode } from './assessment.controller.js';
+import { sanitizeQuestionsForStudent, generateExamAccessCode, linkQuestionAssetsToAssessment } from './assessment.controller.js';
 
 export const getAllExams = async (req: AuthRequest, res: Response) => {
   try {
@@ -160,11 +160,20 @@ const createExamSchema = z.object({
     type: z.string(),
     options: z.array(z.string()).optional(),
     correct: z.any().optional(),
+    imageUrl: z.string().optional().nullable(),
+    imageStorageKey: z.string().optional().nullable(),
+    imageAssetId: z.string().optional().nullable(),
+    points: z.number().optional().nullable(),
+    explanation: z.string().optional().nullable(),
+    mathExpression: z.string().optional().nullable(),
+    diagram: z.any().optional().nullable(),
+    given: z.any().optional().nullable(),
+    required: z.string().optional().nullable(),
     generationLogic: z.any().optional(),
     solutionSteps: z.any().optional(),
     solutionExplanation: z.string().optional(),
     validationStatus: z.string().optional()
-  })).optional()
+  }).passthrough()).optional()
 });
 
 export const createExam = async (req: AuthRequest, res: Response) => {
@@ -189,7 +198,7 @@ export const createExam = async (req: AuthRequest, res: Response) => {
         title,
         courseId,
         duration: duration || 60,
-        questions: questions || [],
+        questions: (questions || []) as any,
         requiresCamera: requiresCamera || false,
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
@@ -220,6 +229,10 @@ export const createExam = async (req: AuthRequest, res: Response) => {
         status: 'PUBLISHED'
       }
     });
+
+    if (exam.questions && Array.isArray(exam.questions)) {
+      await linkQuestionAssetsToAssessment(exam.id, exam.questions as any[]);
+    }
 
     io.to(`course:${courseId}`).emit('exam_created', exam);
     
@@ -271,7 +284,7 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
       title,
       courseId,
       duration: duration || 60,
-      questions: questions || [],
+      questions: (questions || []) as any,
       requiresCamera: requiresCamera || false,
       startTime: startTime ? new Date(startTime) : null,
       endTime: endTime ? new Date(endTime) : null,
@@ -330,6 +343,10 @@ export const updateExam = async (req: AuthRequest, res: Response) => {
         });
       }
     } catch (err) {}
+
+    if (updatedExam.questions && Array.isArray(updatedExam.questions)) {
+      await linkQuestionAssetsToAssessment(id, updatedExam.questions as any[]);
+    }
 
     io.to(`course:${updatedExam.courseId}`).emit('exam_updated', updatedExam);
 

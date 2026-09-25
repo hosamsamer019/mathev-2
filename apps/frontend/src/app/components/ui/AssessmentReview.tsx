@@ -127,6 +127,15 @@ function QuestionReviewItem({ q, index, isTeacher }: { q: any; index: number; is
         <div className="text-lg text-gray-900 font-medium mb-4 whitespace-pre-wrap leading-relaxed">
           {q.questionText}
         </div>
+        {q.imageUrl && (
+          <div className="my-4 flex justify-center">
+            <img
+              src={q.imageUrl}
+              alt={`صورة السؤال ${index}`}
+              className="max-h-72 max-w-full rounded-xl border border-gray-200 shadow-sm object-contain bg-white p-1"
+            />
+          </div>
+        )}
         {q.mathExpression && (
           <div className="mb-6 p-4 bg-gray-50 rounded-xl overflow-x-auto" dir="ltr">
             <MathRenderer expression={q.mathExpression} block />
