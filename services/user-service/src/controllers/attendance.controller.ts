@@ -54,35 +54,19 @@ function normalizeDateRange(dateInput?: string | Date): { dayStart: Date; dayEnd
 }
 
 /**
- * Helper to verify teacher/admin authorization for a student
+ * Helper to verify teacher/admin authorization for a student.
+ * In the current single-teacher deployment, any authenticated TEACHER or ADMIN
+ * is authorized to record/manage attendance for any registered student.
  */
 async function verifyTeacherOrAdminAccess(requesterId: string, requesterRole: string, studentId: string): Promise<boolean> {
   const upperRole = requesterRole.toUpperCase();
-  if (upperRole === 'ADMIN') return true;
-
-  if (upperRole === 'TEACHER') {
-    // 1. Check if student is enrolled in any course taught by this teacher
-    const courseEnrollment = await db.courseEnrollment.findFirst({
-      where: {
-        studentId,
-        course: { teacherId: requesterId }
-      }
+  if (upperRole === 'ADMIN' || upperRole === 'TEACHER') {
+    // Verify target student exists in the database
+    const studentExists = await db.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, role: true }
     });
-    if (courseEnrollment) return true;
-
-    // 2. Check if student belongs to teacher's center group
-    const teacher = await db.user.findUnique({
-      where: { id: requesterId },
-      select: { centerGroupId: true }
-    });
-    if (teacher?.centerGroupId) {
-      const studentInGroup = await db.user.findFirst({
-        where: { id: studentId, centerGroupId: teacher.centerGroupId }
-      });
-      if (studentInGroup) return true;
-    }
-
-    return false;
+    return !!studentExists;
   }
 
   return false;
@@ -119,9 +103,13 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
 
     if (!requesterId) return res.status(401).json({ message: 'Unauthorized' });
 
+    if (requesterRole !== 'TEACHER' && requesterRole !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden: Only teachers and admins can mark attendance' });
+    }
+
     const isAuthorized = await verifyTeacherOrAdminAccess(requesterId, requesterRole, validatedData.studentId);
     if (!isAuthorized) {
-      return res.status(403).json({ message: 'Forbidden: Student is not enrolled in your courses or classes' });
+      return res.status(404).json({ message: 'Student not found or invalid' });
     }
 
     const { dayStart, dayEnd } = normalizeDateRange(validatedData.date);
@@ -399,45 +387,19 @@ export const getAttendanceByDate = async (req: AuthRequest, res: Response) => {
 
     if (!requesterId) return res.status(401).json({ message: 'Unauthorized' });
 
-    if (requesterRole.includes('STUDENT')) {
-      return res.status(403).json({ message: 'Forbidden: Students cannot access attendance by date' });
+    if (requesterRole !== 'TEACHER' && requesterRole !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden: Only teachers and admins can access attendance by date' });
     }
 
     const { dayStart, dayEnd } = normalizeDateRange(dateQuery);
 
-    let whereClause: any = {
-      date: {
-        gte: dayStart,
-        lte: dayEnd
-      }
-    };
-
-    if (requesterRole === 'TEACHER') {
-      const enrollments = await db.courseEnrollment.findMany({
-        where: {
-          course: { teacherId: requesterId }
-        },
-        select: { studentId: true }
-      });
-      const studentIds = new Set(enrollments.map(e => e.studentId));
-
-      const teacher = await db.user.findUnique({
-        where: { id: requesterId },
-        select: { centerGroupId: true }
-      });
-      if (teacher?.centerGroupId) {
-        const groupStudents = await db.user.findMany({
-          where: { centerGroupId: teacher.centerGroupId },
-          select: { id: true }
-        });
-        groupStudents.forEach(s => studentIds.add(s.id));
-      }
-
-      whereClause.studentId = { in: Array.from(studentIds) };
-    }
-
     const records = await db.attendance.findMany({
-      where: whereClause,
+      where: {
+        date: {
+          gte: dayStart,
+          lte: dayEnd
+        }
+      },
       include: {
         student: {
           select: {
@@ -477,13 +439,25 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
 
     if (!requesterId) return res.status(401).json({ message: 'Unauthorized' });
 
+    if (requesterRole !== 'TEACHER' && requesterRole !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden: Only teachers and admins can mark attendance' });
+    }
+
     const { dayStart, dayEnd } = normalizeDateRange(validatedData.date);
     const results: any[] = [];
     let presentCount = 0;
     let lateCount = 0;
     let absentCount = 0;
 
-    for (const item of validatedData.records) {
+    // Deduplicate records in payload by studentId to prevent duplicate processing
+    const seenStudentIds = new Set<string>();
+    const uniqueRecords = validatedData.records.filter(item => {
+      if (seenStudentIds.has(item.studentId)) return false;
+      seenStudentIds.add(item.studentId);
+      return true;
+    });
+
+    for (const item of uniqueRecords) {
       const isAuthorized = await verifyTeacherOrAdminAccess(requesterId, requesterRole, item.studentId);
       if (!isAuthorized) continue;
 
@@ -541,9 +515,9 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
     }
 
     if (results.length === 0 && validatedData.records.length > 0) {
-      return res.status(403).json({
+      return res.status(400).json({
         success: false,
-        message: 'لم يتم حفظ أي سجلات: لا يوجد طلاب مصرح لك بتسجيل حضورهم في القائمة المرسلة.',
+        message: 'لم يتم حفظ أي سجلات: معرفات الطلاب غير صالحة أو غير موجودة.',
         count: 0
       });
     }

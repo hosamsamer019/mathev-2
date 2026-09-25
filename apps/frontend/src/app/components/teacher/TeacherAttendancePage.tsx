@@ -196,18 +196,10 @@ export default function TeacherAttendancePage() {
       return [];
     }
 
-    const teacherCourseIdSet = new Set(courses.map(c => c.id));
     const studentMap = new Map<string, StudentItem>();
     for (const student of allStudents) {
-      // If teacher has courses, ensure student is enrolled in at least one of this teacher's courses
-      if (teacherCourseIdSet.size > 0) {
-        const isEnrolledWithTeacher = student.courseIds.some(cId => teacherCourseIdSet.has(cId));
-        if (!isEnrolledWithTeacher && student.courseIds.length > 0) {
-          continue;
-        }
-      }
-
       if (selectedCourseIds.length === 0 || selectedCourseIds.length === courses.length) {
+        // In single-teacher deployment, all registered students belong to the teacher's active roster
         studentMap.set(student.id, student);
       } else {
         const hasMatchingCourse = student.courseIds.some(cId => selectedCourseIds.includes(cId));
