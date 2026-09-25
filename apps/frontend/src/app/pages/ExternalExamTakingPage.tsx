@@ -14,6 +14,7 @@ import { GeometryDiagram } from '../components/ui/GeometryDiagram';
 import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
 import { normalizeAssessmentResult } from '../utils/assessmentResultNormalizer';
+import { getMediaUrl } from '../utils/mediaUrl';
 import ScrollToTopButton from '../components/ui/ScrollToTopButton';
 
 interface Question {
@@ -555,7 +556,7 @@ export default function ExternalExamTakingPage() {
                     {q.imageUrl && (
                       <div className="my-3 flex justify-center">
                         <img
-                          src={q.imageUrl}
+                          src={getMediaUrl(q.imageUrl)}
                           alt={`صورة سؤال ${i + 1}`}
                           className="max-h-48 max-w-full rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm object-contain bg-white dark:bg-gray-800 p-1"
                         />
@@ -732,7 +733,7 @@ export default function ExternalExamTakingPage() {
               {currentQ.imageUrl && (
                 <div className="my-4 flex justify-center">
                   <img
-                    src={currentQ.imageUrl}
+                    src={getMediaUrl(currentQ.imageUrl)}
                     alt={`صورة السؤال ${currentQuestionIdx + 1}`}
                     className="max-h-72 max-w-full rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm object-contain bg-white dark:bg-gray-800 p-1"
                   />

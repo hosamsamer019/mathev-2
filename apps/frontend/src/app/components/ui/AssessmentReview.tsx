@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, HelpCircle, FileText, Check } from 'lucide-react';
 import { MathRenderer } from './MathRenderer';
 import { GeometryDiagram } from './GeometryDiagram';
+import { getMediaUrl } from '../../utils/mediaUrl';
 
 const resolveOptionText = (options: any, answer: any) => {
   if (answer === null || answer === undefined || answer === "") return null;
@@ -130,7 +131,7 @@ function QuestionReviewItem({ q, index, isTeacher }: { q: any; index: number; is
         {q.imageUrl && (
           <div className="my-4 flex justify-center">
             <img
-              src={q.imageUrl}
+              src={getMediaUrl(q.imageUrl)}
               alt={`صورة السؤال ${index}`}
               className="max-h-72 max-w-full rounded-xl border border-gray-200 shadow-sm object-contain bg-white p-1"
             />

@@ -13,6 +13,7 @@ import { MathContent } from '../ui/MathContent';
 import { QuestionPreview, StructuredQuestion } from '../ui/QuestionPreview';
 import FormSectionNavigation from '../ui/FormSectionNavigation';
 import ScrollToTopButton from '../ui/ScrollToTopButton';
+import { getMediaUrl } from '../../utils/mediaUrl';
 
 const questionTypes = [
   { label: 'اختيار من متعدد (MCQ)', count: 15, color: 'bg-blue-100 text-blue-700' },
@@ -939,7 +940,7 @@ export default function TeacherExamsPage() {
                         {q.imageUrl ? (
                           <div className="relative inline-block border rounded-xl overflow-hidden bg-black/5 dark:bg-black/20 p-1 mb-2">
                             <img
-                              src={q.imageUrl}
+                              src={getMediaUrl(q.imageUrl)}
                               alt={`صورة السؤال ${qIndex + 1}`}
                               className="max-h-48 max-w-full rounded-lg object-contain"
                             />

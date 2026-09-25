@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MathRenderer } from './MathRenderer';
 import { GeometryDiagram, DiagramData } from './GeometryDiagram';
+import { getMediaUrl } from '../../utils/mediaUrl';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export interface StructuredQuestion {
   gradeLevel?: string;
   difficulty?: string;
   questionText: string;
+  imageUrl?: string | null;
   mathExpression?: string | null;
   diagram?: DiagramData | null;
   given?: string[] | null;
@@ -139,6 +141,17 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
           {isTeacher && <ValidationBadge status={question.validationStatus} />}
         </div>
       </div>
+
+      {/* ─── Question Supporting Image ─── */}
+      {question.imageUrl && (
+        <div className="my-4 flex justify-center">
+          <img
+            src={getMediaUrl(question.imageUrl)}
+            alt="صورة السؤال"
+            className="max-h-72 max-w-full rounded-xl border border-gray-200 shadow-sm object-contain bg-white p-1"
+          />
+        </div>
+      )}
 
       {/* ─── Diagram ─── */}
       {question.diagram && <GeometryDiagram data={question.diagram} />}

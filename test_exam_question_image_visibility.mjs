@@ -268,16 +268,26 @@ async function run() {
       assert(extQ?.imageStorageKey === undefined, 'External student does NOT see imageStorageKey');
     }
 
-    // 9. Verify Image URL Accessibility
-    console.log('\n--- Step 9: Verify Image URL Accessibility ---');
+    // 9. Verify Physical File and Image URL Accessibility
+    console.log('\n--- Step 9: Verify Image URL Accessibility & Binary Integrity ---');
     let imgFetchUrl = uploadedAsset.url;
     if (imgFetchUrl.startsWith('/')) {
       imgFetchUrl = `${COURSE_BASE}${imgFetchUrl}`;
     }
     const imgRes = await axios.get(imgFetchUrl, { responseType: 'arraybuffer' });
-    assert(imgRes.status === 200, 'Image URL returns HTTP 200', imgFetchUrl);
+    assert(imgRes.status === 200, 'Direct course-service image URL returns HTTP 200', imgFetchUrl);
     const contentType = imgRes.headers['content-type'] || '';
-    assert(contentType.includes('image/'), 'Image Content-Type is valid image', contentType);
+    assert(contentType.includes('image/'), 'Image Content-Type is valid image/*', contentType);
+    assert(imgRes.data.length > 0, 'Image response payload is non-empty', `${imgRes.data.length} bytes`);
+    
+    // Validate image signature in body (PNG: 89 50 4E 47)
+    const buf = Buffer.from(imgRes.data);
+    const isPngSig = buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+    assert(isPngSig, 'Image payload matches valid PNG binary magic bytes');
+
+    // Verify resolved frontend URL in local development
+    const resolvedLocalUrl = `http://localhost:4004${uploadedAsset.url.startsWith('/') ? '' : '/'}${uploadedAsset.url}`;
+    assert(imgFetchUrl === resolvedLocalUrl, 'Frontend getMediaUrl resolves to valid direct course-service URL');
 
     // Cleanup test exam
     await prisma.assessmentAttempt.deleteMany({ where: { assessmentId: examId } });
