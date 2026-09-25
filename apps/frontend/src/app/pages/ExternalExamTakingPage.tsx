@@ -28,6 +28,7 @@ interface Question {
   given?: string[];
   required?: string;
   mathExpression?: string;
+  imageUrl?: string;
 }
 
 // Broadcast channel name per session — ensures multiple tabs share the same exam

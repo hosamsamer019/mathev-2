@@ -44,12 +44,18 @@ const corsOptions = {
   credentials: true
 };
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Serve static uploads
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve static uploads with cross-origin resource policy
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Mount Routes
 app.use('/api/courses', courseRoutes);

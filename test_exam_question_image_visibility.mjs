@@ -268,18 +268,29 @@ async function run() {
       assert(extQ?.imageStorageKey === undefined, 'External student does NOT see imageStorageKey');
     }
 
-    // 9. Verify Physical File and Image URL Accessibility
-    console.log('\n--- Step 9: Verify Image URL Accessibility & Binary Integrity ---');
+    // 9. Verify Physical File and Image URL Accessibility & Cross-Origin Headers
+    console.log('\n--- Step 9: Verify Image URL Accessibility & Cross-Origin Headers ---');
     let imgFetchUrl = uploadedAsset.url;
     if (imgFetchUrl.startsWith('/')) {
       imgFetchUrl = `${COURSE_BASE}${imgFetchUrl}`;
     }
-    const imgRes = await axios.get(imgFetchUrl, { responseType: 'arraybuffer' });
+    const imgRes = await axios.get(imgFetchUrl, {
+      responseType: 'arraybuffer',
+      headers: { Origin: 'http://localhost:5173' }
+    });
     assert(imgRes.status === 200, 'Direct course-service image URL returns HTTP 200', imgFetchUrl);
     const contentType = imgRes.headers['content-type'] || '';
     assert(contentType.includes('image/'), 'Image Content-Type is valid image/*', contentType);
     assert(imgRes.data.length > 0, 'Image response payload is non-empty', `${imgRes.data.length} bytes`);
     
+    // Validate Cross-Origin-Resource-Policy header
+    const corpHeader = imgRes.headers['cross-origin-resource-policy'] || '';
+    assert(corpHeader === 'cross-origin', 'Response contains Cross-Origin-Resource-Policy: cross-origin', corpHeader);
+
+    // Validate Access-Control-Allow-Origin header
+    const corsHeader = imgRes.headers['access-control-allow-origin'] || '';
+    assert(corsHeader === 'http://localhost:5173' || corsHeader === '*', 'Response contains Access-Control-Allow-Origin for frontend', corsHeader);
+
     // Validate image signature in body (PNG: 89 50 4E 47)
     const buf = Buffer.from(imgRes.data);
     const isPngSig = buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;

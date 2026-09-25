@@ -52,6 +52,7 @@ export default function TeacherAIPage() {
   const [generating, setGenerating] = useState(false);
   const [genStage, setGenStage] = useState<string>('');
   const [genElapsed, setGenElapsed] = useState<number>(0);
+  const [genProgressCount, setGenProgressCount] = useState<number>(0);
   const [generated, setGenerated] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');

@@ -22,7 +22,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
-  loginGuest: (name: string, phone: string, code: string) => Promise<{ success: boolean; assessmentId?: string; message?: string }>;
+  loginGuest: (name: string, phone: string, code: string) => Promise<{ success: boolean; assessmentId?: string; message?: string; code?: string; openAt?: string | null; closeAt?: string | null; user?: any }>;
   register: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;

@@ -47,6 +47,22 @@ describe('getMediaUrl', () => {
     expect(resolved).toBe('http://localhost:4004/uploads/assessment-assets/uuid-image-123.png');
   });
 
+  it('normalizes and resolves uploads path without leading slash on localhost in development', () => {
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'localhost', origin: 'http://localhost:5173' },
+      writable: true,
+    });
+
+    const pathWithoutLeadingSlash = 'uploads/assessment-assets/uuid-image-123.png';
+    const resolved = getMediaUrl(pathWithoutLeadingSlash);
+    expect(resolved).toBe('http://localhost:4004/uploads/assessment-assets/uuid-image-123.png');
+  });
+
+  it('preserves protocol-relative URLs', () => {
+    const protoRelativeUrl = '//cdn.saden-math.com/assets/img.png';
+    expect(getMediaUrl(protoRelativeUrl)).toBe(protoRelativeUrl);
+  });
+
   it('preserves relative /uploads URL in production (non-localhost)', () => {
     Object.defineProperty(window, 'location', {
       value: { hostname: 'app.saden-math.com', origin: 'https://app.saden-math.com' },
@@ -54,6 +70,17 @@ describe('getMediaUrl', () => {
     });
 
     const relativeUrl = '/uploads/assessment-assets/uuid-image-123.png';
+    const resolved = getMediaUrl(relativeUrl);
+    expect(resolved).toBe('/uploads/assessment-assets/uuid-image-123.png');
+  });
+
+  it('normalizes uploads path without leading slash in production', () => {
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'app.saden-math.com', origin: 'https://app.saden-math.com' },
+      writable: true,
+    });
+
+    const relativeUrl = 'uploads/assessment-assets/uuid-image-123.png';
     const resolved = getMediaUrl(relativeUrl);
     expect(resolved).toBe('/uploads/assessment-assets/uuid-image-123.png');
   });
