@@ -278,6 +278,7 @@ model Assessment {
   teacher          User                  @relation("TeacherAssessments", fields: [teacherId], references: [id])
   attempts         AssessmentAttempt[]
   externalAttempts ExternalExamAttempt[]
+  temporaryAssets  TemporaryAsset[]
 }
 
 model ExternalExamAttempt {
@@ -578,4 +579,23 @@ enum AttemptStatus {
   TIME_EXPIRED
   GRADED
   CHEATING
+}
+
+model TemporaryAsset {
+  id           String      @id @default(uuid())
+  storageKey   String      @unique
+  url          String?
+  assessmentId String?
+  questionId   String?
+  mimeType     String
+  sizeBytes    Int
+  createdAt    DateTime    @default(now())
+  expiresAt    DateTime?
+  deletedAt    DateTime?
+
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@index([createdAt])
+  @@index([deletedAt])
 }

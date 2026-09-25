@@ -718,6 +718,17 @@ export default function ExternalExamTakingPage() {
                 <MathContent content={currentQ.questionText || currentQ.text || ''} />
               </div>
 
+              {/* Supporting Question Image (Phase 4) */}
+              {currentQ.imageUrl && (
+                <div className="my-4 flex justify-center">
+                  <img
+                    src={currentQ.imageUrl}
+                    alt={`صورة السؤال ${currentQuestionIdx + 1}`}
+                    className="max-h-72 max-w-full rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm object-contain bg-white dark:bg-gray-800 p-1"
+                  />
+                </div>
+              )}
+
               {/* Geometry Diagram if available */}
               {currentQ.diagram && (
                 <div className="my-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 flex justify-center">

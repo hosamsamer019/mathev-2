@@ -7,6 +7,15 @@ export interface ExamQuestion {
   type: string;
   options?: string[];
   correct?: any;
+  imageUrl?: string;
+  imageStorageKey?: string;
+  imageAssetId?: string;
+  explanation?: string;
+  points?: number;
+  generationLogic?: any;
+  solutionSteps?: any;
+  solutionExplanation?: string;
+  validationStatus?: string;
 }
 
 export interface CreateExamData {
@@ -19,6 +28,8 @@ export interface CreateExamData {
   randomization?: boolean;
   passingScore?: number;
   questions?: ExamQuestion[];
+  allowExternalStudents?: boolean;
+  allowedIps?: string;
 }
 
 export interface SubmitAnswerData {
@@ -70,4 +81,27 @@ export const examService = {
 
   getExternalResults: (examId: string) =>
     assessmentApi.get(`/teacher/external-results/${examId}`),
+
+  uploadQuestionImage: (file: File, assessmentId?: string, questionId?: string) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (assessmentId) formData.append('assessmentId', assessmentId);
+    if (questionId) formData.append('questionId', questionId);
+    const endpoint = assessmentId && assessmentId !== 'draft' ? `/${assessmentId}/assets/upload` : '/assets/upload';
+    return assessmentApi.post(endpoint, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  deleteQuestionAsset: (assetId: string, assessmentId?: string) => {
+    const endpoint = assessmentId && assessmentId !== 'draft' ? `/${assessmentId}/assets/${assetId}` : `/assets/${assetId}`;
+    return assessmentApi.delete(endpoint);
+  },
+
+  getAssessmentAssets: (assessmentId: string) =>
+    assessmentApi.get(`/${assessmentId}/assets`),
+
+  cleanupAssessmentAssets: (assessmentId?: string) =>
+    assessmentApi.post('/admin/cleanup-assets', {}, { params: { assessmentId } }),
 };
+

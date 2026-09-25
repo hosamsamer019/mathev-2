@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldCheck, BarChart3, Brain, Loader2, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Clock, Users, CheckCircle, Edit, Trash2, Eye, Shuffle, ShieldCheck, BarChart3, Brain, Loader2, X, Image as ImageIcon, Upload } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -198,11 +198,16 @@ export default function TeacherExamsPage() {
       setIsSubmitting(true);
       
       const mappedQuestions = questions.map((q, i) => ({
-        id: String(i + 1),
+        id: q.id || String(i + 1),
         text: q.text,
-        type: 'mcq',
+        type: q.type || 'mcq',
         options: q.options,
         correct: q.correct,
+        imageUrl: q.imageUrl,
+        imageStorageKey: q.imageStorageKey,
+        imageAssetId: q.imageAssetId,
+        explanation: q.explanation,
+        points: q.points || 1,
         generationLogic: q.generationLogic,
         solutionSteps: q.solutionSteps,
         solutionExplanation: q.solutionExplanation,
@@ -303,9 +308,19 @@ export default function TeacherExamsPage() {
       setNewAllowedIps(exam.allowedIps || '');
       
       const examQuestions = Array.isArray(exam.questions) ? exam.questions.map((q: any) => ({
-        text: q.text,
-        options: q.options || [],
-        correct: q.correct
+        id: q.id,
+        text: q.text || q.questionText || '',
+        options: q.options || ['', '', '', ''],
+        correct: q.correct ?? q.correctAnswer ?? 0,
+        imageUrl: q.imageUrl,
+        imageStorageKey: q.imageStorageKey,
+        imageAssetId: q.imageAssetId,
+        explanation: q.explanation,
+        points: q.points || 1,
+        generationLogic: q.generationLogic,
+        solutionSteps: q.solutionSteps,
+        solutionExplanation: q.solutionExplanation,
+        validationStatus: q.validationStatus
       })) : [];
       setQuestions(examQuestions);
       
@@ -342,8 +357,63 @@ export default function TeacherExamsPage() {
     }
   };
 
-  const addQuestion = () => {
-    setQuestions([...questions, { text: '', options: ['', '', '', ''], correct: 0 }]);
+  const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
+
+  const addQuestion = (initialData?: Partial<any>) => {
+    setQuestions(prev => [
+      ...prev,
+      {
+        text: initialData?.text || '',
+        options: initialData?.options || ['', '', '', ''],
+        correct: initialData?.correct ?? 0,
+        imageUrl: initialData?.imageUrl,
+        imageStorageKey: initialData?.imageStorageKey,
+        imageAssetId: initialData?.imageAssetId,
+        explanation: initialData?.explanation || '',
+        points: initialData?.points || 1,
+      }
+    ]);
+  };
+
+  const handleQuestionImageUpload = async (qIndex: number, file: File) => {
+    try {
+      setUploadingImageIndex(qIndex);
+      const res = await examService.uploadQuestionImage(
+        file,
+        editingExamId || undefined,
+        `q-${qIndex + 1}`
+      );
+      const assetData = res.data;
+      const updated = [...questions];
+      updated[qIndex].imageUrl = assetData.url;
+      updated[qIndex].imageStorageKey = assetData.storageKey;
+      updated[qIndex].imageAssetId = assetData.assetId;
+      setQuestions(updated);
+      toast.success('تم رفع صورة السؤال بنجاح');
+    } catch (err: any) {
+      console.error('Image upload failed', err);
+      const errMsg = err.response?.data?.message || 'فشل في رفع صورة السؤال';
+      toast.error(errMsg);
+    } finally {
+      setUploadingImageIndex(null);
+    }
+  };
+
+  const handleRemoveQuestionImage = async (qIndex: number) => {
+    const q = questions[qIndex];
+    if (q.imageAssetId) {
+      try {
+        await examService.deleteQuestionAsset(q.imageAssetId, editingExamId || undefined);
+      } catch (err) {
+        console.warn('Failed to delete asset on server', err);
+      }
+    }
+    const updated = [...questions];
+    updated[qIndex].imageUrl = undefined;
+    updated[qIndex].imageStorageKey = undefined;
+    updated[qIndex].imageAssetId = undefined;
+    setQuestions(updated);
+    toast.info('تمت إزالة صورة السؤال');
   };
 
   const updateQuestion = (index: number, field: string, value: any, optIndex?: number) => {
@@ -852,22 +922,79 @@ export default function TeacherExamsPage() {
                     <div key={qIndex} className={`p-4 rounded-2xl border transition-all ${isDark ? 'bg-gray-800/80 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-bold text-xs bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-2.5 py-1 rounded-lg">السؤال {qIndex + 1}</span>
-                        <button 
-                          type="button"
-                          onClick={() => removeQuestion(qIndex)} 
-                          className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 p-1.5 rounded-lg transition-colors"
-                          title="حذف السؤال"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            type="button"
+                            onClick={() => removeQuestion(qIndex)} 
+                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 p-1.5 rounded-lg transition-colors"
+                            title="حذف السؤال"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
+
+                      {/* Question Supporting Image Upload / Preview */}
+                      <div className="mb-3">
+                        {q.imageUrl ? (
+                          <div className="relative inline-block border rounded-xl overflow-hidden bg-black/5 dark:bg-black/20 p-1 mb-2">
+                            <img
+                              src={q.imageUrl}
+                              alt={`صورة السؤال ${qIndex + 1}`}
+                              className="max-h-48 max-w-full rounded-lg object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveQuestionImage(qIndex)}
+                              className="absolute top-2 start-2 bg-red-600 text-white p-1 rounded-lg hover:bg-red-700 shadow-md text-xs flex items-center gap-1 transition-colors"
+                              title="حذف الصورة"
+                            >
+                              <X className="w-3.5 h-3.5" /> حذف الصورة
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <label className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors ${
+                              uploadingImageIndex === qIndex
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : (isDark ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-650' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50')
+                            }`}>
+                              {uploadingImageIndex === qIndex ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <span>جاري الرفع...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>إرفاق صورة / لقطة شاشة للسؤال</span>
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                className="hidden"
+                                disabled={uploadingImageIndex === qIndex}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleQuestionImageUpload(qIndex, file);
+                                    e.target.value = '';
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
                       <input
                         placeholder="نص السؤال (يدعم صيغ الرياضيات KaTeX/LaTeX)"
                         value={q.text}
                         onChange={e => updateQuestion(qIndex, 'text', e.target.value)}
                         className={`w-full mb-3 px-3.5 py-2.5 rounded-xl border ${isDark ? 'bg-gray-750 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300'} text-xs focus:ring-2 focus:ring-emerald-500 outline-none`}
                       />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                         {q.options.map((opt: string, oIndex: number) => (
                           <div key={oIndex} className="flex items-center gap-2">
                             <input
@@ -886,9 +1013,18 @@ export default function TeacherExamsPage() {
                           </div>
                         ))}
                       </div>
+
+                      {/* Explanation Input */}
+                      <input
+                        placeholder="شرح الحل أو التوضيح (اختياري)"
+                        value={q.explanation || ''}
+                        onChange={e => updateQuestion(qIndex, 'explanation', e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-gray-700/60 border-gray-600 text-white placeholder-gray-400' : 'bg-white/80 border-gray-300 text-gray-700'} text-xs focus:ring-2 focus:ring-emerald-500 outline-none`}
+                      />
                     </div>
                   ))}
                 </div>
+
               </div>
 
               {/* Section 4: Advanced Settings */}

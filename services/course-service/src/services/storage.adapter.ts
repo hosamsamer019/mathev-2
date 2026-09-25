@@ -105,7 +105,160 @@ export async function generateSignedUploadUrl(
 }
 
 /**
- * Upload a file to the configured storage backend.
+ * Validate image buffer against actual magic byte signatures and MIME specifications.
+ * Prevents disguised executables, scripts, and malformed files from being uploaded.
+ */
+export function validateImageSignature(
+  buffer: Buffer,
+  declaredMimeType: string,
+  originalName: string
+): { valid: boolean; detectedMime?: string; error?: string } {
+  if (!buffer || buffer.length === 0) {
+    return { valid: false, error: 'Empty file buffer' };
+  }
+
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB limit for question images
+  if (buffer.length > MAX_SIZE) {
+    return { valid: false, error: 'File exceeds 10MB size limit' };
+  }
+
+  const ext = path.extname(originalName).toLowerCase();
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+  if (!allowedExtensions.includes(ext)) {
+    return { valid: false, error: `Invalid file extension "${ext}". Allowed: ${allowedExtensions.join(', ')}` };
+  }
+
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedMimes.includes(declaredMimeType.toLowerCase())) {
+    return { valid: false, error: `Invalid MIME type "${declaredMimeType}". Allowed: ${allowedMimes.join(', ')}` };
+  }
+
+  // Executable and script signature rejections
+  if (buffer.length >= 2 && buffer[0] === 0x4D && buffer[1] === 0x5A) {
+    return { valid: false, error: 'Executable file disguised as image is rejected (MZ signature)' };
+  }
+  if (buffer.length >= 4 && buffer[0] === 0x7F && buffer[1] === 0x45 && buffer[2] === 0x4C && buffer[3] === 0x46) {
+    return { valid: false, error: 'ELF binary disguised as image is rejected' };
+  }
+  if (buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4B && buffer[2] === 0x03 && buffer[3] === 0x04) {
+    return { valid: false, error: 'Zip/Archive disguised as image is rejected' };
+  }
+
+  // Check initial text for script injection
+  const headStr = buffer.subarray(0, Math.min(buffer.length, 128)).toString('utf8').toLowerCase();
+  if (headStr.includes('<script') || headStr.includes('<?php') || headStr.startsWith('#!') || headStr.includes('<html')) {
+    return { valid: false, error: 'Script or HTML file disguised as image is rejected' };
+  }
+
+  // Magic bytes inspection
+  // JPEG: FF D8 FF
+  const isJpeg = buffer.length >= 3 && buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  const isPng = buffer.length >= 8 &&
+    buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47 &&
+    buffer[4] === 0x0D && buffer[5] === 0x0A && buffer[6] === 0x1A && buffer[7] === 0x0A;
+
+  // WebP: RIFF ... WEBP
+  const isWebP = buffer.length >= 12 &&
+    buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+    buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+
+  // GIF: GIF87a or GIF89a
+  const isGif = buffer.length >= 6 &&
+    buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38 &&
+    (buffer[4] === 0x37 || buffer[4] === 0x39) && buffer[5] === 0x61;
+
+  let detectedMime: string | null = null;
+  if (isJpeg) detectedMime = 'image/jpeg';
+  else if (isPng) detectedMime = 'image/png';
+  else if (isWebP) detectedMime = 'image/webp';
+  else if (isGif) detectedMime = 'image/gif';
+
+  if (!detectedMime) {
+    return { valid: false, error: 'File content does not match a valid image signature (JPEG, PNG, WebP, GIF)' };
+  }
+
+  const normalizedDeclared = declaredMimeType.toLowerCase();
+  if (normalizedDeclared !== detectedMime) {
+    return {
+      valid: false,
+      error: `MIME type mismatch: declared "${declaredMimeType}" but detected "${detectedMime}"`
+    };
+  }
+
+  return { valid: true, detectedMime };
+}
+
+/**
+ * Upload a memory buffer directly to the configured storage backend.
+ */
+export async function uploadBuffer(
+  buffer: Buffer,
+  originalName: string,
+  mimetype: string,
+  keyPrefix = 'assessment-assets'
+): Promise<UploadResult> {
+  const ext = path.extname(originalName).toLowerCase();
+  const safeFilename = `${keyPrefix}/${randomUUID()}${ext}`;
+
+  if (activeBackend === 'r2' && s3Client) {
+    const command = new PutObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: safeFilename,
+      Body: buffer,
+      ContentType: mimetype,
+    });
+    await s3Client.send(command);
+
+    const publicUrl = R2_PUBLIC
+      ? `${R2_PUBLIC.replace(/\/$/, '')}/${safeFilename}`
+      : `https://${R2_BUCKET}.r2.cloudflarestorage.com/${safeFilename}`;
+
+    return {
+      url: publicUrl,
+      backend: 'r2',
+      filename: safeFilename,
+      mimetype,
+      size: buffer.length,
+    };
+  } else if (supabaseStorage) {
+    const { error } = await supabaseStorage
+      .from(SUPABASE_BUCKET)
+      .upload(safeFilename, buffer, { contentType: mimetype, upsert: false });
+
+    if (error) throw new Error(`Supabase upload failed: ${error.message}`);
+
+    const { data } = supabaseStorage.from(SUPABASE_BUCKET).getPublicUrl(safeFilename);
+
+    return {
+      url: data.publicUrl,
+      backend: 'supabase',
+      filename: safeFilename,
+      mimetype,
+      size: buffer.length,
+    };
+  } else {
+    // Local disk fallback
+    const uploadDir = path.join(process.cwd(), 'uploads', keyPrefix);
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    const localFileName = path.basename(safeFilename);
+    const fullPath = path.join(uploadDir, localFileName);
+    fs.writeFileSync(fullPath, buffer);
+
+    return {
+      url: `/uploads/${keyPrefix}/${localFileName}`,
+      backend: 'local',
+      filename: safeFilename,
+      mimetype,
+      size: buffer.length,
+    };
+  }
+}
+
+/**
+ * Upload a file from disk to the configured storage backend.
  */
 export async function uploadFile(
   filePath: string,
@@ -152,15 +305,43 @@ export async function uploadFile(
 }
 
 /**
- * Delete a file from the configured storage backend.
+ * Delete a file from the configured storage backend (idempotent).
  */
 export async function deleteFile(filename: string): Promise<void> {
-  if (supabaseStorage) {
-    const { error } = await supabaseStorage.from(SUPABASE_BUCKET).remove([filename]);
-    if (error) throw new Error(`Supabase delete failed: ${error.message}`);
+  if (!filename) return;
+
+  // Sanitize path traversal attempts
+  if (filename.includes('..')) {
+    throw new Error('Invalid storage key: path traversal detected');
+  }
+
+  if (activeBackend === 'r2' && s3Client) {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: filename,
+      });
+      await s3Client.send(command);
+    } catch (err: any) {
+      logger.warn(`[Storage] S3/R2 delete warning for ${filename}: ${err.message}`);
+    }
+  } else if (supabaseStorage) {
+    try {
+      const { error } = await supabaseStorage.from(SUPABASE_BUCKET).remove([filename]);
+      if (error) logger.warn(`[Storage] Supabase delete warning for ${filename}: ${error.message}`);
+    } catch (err: any) {
+      logger.warn(`[Storage] Supabase delete error for ${filename}: ${err.message}`);
+    }
   } else {
-    const filePath = path.join(process.cwd(), 'uploads', filename);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    try {
+      const filePath = path.join(process.cwd(), 'uploads', filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (err: any) {
+      logger.warn(`[Storage] Local delete warning for ${filename}: ${err.message}`);
+    }
   }
 }
+
 

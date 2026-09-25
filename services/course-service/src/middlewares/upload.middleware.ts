@@ -47,3 +47,12 @@ export const uploadMiddleware = multer({
     fileSize: 100 * 1024 * 1024 // 100MB max limit to handle videos
   }
 });
+
+// Export specialized memory-storage upload middleware for question image assets
+export const imageUploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max limit
+  }
+});
+

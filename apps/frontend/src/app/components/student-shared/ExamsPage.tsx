@@ -418,6 +418,17 @@ export default function ExamsPage() {
               )}
             </div>
 
+            {/* Supporting Question Image (Phase 4) */}
+            {currentQ.imageUrl && (
+              <div className="my-4 flex justify-center">
+                <img
+                  src={currentQ.imageUrl}
+                  alt={`صورة السؤال ${currentQuestionIdx + 1}`}
+                  className="max-h-72 max-w-full rounded-xl border border-gray-200 shadow-sm object-contain bg-white p-1"
+                />
+              </div>
+            )}
+
             {currentQ.diagram && <GeometryDiagram data={currentQ.diagram} />}
 
             {currentQ.given && currentQ.given.length > 0 && (
