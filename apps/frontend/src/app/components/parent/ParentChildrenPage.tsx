@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, FileText, CheckCircle, Clock, TrendingUp, BookOpen, Award, Loader2 } from 'lucide-react';
+import { Play, FileText, CheckCircle, Clock, XCircle, TrendingUp, BookOpen, Award, Loader2, Calendar, UserCheck } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { userService } from '../../services/user.service';
 import { analyticsService } from '../../services/analytics.service';
@@ -9,6 +9,7 @@ export default function ParentChildrenPage() {
   const [children, setChildren] = useState<any[]>([]);
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
   const [childData, setChildData] = useState<any>(null);
+  const [childAttendance, setChildAttendance] = useState<{ records: any[]; summary: any } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const cardBg = isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
@@ -39,10 +40,25 @@ export default function ParentChildrenPage() {
   const fetchChildAnalytics = async (childId: string) => {
     setLoading(true);
     try {
-      const res = await analyticsService.getParentChildOverview(childId);
-      setChildData(res.data);
+      const [analyticsRes, attendanceRes] = await Promise.all([
+        analyticsService.getParentChildOverview(childId).catch(() => null),
+        userService.getStudentAttendanceById(childId).catch(() => null)
+      ]);
+
+      if (analyticsRes && analyticsRes.data) {
+        setChildData(analyticsRes.data);
+      }
+
+      if (attendanceRes) {
+        setChildAttendance({
+          records: attendanceRes.data || [],
+          summary: attendanceRes.summary || null
+        });
+      } else {
+        setChildAttendance(null);
+      }
     } catch (err) {
-      console.error('Failed to fetch child analytics', err);
+      console.error('Failed to fetch child analytics or attendance', err);
     } finally {
       setLoading(false);
     }
@@ -138,6 +154,80 @@ export default function ParentChildrenPage() {
                      <p className={textSecondary}>لا توجد أنشطة مسجلة لهذا الطالب بعد.</p>
                   )}
                 </div>
+              </div>
+
+              {/* Attendance Records */}
+              <div className={`${cardBg} border rounded-2xl p-6 mb-6`}>
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-emerald-600" />
+                    <h2 className={`text-lg font-bold ${textPrimary}`}>سجل الحضور والغياب</h2>
+                  </div>
+                  {childAttendance?.summary && (
+                    <div className="flex items-center gap-2 text-xs flex-wrap">
+                      <span className="text-green-600 font-bold bg-green-50 dark:bg-green-950/40 px-2.5 py-1 rounded-lg">
+                        حاضر: {childAttendance.summary.presentCount}
+                      </span>
+                      <span className="text-amber-600 font-bold bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-lg">
+                        متأخر: {childAttendance.summary.lateCount}
+                      </span>
+                      <span className="text-red-600 font-bold bg-red-50 dark:bg-red-950/40 px-2.5 py-1 rounded-lg">
+                        غائب: {childAttendance.summary.absentCount}
+                      </span>
+                      {childAttendance.summary.percentage !== null && (
+                        <span className="text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-100 dark:bg-emerald-950 px-2.5 py-1 rounded-lg">
+                          النسبة: {childAttendance.summary.percentage}٪
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {childAttendance && childAttendance.records.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {childAttendance.records.slice(0, 5).map((rec: any) => {
+                      const recDate = new Date(rec.date);
+                      return (
+                        <div
+                          key={rec.id}
+                          className={`p-3.5 rounded-xl border ${
+                            isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-100 bg-gray-50/50'
+                          } flex justify-between items-center`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <div>
+                              <p className={`text-sm font-bold ${textPrimary}`}>
+                                {isNaN(recDate.getTime()) ? '-' : recDate.toLocaleDateString('ar-EG')}
+                              </p>
+                              <p className="text-[11px] text-gray-400">
+                                {isNaN(recDate.getTime()) ? '-' : recDate.toLocaleDateString('ar-EG', { weekday: 'long' })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div>
+                            {rec.status === 'PRESENT' ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
+                                <CheckCircle className="w-3.5 h-3.5" /> حاضر
+                              </span>
+                            ) : rec.status === 'LATE' ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold">
+                                <Clock className="w-3.5 h-3.5" /> متأخر
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 rounded-full text-xs font-bold">
+                                <XCircle className="w-3.5 h-3.5" /> غائب
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className={textSecondary}>لا يوجد سجل حضور مسجل لهذا الطالب بعد.</p>
+                )}
               </div>
             </>
           )}

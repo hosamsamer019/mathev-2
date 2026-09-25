@@ -61,7 +61,7 @@ async function verifyTeacherOrAdminAccess(requesterId: string, requesterRole: st
   if (upperRole === 'ADMIN') return true;
 
   if (upperRole === 'TEACHER') {
-    // Check if student is enrolled in any course taught by this teacher
+    // 1. Check if student is enrolled in any course taught by this teacher
     const courseEnrollment = await db.courseEnrollment.findFirst({
       where: {
         studentId,
@@ -70,14 +70,19 @@ async function verifyTeacherOrAdminAccess(requesterId: string, requesterRole: st
     });
     if (courseEnrollment) return true;
 
-    // Check if student belongs to teacher's center group
-    const studentUser = await db.user.findFirst({
-      where: {
-        id: studentId,
-        taughtCourses: { none: {} }
-      }
+    // 2. Check if student belongs to teacher's center group
+    const teacher = await db.user.findUnique({
+      where: { id: requesterId },
+      select: { centerGroupId: true }
     });
-    return !!courseEnrollment;
+    if (teacher?.centerGroupId) {
+      const studentInGroup = await db.user.findFirst({
+        where: { id: studentId, centerGroupId: teacher.centerGroupId }
+      });
+      if (studentInGroup) return true;
+    }
+
+    return false;
   }
 
   return false;
@@ -414,8 +419,21 @@ export const getAttendanceByDate = async (req: AuthRequest, res: Response) => {
         },
         select: { studentId: true }
       });
-      const studentIds = Array.from(new Set(enrollments.map(e => e.studentId)));
-      whereClause.studentId = { in: studentIds };
+      const studentIds = new Set(enrollments.map(e => e.studentId));
+
+      const teacher = await db.user.findUnique({
+        where: { id: requesterId },
+        select: { centerGroupId: true }
+      });
+      if (teacher?.centerGroupId) {
+        const groupStudents = await db.user.findMany({
+          where: { centerGroupId: teacher.centerGroupId },
+          select: { id: true }
+        });
+        groupStudents.forEach(s => studentIds.add(s.id));
+      }
+
+      whereClause.studentId = { in: Array.from(studentIds) };
     }
 
     const records = await db.attendance.findMany({
@@ -520,6 +538,14 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
         } catch {}
       }
       results.push(record);
+    }
+
+    if (results.length === 0 && validatedData.records.length > 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'لم يتم حفظ أي سجلات: لا يوجد طلاب مصرح لك بتسجيل حضورهم في القائمة المرسلة.',
+        count: 0
+      });
     }
 
     res.json({

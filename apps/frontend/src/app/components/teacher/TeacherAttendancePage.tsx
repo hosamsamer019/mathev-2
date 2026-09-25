@@ -14,9 +14,9 @@ interface StudentItem {
   name: string;
   email: string;
   role: string;
-  gradeLevel?: string;
+  rawGrade: string;
+  gradeLevel: string;
   educationLevel?: string;
-  academicYear?: string;
   type: string;
   courseIds: string[];
 }
@@ -28,38 +28,25 @@ interface CourseItem {
 }
 
 const GRADE_LABELS: Record<string, string> = {
-  'PRIMARY_1': 'الصف الأول الابتدائي',
-  'PRIMARY_2': 'الصف الثاني الابتدائي',
-  'PRIMARY_3': 'الصف الثالث الابتدائي',
-  'PRIMARY_4': 'الصف الرابع الابتدائي',
-  'PRIMARY_5': 'الصف الخامس الابتدائي',
-  'PRIMARY_6': 'الصف السادس الابتدائي',
-  'PREPARATORY_1': 'الصف الأول الإعدادي',
-  'PREPARATORY_2': 'الصف الثاني الإعدادي',
-  'PREPARATORY_3': 'الصف الثالث الإعدادي',
-  'SECONDARY_1': 'الصف الأول الثانوي',
-  'SECONDARY_2': 'الصف الثاني الثانوي',
-  'SECONDARY_3': 'الصف الثالث الثانوي',
-  'PREP_1': 'الصف الأول الإعدادي',
-  'PREP_2': 'الصف الثاني الإعدادي',
-  'PREP_3': 'الصف الثالث الإعدادي',
-  'SEC_1': 'الصف الأول الثانوي',
-  'SEC_2': 'الصف الثاني الثانوي',
-  'SEC_3': 'الصف الثالث الثانوي',
+  'PRIMARY_1': 'الصف الأول الابتدائي (أولى ابتدائي)',
+  'PRIMARY_2': 'الصف الثاني الابتدائي (تانية ابتدائي)',
+  'PRIMARY_3': 'الصف الثالث الابتدائي (تالتة ابتدائي)',
+  'PRIMARY_4': 'الصف الرابع الابتدائي (رابعة ابتدائي)',
+  'PRIMARY_5': 'الصف الخامس الابتدائي (خامسة ابتدائي)',
+  'PRIMARY_6': 'الصف السادس الابتدائي (ستة ابتدائي)',
+  'PREPARATORY_1': 'الصف الأول الإعدادي (أولى إعدادي)',
+  'PREPARATORY_2': 'الصف الثاني الإعدادي (تانية إعدادي)',
+  'PREPARATORY_3': 'الصف الثالث الإعدادي (تالتة إعدادي)',
+  'SECONDARY_1': 'الصف الأول الثانوي (أولى ثانوي)',
+  'SECONDARY_2': 'الصف الثاني الثانوي (تانية ثانوي)',
+  'SECONDARY_3': 'الصف الثالث الثانوي (تالتة ثانوي)',
+  'PREP_1': 'الصف الأول الإعدادي (أولى إعدادي)',
+  'PREP_2': 'الصف الثاني الإعدادي (تانية إعدادي)',
+  'PREP_3': 'الصف الثالث الإعدادي (تالتة إعدادي)',
+  'SEC_1': 'الصف الأول الثانوي (أولى ثانوي)',
+  'SEC_2': 'الصف الثاني الثانوي (تانية ثانوي)',
+  'SEC_3': 'الصف الثالث الثانوي (تالتة ثانوي)',
 };
-
-function deriveAcademicYear(student: any): string {
-  if (student.academicYear) return student.academicYear;
-  if (student.createdAt) {
-    const d = new Date(student.createdAt);
-    if (!isNaN(d.getTime())) {
-      const year = d.getFullYear();
-      const month = d.getMonth() + 1;
-      return month >= 8 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
-    }
-  }
-  return '2026/2027';
-}
 
 export default function TeacherAttendancePage() {
   const { isDark } = useTheme();
@@ -83,7 +70,7 @@ export default function TeacherAttendancePage() {
   const [loadingAttendance, setLoadingAttendance] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('ALL');
+  const [selectedGradeLevel, setSelectedGradeLevel] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PRESENT' | 'LATE' | 'ABSENT' | 'UNSET'>('ALL');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string; details?: string } | null>(null);
 
@@ -121,15 +108,14 @@ export default function TeacherAttendancePage() {
         .map((u: any) => {
           const rawGrade = u.gradeLevel || u.academicLevel || u.grade || '';
           const displayGrade = GRADE_LABELS[rawGrade] || rawGrade || 'غير محدد';
-          const acadYear = deriveAcademicYear(u);
           return {
             id: u.id,
             name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'طالب',
             email: u.email,
             role: u.role,
+            rawGrade: rawGrade,
             gradeLevel: displayGrade,
             educationLevel: u.educationLevel || '',
-            academicYear: acadYear,
             type: u.role === 'CENTER_STUDENT' ? 'سنتر' : 'أونلاين',
             courseIds: u.enrollments ? u.enrollments.map((e: any) => e.courseId) : []
           };
@@ -176,17 +162,32 @@ export default function TeacherAttendancePage() {
     }
   };
 
-  // Available Academic Years for dropdown
-  const availableAcademicYears = useMemo(() => {
-    const years = new Set<string>();
-    years.add('2026/2027');
-    years.add('2025/2026');
+  // Available Grade Levels for dropdown
+  const availableGradeLevels = useMemo(() => {
+    const gradeMap = new Map<string, string>();
+    
+    // Standard Egyptian educational grades
+    const standardGrades: Array<{ value: string; label: string }> = [
+      { value: 'SEC_1', label: 'الصف الأول الثانوي (أولى ثانوي)' },
+      { value: 'SEC_2', label: 'الصف الثاني الثانوي (تانية ثانوي)' },
+      { value: 'SEC_3', label: 'الصف الثالث الثانوي (تالتة ثانوي)' },
+      { value: 'PREP_1', label: 'الصف الأول الإعدادي (أولى إعدادي)' },
+      { value: 'PREP_2', label: 'الصف الثاني الإعدادي (تانية إعدادي)' },
+      { value: 'PREP_3', label: 'الصف الثالث الإعدادي (تالتة إعدادي)' },
+    ];
+
+    for (const sg of standardGrades) {
+      gradeMap.set(sg.value, sg.label);
+    }
+
     for (const s of allStudents) {
-      if (s.academicYear) {
-        years.add(s.academicYear);
+      if (s.rawGrade) {
+        const label = GRADE_LABELS[s.rawGrade] || s.gradeLevel || s.rawGrade;
+        gradeMap.set(s.rawGrade, label);
       }
     }
-    return Array.from(years).sort().reverse();
+
+    return Array.from(gradeMap.entries()).map(([value, label]) => ({ value, label }));
   }, [allStudents]);
 
   // 3. Deduplicate active students across selected groups/courses
@@ -195,13 +196,22 @@ export default function TeacherAttendancePage() {
       return [];
     }
 
+    const teacherCourseIdSet = new Set(courses.map(c => c.id));
     const studentMap = new Map<string, StudentItem>();
     for (const student of allStudents) {
+      // If teacher has courses, ensure student is enrolled in at least one of this teacher's courses
+      if (teacherCourseIdSet.size > 0) {
+        const isEnrolledWithTeacher = student.courseIds.some(cId => teacherCourseIdSet.has(cId));
+        if (!isEnrolledWithTeacher && student.courseIds.length > 0) {
+          continue;
+        }
+      }
+
       if (selectedCourseIds.length === 0 || selectedCourseIds.length === courses.length) {
         studentMap.set(student.id, student);
       } else {
         const hasMatchingCourse = student.courseIds.some(cId => selectedCourseIds.includes(cId));
-        if (hasMatchingCourse || student.courseIds.length === 0) {
+        if (hasMatchingCourse) {
           studentMap.set(student.id, student);
         }
       }
@@ -209,7 +219,7 @@ export default function TeacherAttendancePage() {
     return Array.from(studentMap.values());
   }, [allStudents, selectedCourseIds, courses]);
 
-  // 4. Filtered students based on search query, academic year, and status filter
+  // 4. Filtered students based on search query, grade level, and status filter
   const visibleStudents = useMemo(() => {
     return activeRoster.filter(student => {
       // 1. Search filter
@@ -222,9 +232,21 @@ export default function TeacherAttendancePage() {
 
       if (!matchesSearch) return false;
 
-      // 2. Academic Year filter
-      if (selectedAcademicYear !== 'ALL') {
-        if (student.academicYear !== selectedAcademicYear) {
+      // 2. Grade-Level filter
+      if (selectedGradeLevel !== 'ALL') {
+        const g = selectedGradeLevel.toUpperCase();
+        const sRaw = (student.rawGrade || '').toUpperCase();
+        const sDisplay = (student.gradeLevel || '').toUpperCase();
+
+        const isSec1 = (g === 'SEC_1' || g === 'SECONDARY_1') && (sRaw === 'SEC_1' || sRaw === 'SECONDARY_1' || sDisplay.includes('الأول الثانوي') || sDisplay.includes('أولى ثانوي'));
+        const isSec2 = (g === 'SEC_2' || g === 'SECONDARY_2') && (sRaw === 'SEC_2' || sRaw === 'SECONDARY_2' || sDisplay.includes('الثاني الثانوي') || sDisplay.includes('تانية ثانوي'));
+        const isSec3 = (g === 'SEC_3' || g === 'SECONDARY_3') && (sRaw === 'SEC_3' || sRaw === 'SECONDARY_3' || sDisplay.includes('الثالث الثانوي') || sDisplay.includes('تالتة ثانوي'));
+        const isPrep1 = (g === 'PREP_1' || g === 'PREPARATORY_1') && (sRaw === 'PREP_1' || sRaw === 'PREPARATORY_1' || sDisplay.includes('الأول الإعدادي') || sDisplay.includes('أولى إعدادي'));
+        const isPrep2 = (g === 'PREP_2' || g === 'PREPARATORY_2') && (sRaw === 'PREP_2' || sRaw === 'PREPARATORY_2' || sDisplay.includes('الثاني الإعدادي') || sDisplay.includes('تانية إعدادي'));
+        const isPrep3 = (g === 'PREP_3' || g === 'PREPARATORY_3') && (sRaw === 'PREP_3' || sRaw === 'PREPARATORY_3' || sDisplay.includes('الثالث الإعدادي') || sDisplay.includes('تالتة إعدادي'));
+        const isExact = sRaw === g || sDisplay === g;
+
+        if (!isSec1 && !isSec2 && !isSec3 && !isPrep1 && !isPrep2 && !isPrep3 && !isExact) {
           return false;
         }
       }
@@ -235,7 +257,7 @@ export default function TeacherAttendancePage() {
       if (statusFilter === 'UNSET') return !currentStatus;
       return currentStatus === statusFilter;
     });
-  }, [activeRoster, searchQuery, selectedAcademicYear, statusFilter, attendanceMap]);
+  }, [activeRoster, searchQuery, selectedGradeLevel, statusFilter, attendanceMap]);
 
   // 5. Live Summary Statistics
   const summary = useMemo(() => {
@@ -567,21 +589,21 @@ export default function TeacherAttendancePage() {
             />
           </div>
 
-          {/* Academic Year Selector */}
+          {/* Grade Level Selector */}
           <div className="flex items-center gap-2">
             <span className={`text-xs font-bold ${textSecondary} whitespace-nowrap flex items-center gap-1`}>
               <GraduationCap className="w-4 h-4 text-emerald-600" />
-              السنة الدراسية:
+              الصف الدراسي:
             </span>
             <select
-              value={selectedAcademicYear}
-              onChange={e => setSelectedAcademicYear(e.target.value)}
+              value={selectedGradeLevel}
+              onChange={e => setSelectedGradeLevel(e.target.value)}
               className={`text-xs font-semibold py-2 px-3 rounded-xl border outline-none transition-all ${inputBg}`}
             >
-              <option value="ALL">كل السنوات الدراسية</option>
-              {availableAcademicYears.map(year => (
-                <option key={year} value={year}>
-                  {year}
+              <option value="ALL">كل الصفوف والمراحل</option>
+              {availableGradeLevels.map(grade => (
+                <option key={grade.value} value={grade.value}>
+                  {grade.label}
                 </option>
               ))}
             </select>
@@ -662,8 +684,8 @@ export default function TeacherAttendancePage() {
       ) : visibleStudents.length === 0 ? (
         <div className={`p-12 rounded-2xl border ${cardBg} text-center space-y-3`}>
           <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className={`text-base font-bold ${textPrimary}`}>لا يوجد طلاب يطابقون معايير البحث أو السنة الدراسية المحددة</p>
-          <p className={`text-xs ${textSecondary}`}>جرب تغيير فلتر المجموعات، السنة الدراسية، أو مسح نص البحث</p>
+          <p className={`text-base font-bold ${textPrimary}`}>لا يوجد طلاب يطابقون معايير البحث أو الصف الدراسي المحدد</p>
+          <p className={`text-xs ${textSecondary}`}>جرب تغيير فلتر المجموعات، الصف الدراسي، أو مسح نص البحث</p>
         </div>
       ) : (
         <div className={`rounded-2xl border overflow-hidden ${cardBg}`}>
@@ -675,8 +697,7 @@ export default function TeacherAttendancePage() {
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
                   <th className="py-3.5 px-6">اسم الطالب</th>
                   <th className="py-3.5 px-4">نوع الطالب</th>
-                  <th className="py-3.5 px-4">الصف / المرحلة</th>
-                  <th className="py-3.5 px-4">السنة الدراسية</th>
+                  <th className="py-3.5 px-6">الصف / المرحلة الدراسية</th>
                   <th className="py-3.5 px-6 text-center w-80">تسجيل الحالة</th>
                 </tr>
               </thead>
@@ -715,11 +736,8 @@ export default function TeacherAttendancePage() {
                           {student.type}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      <td className="py-4 px-6 text-xs font-semibold text-gray-700 dark:text-gray-300">
                         {student.gradeLevel || 'غير محدد'}
-                      </td>
-                      <td className="py-4 px-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-                        {student.academicYear || '2026/2027'}
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-750 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -784,7 +802,7 @@ export default function TeacherAttendancePage() {
                       <div>
                         <p className={`text-sm font-bold ${textPrimary}`}>{student.name}</p>
                         <p className="text-[11px] text-gray-400">
-                          {student.gradeLevel || 'غير محدد'} • {student.academicYear || '2026/2027'}
+                          {student.gradeLevel || 'غير محدد'}
                         </p>
                       </div>
                     </div>

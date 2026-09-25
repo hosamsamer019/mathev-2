@@ -176,6 +176,19 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
           },
           examAttempts: {
             select: { score: true }
+          },
+          enrollments: {
+            select: {
+              courseId: true,
+              course: {
+                select: {
+                  id: true,
+                  title: true,
+                  teacherId: true,
+                  gradeLevel: true
+                }
+              }
+            }
           }
         },
         orderBy: { createdAt: 'desc' }
