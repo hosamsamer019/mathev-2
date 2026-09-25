@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Clock, CheckCircle, AlertCircle, Camera, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { ClipboardCheck, Clock, CheckCircle, AlertCircle, Camera, AlertTriangle, ShieldAlert, ChevronRight, ChevronLeft, Send } from 'lucide-react';
 import { examService } from '../../services/exam.service';
 import { useExamAntiCheat } from '../../hooks/useExamAntiCheat';
 import { MathContent } from '../ui/MathContent';
@@ -13,6 +13,7 @@ export default function ExamsPage() {
   const navigate = useNavigate();
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   const [examState, setExamState] = useState<'list' | 'setup' | 'running' | 'submitting' | 'submitted' | 'disqualified'>('list');
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [score, setScore] = useState(0);
@@ -90,6 +91,7 @@ export default function ExamsPage() {
       const res = await examService.getExamDetails(examId);
       setCurrentExam(res.data);
       setSelectedExam(examId);
+      setCurrentQuestionIdx(0);
       setExamState('setup');
     } catch (err: any) {
       console.error('Failed to load exam details', err);
@@ -291,7 +293,7 @@ export default function ExamsPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">تم إنهاء الامتحان بسبب مخالفة قواعد الامتحان</h2>
           <p className="text-gray-600 mb-2">تم تسجيل ثلاث مخالفات، ولذلك تم إنهاء محاولتك تلقائيًا.</p>
           <p className="text-2xl font-bold text-red-600 mb-8">الدرجة: 0</p>
-          <button onClick={() => { setExamState('list'); setAnswers({}); fetchExams(); }} className="mt-2 bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700">العودة للرئيسية</button>
+          <button onClick={() => { setExamState('list'); setAnswers({}); setCurrentQuestionIdx(0); fetchExams(); }} className="mt-2 bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700">العودة للرئيسية</button>
         </div>
       </div>
     );
@@ -343,8 +345,26 @@ export default function ExamsPage() {
 
   // ─── RUNNING STATE ────────────────────────────────────────────────────────
   if (examState === 'running' && currentExam) {
+    const questionsList: any[] = Array.isArray(currentExam.questions) ? currentExam.questions : [];
+    const totalQuestions = questionsList.length;
+    const currentQ = questionsList[currentQuestionIdx];
+    const answeredCount = Object.keys(answers).length;
+
+    let displayOptions: { text: string; originalIndex: number }[] = [];
+    if (currentQ && Array.isArray(currentQ.options)) {
+      displayOptions = currentQ.options.map((opt: string, i: number) => ({ text: opt, originalIndex: i }));
+      if (currentExam.randomization && currentQ.id) {
+        const seed = currentQ.id.toString().split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        displayOptions.sort((a, b) => {
+          const randomA = Math.sin(seed + a.originalIndex) * 10000;
+          const randomB = Math.sin(seed + b.originalIndex) * 10000;
+          return (randomA - Math.floor(randomA)) - (randomB - Math.floor(randomB));
+        });
+      }
+    }
+
     return (
-      <div className="p-8 max-w-3xl mx-auto" dir="rtl">
+      <div className="p-4 sm:p-8 max-w-3xl mx-auto" dir="rtl">
         {/* Multi-tab warning */}
         {showMultiTabWarning && (
           <div className="mb-4 bg-yellow-50 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg flex items-center gap-2">
@@ -360,89 +380,183 @@ export default function ExamsPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6 sticky top-0 z-10 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">{currentExam.title}</h1>
+        {/* Sticky Header with Title, Progress, Timer & Submit */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{currentExam.title}</h1>
+            {totalQuestions > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                السؤال {currentQuestionIdx + 1} من {totalQuestions} ({answeredCount} مُجاب عليها)
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <div className={`flex items-center gap-2 text-lg font-bold ${timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-indigo-600'}`}>
               <Clock className="w-5 h-5" />
               <span>{formatTime(timeLeft)}</span>
             </div>
-            <button onClick={handleManualSubmit} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">إنهاء وتسليم</button>
+            <button onClick={handleManualSubmit} className="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 font-bold text-sm transition-colors flex items-center gap-1.5">
+              <Send className="w-4 h-4" />
+              إنهاء وتسليم
+            </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-8 space-y-8">
-          {(Array.isArray(currentExam.questions) ? currentExam.questions : []).map((q: any, idx: number) => {
-            const originalOptions = Array.isArray(q.options) ? q.options : [];
-            let displayOptions = originalOptions.map((opt: string, i: number) => ({ text: opt, originalIndex: i }));
+        {/* Single Active Question Card (Only ONE question rendered in DOM) */}
+        {totalQuestions === 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500">لا توجد أسئلة متاحة في هذا الامتحان.</div>
+        ) : currentQ ? (
+          <div className="bg-white rounded-xl shadow-md p-6 sm:p-8 space-y-6" data-testid={`question-container-${currentQ.id || currentQuestionIdx}`}>
+            {/* Question Header */}
+            <div className="font-bold text-gray-900 flex justify-between items-start gap-4">
+              <div>
+                <span className="text-indigo-600 ml-2">السؤال {currentQuestionIdx + 1}:</span>
+                <MathContent content={currentQ.text || ''} className="leading-relaxed inline" />
+              </div>
+              {currentQ.points && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full shrink-0 font-medium">{currentQ.points} نقطة</span>
+              )}
+            </div>
 
-            if (currentExam.randomization) {
-              const seed = q.id.toString().split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-              displayOptions.sort((a: { text: string; originalIndex: number }, b: { text: string; originalIndex: number }) => {
-                const randomA = Math.sin(seed + a.originalIndex) * 10000;
-                const randomB = Math.sin(seed + b.originalIndex) * 10000;
-                return (randomA - Math.floor(randomA)) - (randomB - Math.floor(randomB));
-              });
-            }
+            {currentQ.diagram && <GeometryDiagram data={currentQ.diagram} />}
 
-            return (
-              <div key={q.id} className="pb-6 border-b border-gray-200 last:border-0" dir="rtl">
-                <div className="font-bold text-gray-900 mb-4 flex justify-between">
-                  <div>
-                    <span className="text-indigo-600 ml-2">السؤال {idx + 1}:</span>
-                    <MathContent content={q.text || ''} className="leading-relaxed inline" />
-                  </div>
-                  {q.points && <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded h-6">{q.points} نقطة</span>}
-                </div>
+            {currentQ.given && currentQ.given.length > 0 && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="font-medium text-gray-700 mb-2">المعطيات:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {currentQ.given.map((g: string, i: number) => (
+                    <li key={i} className="text-gray-800"><MathRenderer expression={g} /></li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-                {q.diagram && <GeometryDiagram data={q.diagram} />}
+            {currentQ.mathExpression && (
+              <div className="my-6 text-center overflow-x-auto text-xl">
+                <MathRenderer expression={currentQ.mathExpression} block />
+              </div>
+            )}
 
-                {q.given && q.given.length > 0 && (
-                  <div className="mb-4 bg-gray-50 p-4 rounded-lg">
-                    <p className="font-medium text-gray-700 mb-2">المعطيات:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      {q.given.map((g: string, i: number) => (
-                        <li key={i} className="text-gray-800"><MathRenderer expression={g} /></li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+            {currentQ.required && (
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
+                <p className="font-medium text-yellow-800"><span className="font-bold">المطلوب:</span> {currentQ.required}</p>
+              </div>
+            )}
 
-                {q.mathExpression && (
-                  <div className="my-6 text-center overflow-x-auto text-xl">
-                    <MathRenderer expression={q.mathExpression} block />
-                  </div>
-                )}
-
-                {q.required && (
-                  <div className="mb-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100">
-                    <p className="font-medium text-yellow-800"><span className="font-bold">المطلوب:</span> {q.required}</p>
-                  </div>
-                )}
-
-                <div className="space-y-3 mt-4">
-                  {displayOptions.map((optionObj: { text: string, originalIndex: number }, renderIdx: number) => (
-                    <label key={renderIdx} className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 cursor-pointer transition-colors">
+            {/* Answer Options / Input */}
+            {displayOptions.length > 0 ? (
+              <div className="space-y-3 mt-4">
+                {displayOptions.map((optionObj, renderIdx) => {
+                  const isSelected = answers[currentQ.id] === optionObj.originalIndex.toString() || answers[currentQ.id] === optionObj.text;
+                  return (
+                    <label
+                      key={renderIdx}
+                      className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 font-medium shadow-sm'
+                          : 'border-gray-200 hover:border-indigo-300 text-gray-900 bg-white'
+                      }`}
+                    >
                       <input
                         type="radio"
-                        name={`question-${q.id}`}
+                        name={`question-${currentQ.id}`}
                         value={optionObj.originalIndex}
-                        checked={answers[q.id] === optionObj.originalIndex.toString()}
-                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                        className="w-5 h-5 text-indigo-600"
+                        checked={isSelected}
+                        onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
+                        className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
                       />
-                      <div className="text-gray-900">
+                      <span className="w-6 h-6 rounded-lg bg-gray-100 text-xs font-bold flex items-center justify-center shrink-0">
+                        {['أ', 'ب', 'ج', 'د', 'هـ'][optionObj.originalIndex] || optionObj.originalIndex + 1}
+                      </span>
+                      <div className="flex-1 text-gray-900">
                         {optionObj.text.includes('\\') || optionObj.text.includes('^') || optionObj.text.match(/[a-zA-Z]/)
                           ? <MathRenderer expression={optionObj.text} />
                           : <MathContent content={optionObj.text} />}
                       </div>
                     </label>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            ) : (
+              <div className="my-4">
+                <label className="block text-xs font-bold mb-2 text-gray-700">إجابتك:</label>
+                <input
+                  type="text"
+                  value={answers[currentQ.id] || ''}
+                  onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
+                  placeholder="أدخل الإجابة هنا..."
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                />
+              </div>
+            )}
+
+            {/* Navigation Controls (Prev / Question Grid / Next) */}
+            <div className="pt-6 border-t border-gray-100 mt-6 space-y-4">
+              {/* Question Map / Grid Jumper */}
+              <div className="flex flex-wrap gap-2 justify-center py-2">
+                {questionsList.map((q: any, idx: number) => {
+                  const isCurrent = idx === currentQuestionIdx;
+                  const isAnswered = answers[q.id] !== undefined && answers[q.id] !== '';
+
+                  return (
+                    <button
+                      key={q.id || idx}
+                      type="button"
+                      onClick={() => setCurrentQuestionIdx(idx)}
+                      title={`انتقل إلى السؤال ${idx + 1}`}
+                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center ${
+                        isCurrent
+                          ? 'ring-2 ring-indigo-600 bg-indigo-600 text-white shadow-md'
+                          : isAnswered
+                          ? 'bg-green-100 text-green-700 border border-green-300'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Prev / Next Buttons */}
+              <div className="flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
+                  disabled={currentQuestionIdx === 0}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 text-gray-700 hover:bg-gray-50"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  السابق
+                </button>
+
+                <div className="text-xs text-gray-500 font-medium">
+                  {answeredCount} من {totalQuestions} مُجاب عنها
+                </div>
+
+                {currentQuestionIdx < totalQuestions - 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentQuestionIdx(prev => Math.min(totalQuestions - 1, prev + 1))}
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-colors flex items-center gap-1.5"
+                  >
+                    التالي
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleManualSubmit}
+                    className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-colors flex items-center gap-1.5"
+                  >
+                    <Send className="w-4 h-4" />
+                    إنهاء الامتحان
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -463,7 +577,7 @@ export default function ExamsPage() {
           <div className="text-6xl font-bold text-indigo-600 mb-4">{score}%</div>
           <p className="text-gray-600 mb-8">{passed ? 'مبروك! لقد نجحت' : 'للأسف، لم تنجح'}</p>
           <div className="flex gap-4 justify-center">
-            <button onClick={() => { setExamState('list'); setAnswers({}); setWasAutoSubmit(false); fetchExams(); }} className="bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 font-bold transition-colors">العودة للامتحانات</button>
+            <button onClick={() => { setExamState('list'); setAnswers({}); setCurrentQuestionIdx(0); setWasAutoSubmit(false); fetchExams(); }} className="bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 font-bold transition-colors">العودة للامتحانات</button>
             {attemptId && (
               <button
                 onClick={() => navigate(`/student/online/assessment/${currentExam.id}/review/${attemptId}`)}
