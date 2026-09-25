@@ -212,13 +212,14 @@ export default function SharedLayout({
 
       {/* Sidebar - Desktop */}
       <aside
-        className={`hidden lg:flex flex-col h-screen ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-l shadow-lg transition-all duration-300 z-30 flex-shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}
+        className={`hidden lg:flex flex-col h-screen ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-l shadow-lg transition-all duration-300 z-30 flex-shrink-0 relative ${collapsed ? 'w-16' : 'w-64'}`}
       >
         {/* Collapse Toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          style={{ left: collapsed ? '-12px' : `${256 - 12}px` }}
-          className={`fixed top-20 w-6 h-6 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-500'} border ${isDark ? 'border-gray-600' : 'border-gray-200'} shadow flex items-center justify-center z-50 transition-all duration-300`}
+          aria-label={collapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
+          title={collapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
+          className={`absolute top-20 -left-3 w-6 h-6 rounded-full ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-white text-gray-500 hover:bg-gray-50'} border ${isDark ? 'border-gray-600' : 'border-gray-200'} shadow-md flex items-center justify-center z-50 transition-all duration-300 cursor-pointer`}
         >
           {collapsed ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
