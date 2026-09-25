@@ -655,8 +655,29 @@ export default function VideoPlayerPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <div ref={containerRef} className="bg-black rounded-xl overflow-hidden relative" onContextMenu={e => e.preventDefault()}>
-              <div className="relative aspect-video bg-gray-800 flex items-center justify-center">
+            <div
+              ref={containerRef}
+              className={`bg-black rounded-xl overflow-hidden relative ${
+                isFullscreen
+                  ? 'fixed inset-0 w-screen h-screen z-[9999] flex flex-col justify-between'
+                  : ''
+              }`}
+              onContextMenu={e => e.preventDefault()}
+            >
+              {/* Floating Minimize / Exit Fullscreen Button */}
+              {isFullscreen && (
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  className="absolute top-4 left-4 z-[70] flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/85 hover:bg-black text-white text-xs font-bold backdrop-blur-md border border-white/25 shadow-2xl transition-all hover:scale-105 group"
+                  title="تصغير الفيديو / الخروج من وضع ملء الشاشة (Esc)"
+                >
+                  <Minimize className="w-4 h-4 text-emerald-400 group-hover:rotate-90 transition-transform" />
+                  <span>تصغير الفيديو</span>
+                </button>
+              )}
+
+              <div className={`relative bg-gray-800 flex items-center justify-center ${isFullscreen ? 'flex-1 w-full max-h-[calc(100vh-72px)]' : 'aspect-video'}`}>
                 {lesson?.videoUrl ? (
                   isGoogleDriveUrl(lesson.videoUrl) ? (
                     <div className="w-full h-full flex flex-col pointer-events-auto z-[50]">
@@ -908,11 +929,22 @@ export default function VideoPlayerPage() {
                     <span className="text-white text-sm w-16 font-medium text-right" dir="rtl">{Math.round(progress)}% تم</span>
                     
                     <button
+                      type="button"
                       onClick={toggleFullscreen}
-                      className="text-white hover:text-indigo-400 focus:outline-none transition-colors"
-                      title="ملء الشاشة"
+                      className="text-white hover:text-indigo-400 focus:outline-none transition-colors p-1.5 rounded-lg hover:bg-white/10 flex items-center gap-1.5"
+                      title={isFullscreen ? "تصغير الفيديو (الخروج من ملء الشاشة)" : "تكبير الفيديو (ملء الشاشة)"}
                     >
-                      {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                      {isFullscreen ? (
+                        <>
+                          <Minimize className="w-5 h-5 text-emerald-400" />
+                          <span className="text-xs text-emerald-400 font-bold hidden sm:inline">تصغير</span>
+                        </>
+                      ) : (
+                        <>
+                          <Maximize className="w-5 h-5" />
+                          <span className="text-xs text-gray-300 font-medium hidden sm:inline">تكبير</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
