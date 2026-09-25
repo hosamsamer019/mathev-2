@@ -419,12 +419,22 @@ export const getStudentReport = async (req: AuthRequest, res: Response) => {
     const requesterRole = (req.user?.role || '').toUpperCase();
     const requesterId = req.user?.userId;
 
-    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER' && requesterId !== studentId) {
-      // Also parents checking their children, handled broadly or if we do strict checks
+    if (!requesterId) return res.status(401).json({ message: 'Unauthorized' });
+
+    let isAuthorized = false;
+    if (requesterRole === 'ADMIN' || requesterRole === 'TEACHER') {
+      isAuthorized = true;
+    } else if (requesterId === studentId) {
+      isAuthorized = true;
+    } else if (requesterRole === 'PARENT') {
       const parent = await db.user.findFirst({ where: { id: studentId, parentId: requesterId } });
-      if (!parent && requesterRole === 'PARENT') {
-        return res.status(403).json({ message: 'Forbidden' });
+      if (parent) {
+        isAuthorized = true;
       }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ message: 'Forbidden: Unauthorized access to student report' });
     }
 
     const student = await db.user.findUnique({

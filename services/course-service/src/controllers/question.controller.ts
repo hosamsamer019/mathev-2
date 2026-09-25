@@ -23,15 +23,16 @@ const questionSchema = z.object({
 
 export const createQuestion = async (req: AuthRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'TEACHER') {
-      return res.status(403).json({ message: 'Only teachers can create questions in the bank' });
+    const role = (req.user?.role || '').toUpperCase();
+    if (role !== 'TEACHER' && role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only teachers and admins can create questions in the bank' });
     }
 
     const data = questionSchema.parse(req.body);
 
     const question = await db.questionBank.create({
       data: {
-        creatorId: req.user.userId,
+        creatorId: req.user!.userId,
         text: data.text,
         type: data.type,
         options: data.options,
@@ -65,14 +66,15 @@ export const createQuestion = async (req: AuthRequest, res: Response) => {
 
 export const getQuestions = async (req: AuthRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'TEACHER') {
-      return res.status(403).json({ message: 'Only teachers can access their question bank' });
+    const role = (req.user?.role || '').toUpperCase();
+    if (role !== 'TEACHER' && role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only teachers and admins can access their question bank' });
     }
 
     const { tag } = req.query;
     
-    const where: any = {
-      creatorId: req.user.userId
+    const where: any = role === 'ADMIN' ? {} : {
+      creatorId: req.user!.userId
     };
 
     if (tag && typeof tag === 'string' && tag.trim() !== '') {
