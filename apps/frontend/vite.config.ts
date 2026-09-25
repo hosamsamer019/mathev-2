@@ -39,6 +39,10 @@ export default defineConfig({
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
   server: {
+    hmr: {
+      port: 5173,
+      clientPort: 5173
+    },
     proxy: {
       '/api/auth': {
         target: 'http://localhost:4001',

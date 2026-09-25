@@ -4,14 +4,25 @@ import IORedis from 'ioredis';
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+const isRedisDisabled = true;
 
-export const riskEngineQueue = new Queue('RiskEngineQueue', { connection });
+let connection: IORedis | null = null;
+export let riskEngineQueue: Queue | null = null;
+let worker: Worker | null = null;
+
+if (!isRedisDisabled) {
+  connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+  riskEngineQueue = new Queue('RiskEngineQueue', { connection });
+}
 
 export async function setupRiskEngineJob() {
+  if (isRedisDisabled || !riskEngineQueue) {
+    console.log('[RiskEngine] Redis is disabled, skipping Risk Engine Cron Job.');
+    return;
+  }
   await riskEngineQueue.add('evaluate-risks', {}, {
     repeat: {
       pattern: '0 * * * *' // Every hour at minute 0
@@ -21,8 +32,9 @@ export async function setupRiskEngineJob() {
   console.log('Risk Engine Cron Job Scheduled (Hourly)');
 }
 
-const worker = new Worker('RiskEngineQueue', async (job: Job) => {
-  console.log(`[RiskEngine] Starting evaluation at ${new Date().toISOString()}`);
+if (!isRedisDisabled && connection) {
+  worker = new Worker('RiskEngineQueue', async (job: Job) => {
+    console.log(`[RiskEngine] Starting evaluation at ${new Date().toISOString()}`);
   
   const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
 
@@ -138,6 +150,9 @@ const worker = new Worker('RiskEngineQueue', async (job: Job) => {
   console.log(`[RiskEngine] Evaluation finished at ${new Date().toISOString()}`);
 }, { connection });
 
-worker.on('failed', (job, err) => {
-  console.error(`[RiskEngine] Job ${job?.id} failed with error:`, err);
-});
+if (worker) {
+  worker.on('failed', (job, err) => {
+    console.error(`[RiskEngine] Job ${job?.id} failed with error:`, err);
+  });
+}
+}
