@@ -58,9 +58,38 @@ export const userService = {
     return response.data;
   },
 
-  getAttendance: async (): Promise<any[]> => {
-    // Assuming attendance routes are nested under users or we can just use the userApi wrapper for authorized requests
+  getAttendance: async (): Promise<any> => {
     const response = await userApi.get('/attendance/my-attendance');
+    return response.data;
+  },
+
+  getStudentAttendanceById: async (studentId: string): Promise<any> => {
+    const response = await userApi.get(`/attendance/student/${studentId}`);
+    return response.data;
+  },
+
+  getAttendancePercentage: async (studentId: string): Promise<any> => {
+    const response = await userApi.get(`/attendance/${studentId}/percentage`);
+    return response.data;
+  },
+
+  markAttendance: async (payload: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; date?: string }): Promise<any> => {
+    const response = await userApi.post('/attendance', payload);
+    return response.data;
+  },
+
+  updateAttendance: async (id: string, payload: { status?: 'PRESENT' | 'ABSENT' | 'LATE'; date?: string }): Promise<any> => {
+    const response = await userApi.put(`/attendance/${id}`, payload);
+    return response.data;
+  },
+
+  deleteAttendance: async (id: string): Promise<any> => {
+    const response = await userApi.delete(`/attendance/${id}`);
+    return response.data;
+  },
+
+  bulkMarkAttendance: async (payload: { records: Array<{ studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE' }>; date?: string }): Promise<any> => {
+    const response = await userApi.post('/attendance/bulk', payload);
     return response.data;
   },
 
@@ -69,3 +98,4 @@ export const userService = {
     return response.data;
   }
 };
+

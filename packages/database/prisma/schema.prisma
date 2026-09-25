@@ -189,6 +189,10 @@ model Attendance {
   status    String
   createdAt DateTime @default(now())
   student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([date])
+  @@index([studentId, date])
 }
 
 model Payment {
