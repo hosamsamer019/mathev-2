@@ -4,6 +4,7 @@ import {
   bulkMarkAttendance,
   getStudentAttendance,
   getStudentAttendanceById,
+  getAttendanceByDate,
   getAttendancePercentage,
   updateAttendanceRecord,
   deleteAttendanceRecord
@@ -16,6 +17,7 @@ const router = Router();
 router.get('/my-attendance', verifyToken, getStudentAttendance);
 
 // Teacher / Staff / Admin endpoints
+router.get('/by-date', verifyToken, checkRole(['admin', 'teacher']), getAttendanceByDate);
 router.post('/bulk', verifyToken, checkRole(['admin', 'teacher']), bulkMarkAttendance);
 router.post('/', verifyToken, checkRole(['admin', 'teacher']), markAttendance);
 router.get('/student/:studentId', verifyToken, getStudentAttendanceById);

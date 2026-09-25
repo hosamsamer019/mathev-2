@@ -33,12 +33,23 @@ const statusMapArabic: Record<string, string> = {
  * to ensure consistent date-only uniqueness and prevent timezone shifting.
  */
 function normalizeDateRange(dateInput?: string | Date): { dayStart: Date; dayEnd: Date } {
-  const parsed = dateInput ? new Date(dateInput) : new Date();
-  if (isNaN(parsed.getTime())) {
-    throw new Error('Invalid date format');
+  let year: number, month: number, day: number;
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+    const parts = dateInput.trim().split('-').map(Number);
+    year = parts[0];
+    month = parts[1] - 1;
+    day = parts[2];
+  } else {
+    const parsed = dateInput ? new Date(dateInput) : new Date();
+    if (isNaN(parsed.getTime())) {
+      throw new Error('Invalid date format');
+    }
+    year = parsed.getUTCFullYear();
+    month = parsed.getUTCMonth();
+    day = parsed.getUTCDate();
   }
-  const dayStart = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
-  const dayEnd = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
+  const dayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+  const dayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
   return { dayStart, dayEnd };
 }
 
@@ -372,6 +383,71 @@ export const deleteAttendanceRecord = async (req: AuthRequest, res: Response) =>
 };
 
 /**
+ * GET /api/attendance/by-date?date=YYYY-MM-DD
+ * Retrieve attendance records for the requester's authorized students for a specific date.
+ */
+export const getAttendanceByDate = async (req: AuthRequest, res: Response) => {
+  try {
+    const requesterId = req.user?.userId;
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const dateQuery = req.query.date as string;
+
+    if (!requesterId) return res.status(401).json({ message: 'Unauthorized' });
+
+    if (requesterRole.includes('STUDENT')) {
+      return res.status(403).json({ message: 'Forbidden: Students cannot access attendance by date' });
+    }
+
+    const { dayStart, dayEnd } = normalizeDateRange(dateQuery);
+
+    let whereClause: any = {
+      date: {
+        gte: dayStart,
+        lte: dayEnd
+      }
+    };
+
+    if (requesterRole === 'TEACHER') {
+      const enrollments = await db.courseEnrollment.findMany({
+        where: {
+          course: { teacherId: requesterId }
+        },
+        select: { studentId: true }
+      });
+      const studentIds = Array.from(new Set(enrollments.map(e => e.studentId)));
+      whereClause.studentId = { in: studentIds };
+    }
+
+    const records = await db.attendance.findMany({
+      where: whereClause,
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            gradeLevel: true,
+            educationLevel: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json({
+      date: dayStart.toISOString().split('T')[0],
+      dayStart,
+      dayEnd,
+      count: records.length,
+      data: records
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching attendance by date', error: error.message });
+  }
+};
+
+/**
  * POST /api/attendance/bulk
  * Bulk mark/upsert attendance for multiple students in a class or course session.
  */
@@ -385,10 +461,17 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
 
     const { dayStart, dayEnd } = normalizeDateRange(validatedData.date);
     const results: any[] = [];
+    let presentCount = 0;
+    let lateCount = 0;
+    let absentCount = 0;
 
     for (const item of validatedData.records) {
       const isAuthorized = await verifyTeacherOrAdminAccess(requesterId, requesterRole, item.studentId);
       if (!isAuthorized) continue;
+
+      if (item.status === 'PRESENT') presentCount++;
+      else if (item.status === 'LATE') lateCount++;
+      else if (item.status === 'ABSENT') absentCount++;
 
       const existing = await db.attendance.findFirst({
         where: {
@@ -397,21 +480,59 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
         }
       });
 
+      let record;
       if (existing) {
-        const updated = await db.attendance.update({
+        record = await db.attendance.update({
           where: { id: existing.id },
           data: { status: item.status, date: dayStart }
         });
-        results.push(updated);
+
+        // Notify student only if status actually changed
+        if (existing.status !== item.status) {
+          const statusArabic = statusMapArabic[item.status] || item.status;
+          try {
+            await db.notification.create({
+              data: {
+                userId: item.studentId,
+                title: 'تحديث الحضور',
+                message: `تم تحديث حالتك إلى "${statusArabic}" في الحصة بتاريخ ${dayStart.toLocaleDateString('ar-EG')}`,
+                type: 'info'
+              }
+            });
+          } catch {}
+        }
       } else {
-        const created = await db.attendance.create({
+        record = await db.attendance.create({
           data: { studentId: item.studentId, date: dayStart, status: item.status }
         });
-        results.push(created);
+
+        // Notify student on new attendance creation
+        const statusArabic = statusMapArabic[item.status] || item.status;
+        try {
+          await db.notification.create({
+            data: {
+              userId: item.studentId,
+              title: 'تسجيل الحضور',
+              message: `تم تسجيلك كـ "${statusArabic}" في الحصة بتاريخ ${dayStart.toLocaleDateString('ar-EG')}`,
+              type: 'info'
+            }
+          });
+        } catch {}
       }
+      results.push(record);
     }
 
-    res.json({ success: true, count: results.length, data: results });
+    res.json({
+      success: true,
+      count: results.length,
+      summary: {
+        total: results.length,
+        present: presentCount,
+        late: lateCount,
+        absent: absentCount
+      },
+      data: results
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });

@@ -93,6 +93,11 @@ export const userService = {
     return response.data;
   },
 
+  getAttendanceByDate: async (date: string): Promise<any> => {
+    const response = await userApi.get('/attendance/by-date', { params: { date } });
+    return response.data;
+  },
+
   getRisks: async (): Promise<any[]> => {
     const response = await userApi.get('/risks');
     return response.data;

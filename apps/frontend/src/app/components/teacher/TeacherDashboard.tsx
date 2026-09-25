@@ -1,11 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import {
   Home, Users, BookOpen, ClipboardCheck, BarChart3,
-  MessageCircle, User, FileText, Brain, Video
+  MessageCircle, User, FileText, Brain, Video, CalendarCheck
 } from 'lucide-react';
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
 import TeacherHomePage from './TeacherHomePage';
 import TeacherStudentsPage from './TeacherStudentsPage';
+import TeacherAttendancePage from './TeacherAttendancePage';
 import TeacherCoursesPage from './TeacherCoursesPage';
 import TeacherAnalyticsPage from './TeacherAnalyticsPage';
 import TeacherExamsPage from './TeacherExamsPage';
@@ -25,6 +26,7 @@ export default function TeacherDashboard() {
 
   const menuItems: MenuItem[] = [
     { path: '/teacher/home', icon: Home, label: t('dashboard') as string },
+    { path: '/teacher/attendance', icon: CalendarCheck, label: t('attendance') as string },
     { path: '/teacher/students', icon: Users, label: t('students') as string },
     { path: '/teacher/courses', icon: BookOpen, label: t('courses') as string },
     { path: '/teacher/exams', icon: ClipboardCheck, label: t('exams') as string },
@@ -47,6 +49,7 @@ export default function TeacherDashboard() {
       <Routes>
         <Route path="/" element={<Navigate to="/teacher/home" replace />} />
         <Route path="/home" element={<TeacherHomePage />} />
+        <Route path="/attendance" element={<TeacherAttendancePage />} />
         <Route path="/students" element={<TeacherStudentsPage />} />
         <Route path="/students/:id" element={<StudentReportPage />} />
         <Route path="/courses" element={<TeacherCoursesPage />} />
