@@ -162,32 +162,46 @@ export default function TeacherAttendancePage() {
     }
   };
 
-  // Available Grade Levels for dropdown
+  // Available Grade Levels for dropdown with guaranteed correct educational order (1 -> 2 -> 3)
   const availableGradeLevels = useMemo(() => {
-    const gradeMap = new Map<string, string>();
-    
-    // Standard Egyptian educational grades
-    const standardGrades: Array<{ value: string; label: string }> = [
-      { value: 'SEC_1', label: 'الصف الأول الثانوي (أولى ثانوي)' },
-      { value: 'SEC_2', label: 'الصف الثاني الثانوي (تانية ثانوي)' },
-      { value: 'SEC_3', label: 'الصف الثالث الثانوي (تالتة ثانوي)' },
-      { value: 'PREP_1', label: 'الصف الأول الإعدادي (أولى إعدادي)' },
-      { value: 'PREP_2', label: 'الصف الثاني الإعدادي (تانية إعدادي)' },
-      { value: 'PREP_3', label: 'الصف الثالث الإعدادي (تالتة إعدادي)' },
+    // Standard ordered Egyptian educational grades:
+    // الثانوية: أولى ثانوي -> تانية ثانوي -> تالتة ثانوي
+    // الإعدادية: أولى إعدادي -> تانية إعدادي -> تالتة إعدادي
+    // الابتدائية: أولى ابتدائي -> تانية ابتدائي -> ...
+    const orderedStandardGrades: Array<{ value: string; label: string; aliases: string[] }> = [
+      { value: 'SEC_1', label: 'الصف الأول الثانوي (أولى ثانوي)', aliases: ['SEC_1', 'SECONDARY_1'] },
+      { value: 'SEC_2', label: 'الصف الثاني الثانوي (تانية ثانوي)', aliases: ['SEC_2', 'SECONDARY_2'] },
+      { value: 'SEC_3', label: 'الصف الثالث الثانوي (تالتة ثانوي)', aliases: ['SEC_3', 'SECONDARY_3'] },
+      { value: 'PREP_1', label: 'الصف الأول الإعدادي (أولى إعدادي)', aliases: ['PREP_1', 'PREPARATORY_1'] },
+      { value: 'PREP_2', label: 'الصف الثاني الإعدادي (تانية إعدادي)', aliases: ['PREP_2', 'PREPARATORY_2'] },
+      { value: 'PREP_3', label: 'الصف الثالث الإعدادي (تالتة إعدادي)', aliases: ['PREP_3', 'PREPARATORY_3'] },
+      { value: 'PRIMARY_1', label: 'الصف الأول الابتدائي (أولى ابتدائي)', aliases: ['PRIMARY_1', 'PRIM_1'] },
+      { value: 'PRIMARY_2', label: 'الصف الثاني الابتدائي (تانية ابتدائي)', aliases: ['PRIMARY_2', 'PRIM_2'] },
+      { value: 'PRIMARY_3', label: 'الصف الثالث الابتدائي (تالتة ابتدائي)', aliases: ['PRIMARY_3', 'PRIM_3'] },
+      { value: 'PRIMARY_4', label: 'الصف الرابع الابتدائي (رابعة ابتدائي)', aliases: ['PRIMARY_4', 'PRIM_4'] },
+      { value: 'PRIMARY_5', label: 'الصف الخامس الابتدائي (خامسة ابتدائي)', aliases: ['PRIMARY_5', 'PRIM_5'] },
+      { value: 'PRIMARY_6', label: 'الصف السادس الابتدائي (ستة ابتدائي)', aliases: ['PRIMARY_6', 'PRIM_6'] },
     ];
 
-    for (const sg of standardGrades) {
-      gradeMap.set(sg.value, sg.label);
+    const result: Array<{ value: string; label: string }> = [];
+    const recognizedKeys = new Set<string>();
+
+    for (const std of orderedStandardGrades) {
+      result.push({ value: std.value, label: std.label });
+      std.aliases.forEach(a => recognizedKeys.add(a));
+      recognizedKeys.add(std.value);
     }
 
+    // Add any non-standard custom grade that might exist in students data
     for (const s of allStudents) {
-      if (s.rawGrade) {
+      if (s.rawGrade && !recognizedKeys.has(s.rawGrade)) {
         const label = GRADE_LABELS[s.rawGrade] || s.gradeLevel || s.rawGrade;
-        gradeMap.set(s.rawGrade, label);
+        result.push({ value: s.rawGrade, label });
+        recognizedKeys.add(s.rawGrade);
       }
     }
 
-    return Array.from(gradeMap.entries()).map(([value, label]) => ({ value, label }));
+    return result;
   }, [allStudents]);
 
   // 3. Deduplicate active students across selected groups/courses
