@@ -145,7 +145,12 @@ export const MathContent: React.FC<MathContentProps> = ({ content, className }) 
         return (
           <span
             key={i}
-            className={seg.type === 'display-math' ? 'block my-2 overflow-x-auto text-center' : 'inline mx-1'}
+            dir="ltr"
+            className={
+              seg.type === 'display-math'
+                ? 'block my-2 overflow-x-auto max-w-full text-center py-1 px-2'
+                : 'inline-block max-w-full overflow-x-auto align-middle mx-1 py-0.5'
+            }
             dangerouslySetInnerHTML={{ __html: html }}
           />
         );

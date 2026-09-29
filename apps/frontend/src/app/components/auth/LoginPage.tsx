@@ -110,32 +110,32 @@ export default function LoginPage() {
       {/* Back to Home Button */}
       <button 
         onClick={() => navigate('/')} 
-        className="absolute top-6 right-6 z-50 flex items-center gap-2 text-white hover:text-brand-200 transition-colors bg-brand-600/50 hover:bg-brand-600 px-4 py-2 rounded-xl backdrop-blur-md shadow-lg"
+        className="absolute top-4 start-4 sm:top-6 sm:start-6 z-50 flex items-center gap-1.5 text-white hover:text-brand-200 transition-colors bg-brand-600/50 hover:bg-brand-600 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl backdrop-blur-md shadow-lg text-xs sm:text-sm"
       >
-        <ChevronLeft className="w-5 h-5 rotate-180" />
+        <ChevronLeft className="w-4 h-4 rotate-180" />
         <span className="font-medium">الرئيسية</span>
       </button>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md relative"
+        className="w-full max-w-md relative mt-10 sm:mt-0"
       >
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-accent-600 rounded-2xl mb-4 shadow-2xl">
-            <Sparkles className="w-8 h-8 text-white" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-brand-500 to-brand-accent-600 rounded-2xl mb-3 sm:mb-4 shadow-2xl">
+            <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-1">AL-SADEN</h1>
-          <p className="text-brand-300 text-sm">منصة التعلم الذكي المتكاملة</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">AL-SADEN</h1>
+          <p className="text-brand-300 text-xs sm:text-sm">منصة التعلم الذكي المتكاملة</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl border border-white/20">
           {step === 'role' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <h2 className="text-xl font-bold text-white text-center mb-2">أهلاً بك!</h2>
-              <p className="text-brand-200 text-sm text-center mb-6">اختر دورك للمتابعة</p>
+              <h2 className="text-lg sm:text-xl font-bold text-white text-center mb-1 sm:mb-2">أهلاً بك!</h2>
+              <p className="text-brand-200 text-xs sm:text-sm text-center mb-5 sm:mb-6">اختر دورك للمتابعة</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {roles.map((role) => (
                   <motion.button

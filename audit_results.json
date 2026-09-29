@@ -1,0 +1,662 @@
+[
+  {
+    "category": "Database Health",
+    "name": "Environment variable: DATABASE_URL",
+    "scope": "UNIT",
+    "status": "VERIFIED",
+    "details": "Key 'DATABASE_URL' exists and is configured."
+  },
+  {
+    "category": "Database Health",
+    "name": "Environment variable: JWT_SECRET",
+    "scope": "UNIT",
+    "status": "VERIFIED",
+    "details": "Key 'JWT_SECRET' exists and is configured."
+  },
+  {
+    "category": "Database Health",
+    "name": "PostgreSQL Connectivity & Raw Query Execution",
+    "scope": "REAL_DATABASE",
+    "status": "VERIFIED",
+    "command": "prisma.$queryRaw`SELECT version(), current_database(), now()`",
+    "details": "Connected to DB: math_platform, PG Version: PostgreSQL 15.19"
+  },
+  {
+    "category": "Database Health",
+    "name": "Prisma Client Initialization & Model Queries",
+    "scope": "REAL_DATABASE",
+    "status": "VERIFIED",
+    "command": "prisma.user.count()",
+    "details": "Prisma client initialized successfully. Total existing users: 233"
+  },
+  {
+    "category": "Database Health",
+    "name": "Prisma Migration State",
+    "scope": "REAL_DATABASE",
+    "status": "FAILED",
+    "details": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42P01`. Message: `relation \"_prisma_migrations\" does not exist`"
+  },
+  {
+    "category": "Database Health",
+    "name": "Schema Consistency (27 Required Models / Tables)",
+    "scope": "REAL_DATABASE",
+    "status": "VERIFIED",
+    "details": "All 27 schema tables exist in PostgreSQL public schema."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "CenterGroup -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: e6baf283-1267-49ec-bb9d-ed3eb4d83152"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "CenterGroup -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: e6baf283-1267-49ec-bb9d-ed3eb4d83152 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "CenterGroup -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: e6baf283-1267-49ec-bb9d-ed3eb4d83152 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "CenterGroup -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: e6baf283-1267-49ec-bb9d-ed3eb4d83152"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "User -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 3d0e06e3-f85c-47fe-a620-63b546a08a79"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "User -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 3d0e06e3-f85c-47fe-a620-63b546a08a79 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "User -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 3d0e06e3-f85c-47fe-a620-63b546a08a79 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "User -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 3d0e06e3-f85c-47fe-a620-63b546a08a79"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Course -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: de09c571-38aa-46b9-999a-ef090258a415"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Course -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: de09c571-38aa-46b9-999a-ef090258a415 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Course -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: de09c571-38aa-46b9-999a-ef090258a415 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Course -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: de09c571-38aa-46b9-999a-ef090258a415"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Lesson -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 99b93b99-6202-4cd4-b2ca-14e9dd1938c3"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Lesson -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 99b93b99-6202-4cd4-b2ca-14e9dd1938c3 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Lesson -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 99b93b99-6202-4cd4-b2ca-14e9dd1938c3 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Lesson -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 99b93b99-6202-4cd4-b2ca-14e9dd1938c3"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Assessment -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 092e48f8-b6b4-4889-ab9f-2a865f4e9cf7"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Assessment -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 092e48f8-b6b4-4889-ab9f-2a865f4e9cf7 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Assessment -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 092e48f8-b6b4-4889-ab9f-2a865f4e9cf7 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Assessment -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 092e48f8-b6b4-4889-ab9f-2a865f4e9cf7"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "AssessmentAttempt -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: ecaacac6-19c6-43bc-8e0f-705eaf360f9a"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "AssessmentAttempt -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: ecaacac6-19c6-43bc-8e0f-705eaf360f9a successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "AssessmentAttempt -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: ecaacac6-19c6-43bc-8e0f-705eaf360f9a successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "AssessmentAttempt -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: ecaacac6-19c6-43bc-8e0f-705eaf360f9a"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Homework -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 66d2174d-5fee-4e60-8f7f-f071b75b3ad3"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Homework -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 66d2174d-5fee-4e60-8f7f-f071b75b3ad3 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Homework -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 66d2174d-5fee-4e60-8f7f-f071b75b3ad3 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Homework -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 66d2174d-5fee-4e60-8f7f-f071b75b3ad3"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Submission -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: d3c66a63-04fe-4a41-a93e-1fb7f010029b"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Submission -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: d3c66a63-04fe-4a41-a93e-1fb7f010029b successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Submission -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: d3c66a63-04fe-4a41-a93e-1fb7f010029b successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Submission -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: d3c66a63-04fe-4a41-a93e-1fb7f010029b"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Attendance -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 3dee4ebd-47ca-43d4-a075-bed1cd7d1f97"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Attendance -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 3dee4ebd-47ca-43d4-a075-bed1cd7d1f97 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Attendance -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 3dee4ebd-47ca-43d4-a075-bed1cd7d1f97 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Attendance -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 3dee4ebd-47ca-43d4-a075-bed1cd7d1f97"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Notification -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 2f247ff5-24a6-43f4-84ab-fa07830e3b6e"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Notification -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 2f247ff5-24a6-43f4-84ab-fa07830e3b6e successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Notification -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 2f247ff5-24a6-43f4-84ab-fa07830e3b6e successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Notification -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 2f247ff5-24a6-43f4-84ab-fa07830e3b6e"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "QuestionBank -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 70ef342f-6db7-4436-8fa2-bb1731219d57"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "QuestionBank -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 70ef342f-6db7-4436-8fa2-bb1731219d57 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "QuestionBank -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 70ef342f-6db7-4436-8fa2-bb1731219d57 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "QuestionBank -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 70ef342f-6db7-4436-8fa2-bb1731219d57"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Payment -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 5a7533b2-1306-449e-9b82-8632b4057e5f"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Payment -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 5a7533b2-1306-449e-9b82-8632b4057e5f successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Payment -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 5a7533b2-1306-449e-9b82-8632b4057e5f successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "Payment -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 5a7533b2-1306-449e-9b82-8632b4057e5f"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "VideoProgress -> CREATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Created record ID: 06e16337-ae59-4d04-9b47-db7fd9494487"
+  },
+  {
+    "category": "Database CRUD",
+    "name": "VideoProgress -> READ",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Read record ID: 06e16337-ae59-4d04-9b47-db7fd9494487 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "VideoProgress -> UPDATE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Updated record ID: 06e16337-ae59-4d04-9b47-db7fd9494487 successfully."
+  },
+  {
+    "category": "Database CRUD",
+    "name": "VideoProgress -> DELETE",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleted and confirmed removal of record ID: 06e16337-ae59-4d04-9b47-db7fd9494487"
+  },
+  {
+    "category": "Relations & Constraints",
+    "name": "User Email Unique Constraint (Prisma P2002)",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Correctly rejected duplicate email with P2002 constraint error."
+  },
+  {
+    "category": "Relations & Constraints",
+    "name": "CourseEnrollment [studentId, courseId] Unique Constraint",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Correctly enforced compound unique enrollment constraint."
+  },
+  {
+    "category": "Relations & Constraints",
+    "name": "Course -> Lesson Cascade On Delete",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Deleting course cleanly cascaded and removed child lessons."
+  },
+  {
+    "category": "Relations & Constraints",
+    "name": "Parent <-> Child Self Relation",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Parent to Child link established and verified via Prisma include."
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "GET /api/users/users (Pagination, Filters)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Returned 5 users, total in system: 235"
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "POST /api/users/users (Create User)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Created student user with ID: 2c546036-3cad-4a8c-b87d-8f7c0e31549c"
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "PUT /api/users/users/:id (Update User)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Updated name successfully."
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "POST /api/users/users/deletion-impact",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Impact calculated: 1 user(s), 0 course(s)"
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "DELETE /api/users/users/:id (Single Delete)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "User ID 2c546036-3cad-4a8c-b87d-8f7c0e31549c deleted successfully."
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "POST /api/users/users/bulk-delete (Bulk Delete)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Successfully deleted 2 users in single atomic transaction."
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "GET /api/users/profile",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Loaded profile for Audit Test Student (ONLINE_STUDENT)"
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "POST /api/attendance (Mark Attendance)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Marked attendance successfully."
+  },
+  {
+    "category": "User-Service Endpoints",
+    "name": "GET /api/notifications (List Notifications)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Loaded 1 notifications for student."
+  },
+  {
+    "category": "Auth-Service Endpoints",
+    "name": "POST /api/auth/register (Public Registration Policy)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Verified public self-registration is safely disabled (enforcing admin-only user provisioning)."
+  },
+  {
+    "category": "Auth-Service Endpoints",
+    "name": "POST /api/auth/login (JWT & Session Token)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Successfully authenticated and issued valid JWT."
+  },
+  {
+    "category": "Course-Service Endpoints",
+    "name": "GET /api/courses (List Courses)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Courses listed successfully."
+  },
+  {
+    "category": "Course-Service Endpoints",
+    "name": "GET /api/assessments (List Assessments)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Loaded 1 assessments."
+  },
+  {
+    "category": "Analytics-Service Endpoints",
+    "name": "GET /api/analytics/admin (Admin Overview)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Total users: 235, Active: 235"
+  },
+  {
+    "category": "Analytics-Service Endpoints",
+    "name": "GET /api/analytics/teacher/:id/overview",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Teacher analytics overview loaded successfully."
+  },
+  {
+    "category": "Analytics-Service Endpoints",
+    "name": "GET /api/analytics/student/overview",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Student analytics overview loaded successfully."
+  },
+  {
+    "category": "Authorization Matrix",
+    "name": "Student cannot create Admin account (403 Enforcement)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Correctly returned HTTP 403 Forbidden on insufficient role."
+  },
+  {
+    "category": "Authorization Matrix",
+    "name": "Student cannot delete Users (403 Enforcement)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Correctly returned HTTP 403 Forbidden."
+  },
+  {
+    "category": "Authorization Matrix",
+    "name": "Guest/External account isolation (403 Enforcement)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Correctly blocked guest account with HTTP 403 Forbidden."
+  },
+  {
+    "category": "Error Handling",
+    "name": "Unauthenticated Request returns 401",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Correctly returned 401 Unauthorized."
+  },
+  {
+    "category": "Error Handling",
+    "name": "Invalid Payload returns 400 (Zod Validation)",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Correctly returned 400 Bad Request with validation errors."
+  },
+  {
+    "category": "Error Handling",
+    "name": "Non-existent Entity returns 404",
+    "scope": "INTEGRATION",
+    "status": "PASSED",
+    "details": "Correctly returned 404 Not Found."
+  },
+  {
+    "category": "Nginx & Cloudflare Parity",
+    "name": "Direct Local User-Service",
+    "scope": "E2E",
+    "status": "PASSED",
+    "details": "HTTP 200 OK, items: 1, latency: 12ms"
+  },
+  {
+    "category": "Nginx & Cloudflare Parity",
+    "name": "Nginx Gateway (:80)",
+    "scope": "E2E",
+    "status": "PASSED",
+    "details": "HTTP 200 OK, items: 1, latency: 51ms"
+  },
+  {
+    "category": "Nginx & Cloudflare Parity",
+    "name": "Cloudflare Quick Tunnel (Public HTTPS)",
+    "scope": "E2E",
+    "status": "PASSED",
+    "details": "HTTP 200 OK, items: 1, latency: 414ms"
+  },
+  {
+    "category": "Nginx & Cloudflare Parity",
+    "name": "Cloudflare Tunnel -> Nginx -> Socket.IO Handshake",
+    "scope": "E2E",
+    "status": "PASSED",
+    "details": "Socket.IO Engine.IO v4 handshake returned active session ID via Cloudflare tunnel."
+  },
+  {
+    "category": "Real Persistence",
+    "name": "DB -> API -> DB Roundtrip Persistence & Consistency",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Full CREATE(DB) -> READ(API) -> UPDATE(API) -> VERIFY(DB) -> DELETE(API) -> VERIFY(DB) passed."
+  },
+  {
+    "category": "Transaction Integrity",
+    "name": "Prisma $transaction Rollback On Failure",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Transaction successfully rolled back all partial writes on error."
+  },
+  {
+    "category": "Bulk Delete Root Cause & Fix",
+    "name": "POST /api/users/users/bulk-delete with Related Assessments & Parent-Child",
+    "scope": "REAL_DATABASE",
+    "status": "PASSED",
+    "details": "Root cause (Assessment.teacherId foreign key constraint & parentId self-relation) fully verified and transactionally handled."
+  },
+  {
+    "category": "Protected Files",
+    "name": "apps/frontend/vite.config.ts",
+    "scope": "UNIT",
+    "status": "VERIFIED",
+    "details": "Protected file is present and untouched."
+  },
+  {
+    "category": "Protected Files",
+    "name": "packages/database/prisma/seed.ts",
+    "scope": "UNIT",
+    "status": "VERIFIED",
+    "details": "Protected file is present and untouched."
+  },
+  {
+    "category": "Protected Files",
+    "name": "services/course-service/src/jobs/riskEngine.job.ts",
+    "scope": "UNIT",
+    "status": "VERIFIED",
+    "details": "Protected file is present and untouched."
+  }
+]

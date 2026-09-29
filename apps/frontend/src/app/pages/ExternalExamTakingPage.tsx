@@ -613,21 +613,21 @@ export default function ExternalExamTakingPage() {
       )}
 
       {/* Top Navbar */}
-      <header className={`sticky z-30 border-b backdrop-blur-md px-4 py-3 sm:px-6 flex items-center justify-between transition-colors ${
+      <header className={`sticky z-30 border-b backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 transition-colors ${
         showMultiTabWarning ? 'top-8' : 'top-0'
       } ${isDark ? 'bg-gray-900/90 border-gray-800' : 'bg-white/90 border-gray-200 shadow-sm'}`}>
         {/* Left: Brand & Student Name */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md">
-            <Sparkles className="w-5 h-5" />
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shrink-0">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-xs">
+          <div className="min-w-0">
+            <h1 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate max-w-[110px] xs:max-w-[160px] sm:max-w-xs">
               {exam?.title || 'الامتحان الخارجي'}
             </h1>
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-              <User className="w-3.5 h-3.5" />
-              <span className="font-medium">{studentName}</span>
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+              <User className="w-3 h-3 shrink-0" />
+              <span className="font-medium truncate">{studentName}</span>
             </div>
           </div>
         </div>
@@ -923,11 +923,11 @@ export default function ExternalExamTakingPage() {
       {/* Submit Confirmation Modal */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
-          <div className={`max-w-md w-full rounded-3xl border p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${
+          <div className={`max-w-md w-full max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl border p-5 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${
             isDark ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'
           }`}>
-            <div className="w-14 h-14 bg-green-100 dark:bg-green-950/60 text-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Send className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 dark:bg-green-950/60 text-green-600 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <Send className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
 
             <h3 className="text-xl font-bold text-center mb-2">تأكيد إنهاء وتسليم الامتحان</h3>

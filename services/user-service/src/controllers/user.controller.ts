@@ -622,6 +622,14 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
             if (totalAdmins <= 1) throw new Error('Cannot delete the last remaining admin account');
         }
         
+        await tx.assessment.deleteMany({
+            where: { teacherId: id }
+        });
+
+        await tx.course.deleteMany({
+            where: { teacherId: id }
+        });
+
         await tx.user.updateMany({
             where: { parentId: id },
             data: { parentId: null }
@@ -667,6 +675,14 @@ export const bulkDeleteUsers = async (req: AuthRequest, res: Response) => {
             }
         }
         
+        await tx.assessment.deleteMany({
+            where: { teacherId: { in: targetUserIds } }
+        });
+
+        await tx.course.deleteMany({
+            where: { teacherId: { in: targetUserIds } }
+        });
+
         await tx.user.updateMany({
             where: { parentId: { in: targetUserIds } },
             data: { parentId: null }

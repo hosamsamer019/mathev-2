@@ -59,7 +59,7 @@ export default function NotificationsPanel({ onClose, isDark, onUnreadCountChang
 
   return (
     <div
-      className={`absolute top-full left-0 mt-2 w-80 rounded-2xl shadow-2xl border z-50 overflow-hidden ${
+      className={`absolute top-full end-0 mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-80 rounded-2xl shadow-2xl border z-50 overflow-hidden ${
         isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
       }`}
       onClick={(e) => e.stopPropagation()}

@@ -301,46 +301,46 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="p-8 relative">
+    <div className="p-3 sm:p-6 lg:p-8 relative">
       {toast && (
         <div className={`fixed top-4 right-4 p-4 rounded shadow-lg text-white ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'} z-50`}>
           {toast.message}
         </div>
       )}
 
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-purple-100 text-purple-600 rounded-xl">
-            <Shield className="w-8 h-8" />
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 bg-purple-100 text-purple-600 rounded-xl shrink-0">
+            <Shield className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة المستخدمين</h1>
-            <p className="text-gray-600">إضافة وتعديل وحذف المستخدمين، وإدارة الصلاحيات</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">إدارة المستخدمين</h1>
+            <p className="text-xs sm:text-sm text-gray-600">إضافة وتعديل وحذف المستخدمين، وإدارة الصلاحيات</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {totalSelectedCount > 0 && (
             <button
               onClick={prepareBulkDelete}
               disabled={isDeleting}
-              className="flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 disabled:opacity-50"
+              className="flex items-center gap-2 bg-red-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>حذف المحدد ({totalSelectedCount})</span>
             </button>
           )}
           <button
             onClick={handleAdd}
-            className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
+            className="flex items-center gap-2 bg-purple-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold rounded-lg hover:bg-purple-700 transition-colors"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>إضافة مستخدم</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-6 flex gap-4">
+      <div className="bg-white rounded-xl shadow-md p-4 sm:p-6">
+        <div className="mb-6 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
@@ -348,15 +348,15 @@ export default function AdminUsersPage() {
               placeholder="ابحث عن مستخدم (بالاسم أو البريد)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              className="w-full pr-10 px-4 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             />
           </div>
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white appearance-none"
+              className="w-full pr-10 px-4 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white appearance-none"
             >
               <option value="">كل الأدوار</option>
               <option value="ADMIN">مدير</option>
@@ -435,12 +435,12 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
           
-          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4 rounded-b-xl">
-            <div className="flex flex-1 items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4 rounded-b-xl">
+            <div className="flex flex-1 flex-col sm:flex-row items-center justify-between gap-3 w-full">
+              <div className="text-center sm:text-start">
+                <p className="text-xs sm:text-sm text-gray-700">
                   الصفحة <span className="font-medium">{page}</span> من <span className="font-medium">{totalPages}</span>
-                  <span className="mr-4 text-gray-500">إجمالي النتائج: {totalUsersMatching}</span>
+                  <span className="mr-3 text-gray-500">إجمالي النتائج: {totalUsersMatching}</span>
                 </p>
               </div>
               <div>
@@ -448,14 +448,14 @@ export default function AdminUsersPage() {
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    className="relative inline-flex items-center rounded-r-md px-3 py-1.5 text-xs sm:text-sm text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"
                   >
                     <span>السابق</span>
                   </button>
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    className="relative inline-flex items-center rounded-l-md px-3 py-1.5 text-xs sm:text-sm text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"
                   >
                     <span>التالي</span>
                   </button>

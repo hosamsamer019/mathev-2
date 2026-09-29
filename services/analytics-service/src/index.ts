@@ -16,11 +16,11 @@ app.use(helmet());
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
+    if (process.env.NODE_ENV !== 'production' && (origin.startsWith('http://localhost:') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com'))) {
       return callback(null, true);
     }
     const allowedOrigin = process.env.CLIENT_URL || 'https://your-production-domain.com';
-    if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
+    if (origin === allowedOrigin || origin.includes('vercel.app') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com')) { return callback(null, true); }
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
