@@ -3,7 +3,7 @@ import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
 import { io } from '../index.js';
-import { sanitizeQuestionsForStudent } from './assessment.controller.js';
+import { sanitizeQuestionsForStudent, linkQuestionAssetsToAssessment } from './assessment.controller.js';
 
 export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
   try {
@@ -154,11 +154,20 @@ const createHomeworkSchema = z.object({
     type: z.string(),
     options: z.array(z.string()).optional(),
     correct: z.any().optional(),
+    imageUrl: z.string().optional().nullable(),
+    imageStorageKey: z.string().optional().nullable(),
+    imageAssetId: z.string().optional().nullable(),
+    points: z.number().optional().nullable(),
+    explanation: z.string().optional().nullable(),
+    mathExpression: z.string().optional().nullable(),
+    diagram: z.any().optional().nullable(),
+    given: z.any().optional().nullable(),
+    required: z.string().optional().nullable(),
     generationLogic: z.any().optional(),
     solutionSteps: z.any().optional(),
     solutionExplanation: z.string().optional(),
     validationStatus: z.string().optional()
-  })).optional(),
+  }).passthrough()).optional(),
   lessonId: z.string().uuid().optional().nullable(),
   type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional().default('NORMAL'),
   openAt: z.string().optional().nullable(),
@@ -186,8 +195,8 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
       data: {
         title,
         courseId,
-        questions: questions || [],
-        lessonId,
+        questions: (questions || []) as any,
+        lessonId: lessonId ?? undefined,
         type: lessonId ? 'VIDEO_DEPENDENT' : type,
         openAt: openAt ? new Date(openAt) : null,
         closeAt: closeAt ? new Date(closeAt) : null,
@@ -209,6 +218,10 @@ export const createHomework = async (req: AuthRequest, res: Response) => {
         closeAt: homework.closeAt
       }
     });
+
+    if (homework.questions && Array.isArray(homework.questions)) {
+      await linkQuestionAssetsToAssessment(homework.id, homework.questions as any[]);
+    }
 
     io.to(`course:${courseId}`).emit('homework_assigned', homework);
 
@@ -233,11 +246,20 @@ const updateHomeworkSchema = z.object({
     type: z.string(),
     options: z.array(z.string()).optional(),
     correct: z.any().optional(),
+    imageUrl: z.string().optional().nullable(),
+    imageStorageKey: z.string().optional().nullable(),
+    imageAssetId: z.string().optional().nullable(),
+    points: z.number().optional().nullable(),
+    explanation: z.string().optional().nullable(),
+    mathExpression: z.string().optional().nullable(),
+    diagram: z.any().optional().nullable(),
+    given: z.any().optional().nullable(),
+    required: z.string().optional().nullable(),
     generationLogic: z.any().optional(),
     solutionSteps: z.any().optional(),
     solutionExplanation: z.string().optional(),
     validationStatus: z.string().optional()
-  })).optional(),
+  }).passthrough()).optional(),
   lessonId: z.string().uuid().optional().nullable(),
   type: z.enum(['NORMAL', 'VIDEO_DEPENDENT']).optional(),
   openAt: z.string().optional().nullable(),
@@ -268,8 +290,8 @@ export const updateHomework = async (req: AuthRequest, res: Response) => {
       where: { id },
       data: {
         ...(title && { title }),
-        ...(questions && { questions }),
-        ...(lessonId !== undefined && { lessonId }),
+        ...(questions && { questions: questions as any }),
+        ...(lessonId !== undefined && { lessonId: lessonId ?? undefined }),
         ...(type !== undefined && { type }),
         ...(openAt !== undefined && { openAt: openAt ? new Date(openAt) : null }),
         ...(closeAt !== undefined && { 
@@ -285,14 +307,18 @@ export const updateHomework = async (req: AuthRequest, res: Response) => {
         where: { id },
         data: {
           ...(title && { title }),
-          ...(lessonId !== undefined && { lessonId }),
-          ...(questions && { questions }),
+          ...(lessonId !== undefined && { lessonId: lessonId ?? undefined }),
+          ...(questions && { questions: questions as any }),
           ...(openAt !== undefined && { openAt: openAt ? new Date(openAt) : null }),
           ...(closeAt !== undefined && { closeAt: closeAt ? new Date(closeAt) : null })
         }
       });
     } catch (err) {
       // Ignore if it doesn't exist in Assessment yet for some reason
+    }
+
+    if (updatedHomework.questions && Array.isArray(updatedHomework.questions)) {
+      await linkQuestionAssetsToAssessment(id, updatedHomework.questions as any[]);
     }
 
     res.json(updatedHomework);

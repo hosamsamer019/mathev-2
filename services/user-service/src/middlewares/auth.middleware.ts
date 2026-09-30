@@ -34,9 +34,12 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
 
 export const checkRole = (roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role.toLowerCase())) {
+    const userRole = (req.user?.role || '').toLowerCase();
+    const allowed = roles.map(r => r.toLowerCase());
+    if (!req.user || !allowed.includes(userRole)) {
       return res.status(403).json({ message: 'Insufficient permissions' });
     }
     next();
   };
 };
+

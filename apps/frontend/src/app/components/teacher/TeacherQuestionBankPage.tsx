@@ -263,11 +263,11 @@ export default function TeacherQuestionBankPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            <Database className="w-8 h-8 text-indigo-600" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+            <Database className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             بنك الأسئلة
           </h1>
-          <p className="text-gray-600">إدارة أسئلتك الخاصة لاستخدامها لاحقاً في الامتحانات</p>
+          <p className="text-gray-600 dark:text-gray-400">إدارة أسئلتك الخاصة لاستخدامها لاحقاً في الامتحانات</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -292,7 +292,7 @@ export default function TeacherQuestionBankPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute right-4 top-3 w-5 h-5 text-gray-400" />
@@ -301,7 +301,7 @@ export default function TeacherQuestionBankPage() {
               placeholder="تصفية حسب الوسم (Tag)..."
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
-              className="w-full pr-12 pl-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-right"
+              className="w-full pr-12 pl-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-indigo-500 text-right"
             />
           </div>
         </div>
@@ -310,25 +310,25 @@ export default function TeacherQuestionBankPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto" onClick={() => setShowForm(false)}>
           <div 
-            className="bg-white rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl my-auto border border-gray-100"
+            className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl my-auto border border-gray-100 dark:border-gray-700"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50">
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-gray-900/50">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {editingId ? 'تعديل السؤال' : 'إنشاء سؤال جديد'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 transition-colors">
+              <button onClick={() => setShowForm(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 dark:text-gray-400 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div id="question-bank-modal-body" className="p-6 space-y-6 overflow-y-auto flex-1 overscroll-contain relative">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">نص السؤال *</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">نص السؤال *</label>
                 <textarea
                   value={formData.text}
                   onChange={(e) => setFormData({ ...formData, text: e.target.value })}
-                  className={`w-full px-4 py-3 border ${formErrors.text ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none`}
+                  className={`w-full px-4 py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border ${formErrors.text ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-gray-200 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none`}
                   rows={3}
                   placeholder="أدخل نص السؤال هنا (يدعم صيغ الرياضيات KaTeX/LaTeX)..."
                 />
@@ -337,9 +337,9 @@ export default function TeacherQuestionBankPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">الصف الدراسي</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">الصف الدراسي</label>
                   <select
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                     value={formData.academicLevel}
                     onChange={(e) => setFormData({ ...formData, academicLevel: e.target.value })}
                   >
@@ -352,11 +352,11 @@ export default function TeacherQuestionBankPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">التصنيف / الموضوع</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">التصنيف / الموضوع</label>
                   <input
                     type="text"
                     placeholder="مثال: الجبر، الهندسة، الوحدة الأولى..."
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                     value={formData.tag}
                     onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
                   />
@@ -364,7 +364,7 @@ export default function TeacherQuestionBankPage() {
               </div>
 
               <div className="space-y-4">
-                <label className="block text-xs font-semibold text-gray-700">الخيارات والإجابة الصحيحة</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">الخيارات والإجابة الصحيحة</label>
                 {formData.options.map((opt, i) => (
                   <div key={i} className="flex gap-3 items-center">
                     <input
@@ -380,7 +380,7 @@ export default function TeacherQuestionBankPage() {
                         value={opt}
                         onChange={(e) => updateOption(i, e.target.value)}
                         placeholder={`الخيار ${i + 1}`}
-                        className={`w-full px-4 py-2 border ${formErrors[`opt_${i}`] ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm`}
+                        className={`w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border ${formErrors[`opt_${i}`] ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-gray-200 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm`}
                       />
                       {formErrors[`opt_${i}`] && <p className="text-red-500 text-xs mt-1 font-semibold">{formErrors[`opt_${i}`]}</p>}
                     </div>
@@ -393,11 +393,11 @@ export default function TeacherQuestionBankPage() {
               <ScrollToTopButton containerId="question-bank-modal-body" className="!bottom-20 !start-8" />
             </div>
 
-            <div className="p-4 border-t border-gray-100 flex gap-3 justify-end bg-gray-50 flex-shrink-0">
+            <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-5 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                className="px-5 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               >
                 إلغاء
               </button>
@@ -423,15 +423,15 @@ export default function TeacherQuestionBankPage() {
       {showAiModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto" onClick={() => setShowAiModal(false)}>
           <div 
-            className="bg-white rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl my-auto border border-gray-100"
+            className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl my-auto border border-gray-100 dark:border-gray-700"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Brain className="w-6 h-6 text-purple-600" />
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-gray-900/50">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 توليد أسئلة بالذكاء الاصطناعي
               </h2>
-              <button onClick={() => setShowAiModal(false)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 transition-colors">
+              <button onClick={() => setShowAiModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 dark:text-gray-400 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -439,14 +439,14 @@ export default function TeacherQuestionBankPage() {
             <div id="ai-modal-body" className="p-6 space-y-6 overflow-y-auto flex-1 overscroll-contain relative">
               {!generatedQuestions ? (
                 <>
-                  <div className="bg-purple-50 text-purple-800 p-4 rounded-xl text-sm mb-6 border border-purple-100">
+                  <div className="bg-purple-50 dark:bg-purple-950/30 text-purple-800 dark:text-purple-300 p-4 rounded-xl text-sm mb-6 border border-purple-100 dark:border-purple-900/40">
                     أدخل موضوع الدرس ومستوى الصعوبة، وسيقوم المساعد الذكي بتوليد أسئلة اختيار من متعدد لك.
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الصف الدراسي</label>
                       <select
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500"
+                        className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500"
                         value={aiForm.academicLevel}
                         onChange={(e) => setAiForm({ ...aiForm, academicLevel: e.target.value })}
                       >
@@ -459,23 +459,23 @@ export default function TeacherQuestionBankPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">الموضوع / الدرس</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموضوع / الدرس</label>
                     <input
                       type="text"
                       value={aiForm.topic}
                       onChange={(e) => setAiForm({ ...aiForm, topic: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-purple-500"
                       placeholder="مثال: المعادلات التربيعية، نظرية فيثاغورس..."
                     />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">مستوى الصعوبة</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">مستوى الصعوبة</label>
                       <select
                         value={aiForm.difficulty}
                         onChange={(e) => setAiForm({ ...aiForm, difficulty: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500"
                       >
                         <option value="سهل">سهل</option>
                         <option value="متوسط">متوسط</option>
@@ -484,36 +484,36 @@ export default function TeacherQuestionBankPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">عدد الأسئلة (الحد الأقصى 20)</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عدد الأسئلة (الحد الأقصى 20)</label>
                       <input
                         type="number"
                         min="1"
                         max="20"
                         value={aiForm.count}
                         onChange={(e) => setAiForm({ ...aiForm, count: parseInt(e.target.value) || 1 })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
                   </div>
                   {aiLoading && (
-                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-3">
+                    <div className="p-4 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-xl space-y-3">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold text-purple-900 flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                        <span className="font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-purple-600 dark:text-purple-400" />
                           {aiStage || 'توليد الأسئلة...'}
                         </span>
                         <div className="flex items-center gap-2">
                           {aiProgressCount > 0 && (
-                            <span className="text-xs font-semibold text-purple-800 bg-purple-200 px-2 py-0.5 rounded-full">
+                            <span className="text-xs font-semibold text-purple-800 dark:text-purple-300 bg-purple-200 dark:bg-purple-900/60 px-2 py-0.5 rounded-full">
                               تم توليد {aiProgressCount} من {aiForm.count} أسئلة
                             </span>
                           )}
-                          <span className="text-xs font-mono font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                          <span className="text-xs font-mono font-bold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded-full">
                             الوقت المنقضي: {aiElapsed.toFixed(1)} ثانية
                           </span>
                         </div>
                       </div>
-                      <div className="w-full bg-purple-200 h-2 rounded-full overflow-hidden">
+                      <div className="w-full bg-purple-200 dark:bg-purple-900/50 h-2 rounded-full overflow-hidden">
                         <div className="bg-purple-600 h-full rounded-full animate-pulse transition-all duration-300" style={{ width: `${Math.min(100, Math.max(15, (aiElapsed / (aiForm.count * 2)) * 100))}%` }}></div>
                       </div>
                     </div>
@@ -522,13 +522,13 @@ export default function TeacherQuestionBankPage() {
                 </>
               ) : (
                 <div className="space-y-6">
-                  <div className="bg-green-50 text-green-800 p-4 rounded-xl text-sm border border-green-200">
+                  <div className="bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300 p-4 rounded-xl text-sm border border-green-200 dark:border-green-800">
                     تم التوليد بنجاح! يرجى مراجعة الأسئلة وتعديلها إذا لزم الأمر قبل حفظها في البنك.
                   </div>
                   {generatedQuestions.map((q, qIndex) => (
                     <div key={qIndex} className="relative">
                       {editingGeneratedQuestion === qIndex ? (
-                        <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/60">
                           <input
                             type="text"
                             value={q.questionText}
@@ -537,7 +537,7 @@ export default function TeacherQuestionBankPage() {
                               updated[qIndex].questionText = e.target.value;
                               setGeneratedQuestions(updated);
                             }}
-                            className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg font-bold"
+                            className="w-full px-4 py-2 mb-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-bold"
                             placeholder="نص السؤال"
                           />
                           <input
@@ -548,7 +548,7 @@ export default function TeacherQuestionBankPage() {
                               updated[qIndex].mathExpression = e.target.value;
                               setGeneratedQuestions(updated);
                             }}
-                            className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg font-mono text-left"
+                            className="w-full px-4 py-2 mb-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-mono text-left"
                             placeholder="معادلة LaTeX (اختياري)"
                             dir="ltr"
                           />
@@ -570,14 +570,14 @@ export default function TeacherQuestionBankPage() {
                                   type="text"
                                   value={opt.text}
                                   onChange={(e) => handleUpdateGeneratedOption(qIndex, optIndex, e.target.value)}
-                                  className={`w-full px-3 py-1.5 border rounded-md text-sm ${q.correctAnswer === opt.id ? 'border-green-400 bg-green-50' : 'border-gray-300 bg-white'}`}
+                                  className={`w-full px-3 py-1.5 border rounded-md text-sm ${q.correctAnswer === opt.id ? 'border-green-400 bg-green-50 dark:bg-green-950/40 text-green-900 dark:text-green-200' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}`}
                                   placeholder={`خيار ${opt.id}`}
                                 />
                               </div>
                             ))}
                           </div>
                           <div className="mt-3 flex justify-end">
-                            <button onClick={() => setEditingGeneratedQuestion(null)} className="px-4 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">
+                            <button onClick={() => setEditingGeneratedQuestion(null)} className="px-4 py-1.5 bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-bold">
                               تم التعديل
                             </button>
                           </div>
@@ -585,13 +585,13 @@ export default function TeacherQuestionBankPage() {
                       ) : (
                         <div className="relative">
                           <div className="absolute top-4 left-4 z-10 flex gap-2">
-                             <button onClick={() => setEditingGeneratedQuestion(qIndex)} className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-md font-bold hover:bg-purple-200 transition-colors">
+                             <button onClick={() => setEditingGeneratedQuestion(qIndex)} className="text-xs bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-md font-bold hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors">
                                تعديل
                              </button>
                              <button
                                onClick={() => handleRegenerateQuestion(qIndex)}
                                disabled={regeneratingIndex === qIndex}
-                               className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-md font-bold hover:bg-orange-200 transition-colors disabled:opacity-50"
+                               className="text-xs bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 px-3 py-1 rounded-md font-bold hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors disabled:opacity-50"
                              >
                                {regeneratingIndex === qIndex ? '...' : '↺'} إعادة توليد
                              </button>
@@ -607,11 +607,11 @@ export default function TeacherQuestionBankPage() {
               <ScrollToTopButton containerId="ai-modal-body" className="!bottom-20 !start-8" />
             </div>
 
-            <div className="p-4 border-t border-gray-100 flex gap-3 justify-end bg-gray-50 flex-shrink-0">
+            <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setShowAiModal(false)}
-                className="px-5 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                className="px-5 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               >
                 إلغاء
               </button>
@@ -661,50 +661,50 @@ export default function TeacherQuestionBankPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">جاري التحميل...</div>
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">جاري التحميل...</div>
       ) : error ? (
-        <div className="bg-red-50 text-red-700 p-6 rounded-xl text-center">{error}</div>
+        <div className="bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 p-6 rounded-xl text-center border border-red-100 dark:border-red-900/50">{error}</div>
       ) : questions.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 border-dashed">
-          <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">لا توجد أسئلة</h3>
-          <p className="text-gray-500">بنك الأسئلة الخاص بك فارغ، أو لا توجد أسئلة تطابق بحثك.</p>
+        <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 border-dashed">
+          <Database className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">لا توجد أسئلة</h3>
+          <p className="text-gray-500 dark:text-gray-400">بنك الأسئلة الخاص بك فارغ، أو لا توجد أسئلة تطابق بحثك.</p>
         </div>
       ) : (
         <div className="grid gap-6">
           {questions.map((q) => (
-            <div key={q.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div key={q.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
                           {q.academicLevel && (
-                            <span className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md font-medium">
+                            <span className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-md font-medium">
                               {q.academicLevel}
                             </span>
                           )}
                           {q.tag && (
-                            <span className="flex items-center gap-1 text-xs px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">
+                            <span className="flex items-center gap-1 text-xs px-2 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-md border border-indigo-100 dark:border-indigo-900/40">
                               <Tag className="w-3 h-3" />
                               {q.tag}
                             </span>
                           )}
-                    <span className="text-gray-400 text-sm">أضيف في {new Date(q.createdAt).toLocaleDateString('ar-EG')}</span>
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">أضيف في {new Date(q.createdAt).toLocaleDateString('ar-EG')}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 leading-relaxed">{q.text}</h3>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 leading-relaxed">{q.text}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {q.options.map((opt: string, idx: number) => (
-                      <div key={idx} className={`p-3 rounded-lg border text-sm ${idx === q.correctAnswer ? 'bg-green-50 border-green-200 text-green-800 font-medium' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
+                      <div key={idx} className={`p-3 rounded-lg border text-sm ${idx === q.correctAnswer ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 font-medium' : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200'}`}>
                         {idx + 1}. {opt}
-                        {idx === q.correctAnswer && <span className="mr-2 text-green-600">(الإجابة الصحيحة)</span>}
+                        {idx === q.correctAnswer && <span className="mr-2 text-green-600 dark:text-green-400">(الإجابة الصحيحة)</span>}
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => handleEdit(q)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                  <button onClick={() => handleEdit(q)} className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors">
                     <Edit className="w-5 h-5" />
                   </button>
-                  <button onClick={() => handleDelete(q.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button onClick={() => handleDelete(q.id)} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors">
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>

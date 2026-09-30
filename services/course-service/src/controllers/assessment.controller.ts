@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { db, AttemptStatus } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { normalizeAnswer } from '../utils/answerNormalizer.js';
+import { uploadBuffer, deleteFile, validateImageSignature } from '../services/storage.adapter.js';
+import { runTemporaryAssetCleanup } from '../jobs/assetCleanup.job.js';
+import { logger } from '@shared/utils';
 
 export function sanitizeQuestionsForStudent(questions: any[] | null | undefined): any[] {
   if (!Array.isArray(questions)) return [];
@@ -13,6 +16,8 @@ export function sanitizeQuestionsForStudent(questions: any[] | null | undefined)
       solutionSteps,
       solutionExplanation,
       validationStatus,
+      imageStorageKey,
+      imageAssetId,
       ...safeQuestion
     } = q;
     return safeQuestion;
@@ -578,6 +583,7 @@ export const getAssessmentReview = async (req: AuthRequest, res: Response) => {
       const reviewQ: any = {
         id: q.id,
         questionText: q.questionText || q.text,
+        imageUrl: q.imageUrl || null,
         mathExpression: q.mathExpression || null,
         diagram: q.diagram || null,
         given: q.given || null,
@@ -737,6 +743,10 @@ export const createAssessment = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    if (questions && Array.isArray(questions)) {
+      await linkQuestionAssetsToAssessment(assessment.id, questions);
+    }
+
     res.status(201).json(assessment);
   } catch (error: any) {
     res.status(500).json({ message: 'Error creating assessment', error: error.message });
@@ -785,6 +795,10 @@ export const updateAssessment = async (req: AuthRequest, res: Response) => {
         examAccessCode
       }
     });
+
+    if (questions && Array.isArray(questions)) {
+      await linkQuestionAssetsToAssessment(id, questions);
+    }
 
     res.json(updated);
   } catch (error: any) {
@@ -976,3 +990,217 @@ export const getAllExternalAttempts = async (req: AuthRequest, res: Response) =>
     res.status(500).json({ message: 'Error fetching all external attempts', error: error.message });
   }
 };
+
+/**
+ * Helper to associate temporary question assets with the parent assessment
+ */
+export async function linkQuestionAssetsToAssessment(assessmentId: string, questions: any[]) {
+  if (!Array.isArray(questions)) return;
+  const assetIds: string[] = [];
+  const storageKeys: string[] = [];
+  for (const q of questions) {
+    if (q.imageAssetId) assetIds.push(q.imageAssetId);
+    if (q.imageStorageKey) storageKeys.push(q.imageStorageKey);
+    if (q.imageUrl && typeof q.imageUrl === 'string') {
+      const match = q.imageUrl.match(/assessment-assets\/[a-zA-Z0-9_\-\.]+/);
+      if (match) storageKeys.push(match[0]);
+    }
+  }
+
+  if (assetIds.length > 0 || storageKeys.length > 0) {
+    await (db as any).temporaryAsset.updateMany({
+      where: {
+        OR: [
+          ...(assetIds.length > 0 ? [{ id: { in: assetIds } }] : []),
+          ...(storageKeys.length > 0 ? [{ storageKey: { in: storageKeys } }] : [])
+        ]
+      },
+      data: {
+        assessmentId
+      }
+    });
+  }
+}
+
+/**
+ * POST /api/assessments/:id/assets/upload OR /api/assessments/assets/upload
+ * Upload a question image asset with strict server-side validation and IDOR protection.
+ */
+export const uploadQuestionAsset = async (req: AuthRequest, res: Response) => {
+  try {
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole !== 'ADMIN' && userRole !== 'TEACHER') {
+      return res.status(403).json({ message: 'Forbidden: Only teachers and admins can upload question assets' });
+    }
+
+    const assessmentId = req.params.id || req.body.assessmentId;
+    let validatedAssessmentId: string | null = null;
+
+    if (assessmentId && assessmentId !== 'draft' && assessmentId !== 'temp' && !assessmentId.startsWith('draft-')) {
+      const assessment = await db.assessment.findUnique({ where: { id: assessmentId } });
+      if (!assessment) {
+        return res.status(404).json({ message: 'Assessment not found' });
+      }
+      if (userRole !== 'ADMIN' && assessment.teacherId !== req.user!.userId) {
+        return res.status(403).json({ message: 'Forbidden: Unauthorized assessment access' });
+      }
+      validatedAssessmentId = assessment.id;
+    }
+
+    let fileBuffer: Buffer | null = null;
+    let originalName = 'upload.png';
+    let mimeType = 'image/png';
+
+    if (req.file) {
+      fileBuffer = req.file.buffer;
+      originalName = req.file.originalname;
+      mimeType = req.file.mimetype;
+    } else if (req.body.imageBase64) {
+      const base64Str = req.body.imageBase64;
+      const matches = base64Str.match(/^data:([A-Za-z\-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        mimeType = matches[1];
+        fileBuffer = Buffer.from(matches[2], 'base64');
+      } else {
+        fileBuffer = Buffer.from(base64Str, 'base64');
+      }
+      if (req.body.filename) originalName = req.body.filename;
+      if (req.body.mimeType) mimeType = req.body.mimeType;
+    }
+
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return res.status(400).json({ message: 'No image file or data provided' });
+    }
+
+    // Comprehensive server-side validation: magic bytes, MIME, size, disguised executable checks
+    const validation = validateImageSignature(fileBuffer, mimeType, originalName);
+    if (!validation.valid) {
+      return res.status(400).json({ message: `Upload rejected: ${validation.error}` });
+    }
+
+    const uploadResult = await uploadBuffer(fileBuffer, originalName, validation.detectedMime || mimeType, 'assessment-assets');
+
+    // Create TemporaryAsset record in database
+    const asset = await (db as any).temporaryAsset.create({
+      data: {
+        storageKey: uploadResult.filename,
+        url: uploadResult.url,
+        assessmentId: validatedAssessmentId,
+        questionId: req.body.questionId || null,
+        mimeType: uploadResult.mimetype,
+        sizeBytes: uploadResult.size,
+      }
+    });
+
+    res.status(201).json({
+      assetId: asset.id,
+      storageKey: asset.storageKey,
+      url: asset.url,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.sizeBytes,
+      assessmentId: asset.assessmentId,
+      questionId: asset.questionId
+    });
+  } catch (error: any) {
+    logger.error(`[UploadQuestionAsset] Error: ${error.message}`);
+    res.status(500).json({ message: 'Failed to upload question asset', error: error.message });
+  }
+};
+
+/**
+ * DELETE /api/assessments/assets/:assetId OR /api/assessments/:id/assets/:assetId
+ * Idempotent asset deletion with strict authorization.
+ */
+export const deleteQuestionAsset = async (req: AuthRequest, res: Response) => {
+  try {
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole !== 'ADMIN' && userRole !== 'TEACHER') {
+      return res.status(403).json({ message: 'Forbidden: Only teachers and admins can delete question assets' });
+    }
+
+    const { assetId } = req.params;
+    const asset = await (db as any).temporaryAsset.findUnique({
+      where: { id: assetId }
+    });
+
+    if (!asset) {
+      return res.status(404).json({ message: 'Asset not found' });
+    }
+
+    if (asset.assessmentId) {
+      const assessment = await db.assessment.findUnique({ where: { id: asset.assessmentId } });
+      if (assessment && userRole !== 'ADMIN' && assessment.teacherId !== req.user!.userId) {
+        return res.status(403).json({ message: 'Forbidden: Unauthorized assessment asset deletion' });
+      }
+    }
+
+    // Idempotent deletion from storage
+    await deleteFile(asset.storageKey);
+
+    // Mark as deleted in DB
+    await (db as any).temporaryAsset.update({
+      where: { id: assetId },
+      data: { deletedAt: new Date() }
+    });
+
+    res.json({ message: 'Asset deleted successfully', assetId });
+  } catch (error: any) {
+    logger.error(`[DeleteQuestionAsset] Error: ${error.message}`);
+    res.status(500).json({ message: 'Failed to delete asset', error: error.message });
+  }
+};
+
+/**
+ * GET /api/assessments/:id/assets
+ */
+export const getAssessmentAssets = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const assessment = await db.assessment.findUnique({ where: { id } });
+    if (!assessment) return res.status(404).json({ message: 'Assessment not found' });
+
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole !== 'ADMIN' && assessment.teacherId !== req.user?.userId) {
+      // Check if student enrolled or authorized
+      const authError = await validateEnrollment(req.user?.userId || '', userRole, assessment.courseId, false, assessment.id);
+      if (authError) return res.status(403).json({ message: 'Unauthorized access' });
+    }
+
+    const assets = await (db as any).temporaryAsset.findMany({
+      where: { assessmentId: id, deletedAt: null },
+      select: {
+        id: true,
+        storageKey: true,
+        url: true,
+        questionId: true,
+        mimeType: true,
+        sizeBytes: true,
+        createdAt: true
+      }
+    });
+
+    res.json({ data: assets });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching assessment assets', error: error.message });
+  }
+};
+
+/**
+ * POST /api/assessments/admin/cleanup-assets
+ */
+export const cleanupAssessmentAssets = async (req: AuthRequest, res: Response) => {
+  try {
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole !== 'ADMIN' && userRole !== 'TEACHER') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const assessmentId = req.query.assessmentId as string | undefined;
+    const result = await runTemporaryAssetCleanup(assessmentId);
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error executing asset cleanup', error: error.message });
+  }
+};
+

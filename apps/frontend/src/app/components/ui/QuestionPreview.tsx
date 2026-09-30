@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MathRenderer } from './MathRenderer';
 import { GeometryDiagram, DiagramData } from './GeometryDiagram';
+import { getMediaUrl } from '../../utils/mediaUrl';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export interface StructuredQuestion {
   gradeLevel?: string;
   difficulty?: string;
   questionText: string;
+  imageUrl?: string | null;
   mathExpression?: string | null;
   diagram?: DiagramData | null;
   given?: string[] | null;
@@ -50,22 +52,22 @@ const ValidationBadge: React.FC<{ status?: string }> = ({ status }) => {
     MATHEMATICALLY_VERIFIED: {
       icon: '✓',
       label: 'تم التحقق رياضيًا',
-      classes: 'bg-green-100 text-green-800 border border-green-200',
+      classes: 'bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800',
     },
     STRUCTURALLY_VALID: {
       icon: '●',
       label: 'صحيح هيكليًا',
-      classes: 'bg-blue-100 text-blue-800 border border-blue-200',
+      classes: 'bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
     },
     NEEDS_REVIEW: {
       icon: '⚠',
       label: 'يحتاج مراجعة المعلم',
-      classes: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+      classes: 'bg-yellow-100 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800',
     },
     INVALID: {
       icon: '✕',
       label: 'السؤال غير صحيح',
-      classes: 'bg-red-100 text-red-800 border border-red-200',
+      classes: 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800',
     },
   };
 
@@ -88,13 +90,13 @@ const ExpandablePanel: React.FC<{
   defaultOpen?: boolean;
   panelClass?: string;
   children: React.ReactNode;
-}> = ({ title, icon, defaultOpen = false, panelClass = 'bg-gray-50 border-gray-200', children }) => {
+}> = ({ title, icon, defaultOpen = false, panelClass = 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700', children }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={`rounded-xl border overflow-hidden mb-3 ${panelClass}`}>
       <button
         type="button"
-        className="w-full flex items-center justify-between px-4 py-3 text-right hover:brightness-95 transition"
+        className="w-full flex items-center justify-between px-4 py-3 text-right text-gray-900 dark:text-white hover:brightness-95 transition"
         onClick={() => setOpen(!open)}
       >
         <span className="flex items-center gap-2 font-semibold text-sm">
@@ -123,16 +125,16 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
   isTeacher = false,
 }) => {
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6" dir="rtl">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6" dir="rtl">
 
       {/* ─── Header: question text + metadata badges ─── */}
       <div className="flex items-start justify-between gap-3 mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 leading-relaxed whitespace-pre-wrap flex-1">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed whitespace-pre-wrap flex-1">
           {question.questionText}
         </h3>
         <div className="flex flex-col items-end gap-1 shrink-0">
           {question.points && (
-            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap">
+            <span className="bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap">
               {question.points} {question.points === 1 ? 'نقطة' : 'نقاط'}
             </span>
           )}
@@ -140,16 +142,27 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
         </div>
       </div>
 
+      {/* ─── Question Supporting Image ─── */}
+      {question.imageUrl && (
+        <div className="my-4 flex justify-center">
+          <img
+            src={getMediaUrl(question.imageUrl)}
+            alt="صورة السؤال"
+            className="max-h-72 max-w-full rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm object-contain bg-white dark:bg-gray-900 p-1"
+          />
+        </div>
+      )}
+
       {/* ─── Diagram ─── */}
       {question.diagram && <GeometryDiagram data={question.diagram} />}
 
       {/* ─── Given (structured mathematical givens) ─── */}
       {question.given && question.given.length > 0 && (
-        <div className="mb-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-          <p className="font-semibold text-gray-700 mb-2 text-sm">المعطيات:</p>
+        <div className="mb-4 bg-gray-50 dark:bg-gray-900/60 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+          <p className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-sm">المعطيات:</p>
           <ul className="list-disc list-inside space-y-1">
             {question.given.map((g, i) => (
-              <li key={i} className="text-gray-800 text-sm">
+              <li key={i} className="text-gray-800 dark:text-gray-200 text-sm">
                 <MathRenderer expression={g} />
               </li>
             ))}
@@ -159,15 +172,15 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
 
       {/* ─── Main Mathematical Expression ─── */}
       {question.mathExpression && (
-        <div className="my-6 text-center overflow-x-auto text-xl bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+        <div className="my-6 text-center overflow-x-auto text-xl bg-indigo-50 dark:bg-indigo-950/30 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/40 text-gray-900 dark:text-white">
           <MathRenderer expression={question.mathExpression} block />
         </div>
       )}
 
       {/* ─── Required ─── */}
       {question.required && (
-        <div className="mb-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100">
-          <p className="text-yellow-900 text-sm">
+        <div className="mb-6 bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-100 dark:border-yellow-900/40">
+          <p className="text-yellow-900 dark:text-yellow-300 text-sm">
             <span className="font-bold">المطلوب: </span>
             {question.required}
           </p>
@@ -177,7 +190,7 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
       {/* ─── Options ─── */}
       {question.options && question.options.length > 0 && (
         <div className="mt-6">
-          <p className="font-semibold text-gray-700 mb-3 text-sm">الخيارات:</p>
+          <p className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-sm">الخيارات:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {question.options.map((opt) => {
               const isCorrect = showSolution && isTeacher && opt.id === question.correctAnswer;
@@ -186,22 +199,22 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
                   key={opt.id}
                   className={`flex items-center p-3 rounded-xl border transition-colors ${
                     isCorrect
-                      ? 'bg-green-50 border-green-300 ring-1 ring-green-200'
-                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                      ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700 ring-1 ring-green-200 dark:ring-green-800'
+                      : 'bg-white dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   <span
                     className={`w-8 h-8 flex items-center justify-center rounded-full ml-3 font-semibold text-sm shrink-0 ${
-                      isCorrect ? 'bg-green-200 text-green-800' : 'bg-gray-100 text-gray-600'
+                      isCorrect ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
                     }`}
                   >
                     {opt.id}
                   </span>
-                  <div className="text-gray-800 flex-1 min-w-0 overflow-hidden text-sm">
+                  <div className="text-gray-800 dark:text-gray-200 flex-1 min-w-0 overflow-hidden text-sm">
                     <MathRenderer expression={opt.text} />
                   </div>
                   {isCorrect && (
-                    <span className="text-green-600 text-xs font-bold mr-2 shrink-0">✓ صحيح</span>
+                    <span className="text-green-600 dark:text-green-400 text-xs font-bold mr-2 shrink-0">✓ صحيح</span>
                   )}
                 </div>
               );
@@ -212,23 +225,23 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
 
       {/* ─── Teacher-only panels ─── */}
       {isTeacher && showSolution && (
-        <div className="mt-6 border-t border-gray-100 pt-5 space-y-2">
+        <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-5 space-y-2">
 
           {/* Solution panel */}
           {(question.solutionExplanation || question.solutionSteps?.length || question.explanation) && (
             <ExpandablePanel
               title="كيف تم حل السؤال؟"
               defaultOpen={false}
-              panelClass="bg-indigo-50 border-indigo-200"
+              panelClass="bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800"
               icon={
-                <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               }
             >
               {/* Solution explanation (plain Arabic text) */}
               {question.solutionExplanation && (
-                <p className="text-gray-700 leading-relaxed mb-4 bg-white p-3 rounded-lg border border-indigo-100">
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 bg-white dark:bg-gray-900 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/40">
                   {question.solutionExplanation}
                 </p>
               )}
@@ -237,8 +250,8 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
               {question.solutionSteps && question.solutionSteps.length > 0 && (
                 <div className="space-y-2 text-center overflow-x-auto">
                   {question.solutionSteps.map((step, idx) => (
-                    <div key={idx} className="bg-white p-2 rounded-lg border border-indigo-100">
-                      <span className="text-xs text-indigo-400 block mb-1 text-right">الخطوة {idx + 1}</span>
+                    <div key={idx} className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/40 text-gray-900 dark:text-white">
+                      <span className="text-xs text-indigo-400 dark:text-indigo-300 block mb-1 text-right">الخطوة {idx + 1}</span>
                       <MathRenderer expression={step} block />
                     </div>
                   ))}
@@ -247,7 +260,7 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
 
               {/* Fallback explanation */}
               {!question.solutionExplanation && !question.solutionSteps?.length && question.explanation && (
-                <p className="text-gray-700 leading-relaxed">{question.explanation}</p>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{question.explanation}</p>
               )}
             </ExpandablePanel>
           )}
@@ -257,29 +270,29 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
             <ExpandablePanel
               title="كيف تم توليد السؤال؟"
               defaultOpen={false}
-              panelClass="bg-purple-50 border-purple-200"
+              panelClass="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800"
               icon={
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               }
             >
               <dl className="space-y-3">
-                <div className="bg-white p-3 rounded-lg border border-purple-100">
-                  <dt className="text-xs text-purple-500 font-bold mb-1">الهدف التعليمي</dt>
-                  <dd className="text-gray-800 text-sm leading-relaxed">{question.generationLogic.learningObjective}</dd>
+                <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                  <dt className="text-xs text-purple-500 dark:text-purple-400 font-bold mb-1">الهدف التعليمي</dt>
+                  <dd className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed">{question.generationLogic.learningObjective}</dd>
                 </div>
-                <div className="bg-white p-3 rounded-lg border border-purple-100">
-                  <dt className="text-xs text-purple-500 font-bold mb-1">فكرة تصميم السؤال</dt>
-                  <dd className="text-gray-800 text-sm leading-relaxed">{question.generationLogic.questionDesign}</dd>
+                <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                  <dt className="text-xs text-purple-500 dark:text-purple-400 font-bold mb-1">فكرة تصميم السؤال</dt>
+                  <dd className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed">{question.generationLogic.questionDesign}</dd>
                 </div>
-                <div className="bg-white p-3 rounded-lg border border-purple-100">
-                  <dt className="text-xs text-purple-500 font-bold mb-1">المهارة الرياضية المستهدفة</dt>
-                  <dd className="text-gray-800 text-sm leading-relaxed">{question.generationLogic.mathematicalMethod}</dd>
+                <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                  <dt className="text-xs text-purple-500 dark:text-purple-400 font-bold mb-1">المهارة الرياضية المستهدفة</dt>
+                  <dd className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed">{question.generationLogic.mathematicalMethod}</dd>
                 </div>
-                <div className="bg-white p-3 rounded-lg border border-purple-100">
-                  <dt className="text-xs text-purple-500 font-bold mb-1">سبب مستوى الصعوبة</dt>
-                  <dd className="text-gray-800 text-sm leading-relaxed">{question.generationLogic.difficultyReason}</dd>
+                <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                  <dt className="text-xs text-purple-500 dark:text-purple-400 font-bold mb-1">سبب مستوى الصعوبة</dt>
+                  <dd className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed">{question.generationLogic.difficultyReason}</dd>
                 </div>
               </dl>
             </ExpandablePanel>

@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LogOut, Bell, Sun, Moon, ChevronLeft, ChevronRight,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { notificationService } from '../../services/notification.service';
 import NotificationsPanel from './NotificationsPanel';
 import ScrollToTopButton from '../ui/ScrollToTopButton';
 
@@ -77,6 +78,23 @@ export default function SharedLayout({
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const res = await notificationService.getUnreadCount();
+      setUnreadCount(typeof res.data?.unreadCount === 'number' ? res.data.unreadCount : 0);
+    } catch {
+      // Graceful fallback on network/auth errors
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const colors = colorPresets[gradientFrom] || colorPresets['indigo-600'];
 
@@ -118,10 +136,13 @@ export default function SharedLayout({
           </div>
           {user?.subscriptionPlan && (
             <div className="mt-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.subscriptionPlan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-                  user.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-600'
-                }`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                user.subscriptionPlan === 'enterprise'
+                  ? (isDark ? 'bg-purple-900/50 text-purple-300' : 'bg-purple-100 text-purple-700')
+                  : user.subscriptionPlan === 'pro'
+                    ? (isDark ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700')
+                    : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')
+              }`}>
                 {user.subscriptionPlan === 'enterprise' ? '⭐ مؤسسي' : user.subscriptionPlan === 'pro' ? '🚀 احترافي' : '🔹 أساسي'}
               </span>
             </div>
@@ -194,13 +215,14 @@ export default function SharedLayout({
 
       {/* Sidebar - Desktop */}
       <aside
-        className={`hidden lg:flex flex-col h-screen ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-l shadow-lg transition-all duration-300 z-30 flex-shrink-0 ${collapsed ? 'w-16' : 'w-64'}`}
+        className={`hidden lg:flex flex-col h-screen ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-l shadow-lg transition-all duration-300 z-30 flex-shrink-0 relative ${collapsed ? 'w-16' : 'w-64'}`}
       >
         {/* Collapse Toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          style={{ left: collapsed ? '-12px' : `${256 - 12}px` }}
-          className={`fixed top-20 w-6 h-6 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-500'} border ${isDark ? 'border-gray-600' : 'border-gray-200'} shadow flex items-center justify-center z-50 transition-all duration-300`}
+          aria-label={collapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
+          title={collapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
+          className={`absolute top-20 -left-3 w-6 h-6 rounded-full ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-white text-gray-500 hover:bg-gray-50'} border ${isDark ? 'border-gray-600' : 'border-gray-200'} shadow-md flex items-center justify-center z-50 transition-all duration-300 cursor-pointer`}
         >
           {collapsed ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
@@ -216,7 +238,7 @@ export default function SharedLayout({
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute top-4 end-4 p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+          className={`absolute top-4 end-4 p-2 rounded-lg ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}
         >
           <X className="w-5 h-5" />
         </button>
@@ -228,7 +250,7 @@ export default function SharedLayout({
       {/* Main Content Column */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Bar */}
-        <header className={`sticky top-0 z-20 flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm px-4 lg:px-6 py-3 flex items-center gap-4`}>
+        <header className={`sticky top-0 z-50 flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm px-4 lg:px-6 py-3 flex items-center gap-4`}>
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileOpen(true)}
@@ -264,12 +286,21 @@ export default function SharedLayout({
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`p-2 rounded-lg relative transition-colors ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                aria-label="الإشعارات"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 end-1 w-2 h-2 bg-red-500 rounded-full" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -end-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
               {showNotifications && (
-                <NotificationsPanel onClose={() => setShowNotifications(false)} isDark={isDark} />
+                <NotificationsPanel
+                  onClose={() => setShowNotifications(false)}
+                  isDark={isDark}
+                  onUnreadCountChange={fetchUnreadCount}
+                />
               )}
             </div>
 
@@ -295,11 +326,6 @@ export default function SharedLayout({
           <ScrollToTopButton containerId="main-content" />
         </main>
       </div>
-
-      {/* Click outside notifications */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-10" onClick={() => setShowNotifications(false)} />
-      )}
     </div>
   );
 }

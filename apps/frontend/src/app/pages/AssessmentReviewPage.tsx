@@ -42,16 +42,16 @@ export default function AssessmentReviewPage() {
   const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8" dir="rtl">
       <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-bold transition-colors"
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-bold transition-colors"
         >
           <ArrowRight className="w-5 h-5" />
           العودة
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">النتيجة التفصيلية</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">النتيجة التفصيلية</h1>
       </div>
 
       {loading ? (
@@ -59,7 +59,7 @@ export default function AssessmentReviewPage() {
           <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
         </div>
       ) : error ? (
-        <div className="max-w-4xl mx-auto bg-red-50 text-red-700 p-8 rounded-2xl flex flex-col items-center justify-center text-center border border-red-100">
+        <div className="max-w-4xl mx-auto bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 p-8 rounded-2xl flex flex-col items-center justify-center text-center border border-red-100 dark:border-red-900/50">
           <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
           <h3 className="text-xl font-bold mb-2">عذراً</h3>
           <p>{error}</p>

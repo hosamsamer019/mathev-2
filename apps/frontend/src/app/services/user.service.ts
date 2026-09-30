@@ -1,4 +1,4 @@
-import { userApi } from './api';
+import { userApi, attendanceApi } from './api';
 import { User, UserRole } from '../contexts/AuthContext';
 
 export interface UpdateProfileData {
@@ -58,9 +58,43 @@ export const userService = {
     return response.data;
   },
 
-  getAttendance: async (): Promise<any[]> => {
-    // Assuming attendance routes are nested under users or we can just use the userApi wrapper for authorized requests
-    const response = await userApi.get('/attendance/my-attendance');
+  getAttendance: async (): Promise<any> => {
+    const response = await attendanceApi.get('/my-attendance');
+    return response.data;
+  },
+
+  getStudentAttendanceById: async (studentId: string): Promise<any> => {
+    const response = await attendanceApi.get(`/student/${studentId}`);
+    return response.data;
+  },
+
+  getAttendancePercentage: async (studentId: string): Promise<any> => {
+    const response = await attendanceApi.get(`/${studentId}/percentage`);
+    return response.data;
+  },
+
+  markAttendance: async (payload: { studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE'; date?: string }): Promise<any> => {
+    const response = await attendanceApi.post('/', payload);
+    return response.data;
+  },
+
+  updateAttendance: async (id: string, payload: { status?: 'PRESENT' | 'ABSENT' | 'LATE'; date?: string }): Promise<any> => {
+    const response = await attendanceApi.put(`/${id}`, payload);
+    return response.data;
+  },
+
+  deleteAttendance: async (id: string): Promise<any> => {
+    const response = await attendanceApi.delete(`/${id}`);
+    return response.data;
+  },
+
+  bulkMarkAttendance: async (payload: { records: Array<{ studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE' }>; date?: string }): Promise<any> => {
+    const response = await attendanceApi.post('/bulk', payload);
+    return response.data;
+  },
+
+  getAttendanceByDate: async (date: string): Promise<any> => {
+    const response = await attendanceApi.get('/by-date', { params: { date } });
     return response.data;
   },
 
@@ -69,3 +103,4 @@ export const userService = {
     return response.data;
   }
 };
+

@@ -329,6 +329,44 @@ export default function TeacherStudentsPage() {
                 </div>
               ))}
             </div>
+
+            {/* Quick Attendance Marking */}
+            <div className="mb-6 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750">
+              <p className={`text-xs font-bold ${textPrimary} mb-2.5 flex items-center gap-1.5`}>
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                تسجيل حضور اليوم:
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    await userService.markAttendance({ studentId: selectedStudent.id, status: 'PRESENT' });
+                    fetchStudents();
+                  }}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-600 hover:bg-green-700 text-white transition-colors"
+                >
+                  حاضر
+                </button>
+                <button
+                  onClick={async () => {
+                    await userService.markAttendance({ studentId: selectedStudent.id, status: 'LATE' });
+                    fetchStudents();
+                  }}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+                >
+                  متأخر
+                </button>
+                <button
+                  onClick={async () => {
+                    await userService.markAttendance({ studentId: selectedStudent.id, status: 'ABSENT' });
+                    fetchStudents();
+                  }}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-colors"
+                >
+                  غائب
+                </button>
+              </div>
+            </div>
+
             <div className="flex gap-3">
               <button onClick={() => navigate(`/teacher/students/${selectedStudent.id}`)} className="flex-1 bg-gradient-to-l from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-medium hover:opacity-90 flex items-center justify-center gap-2">
                 <Eye className="w-4 h-4" /> عرض التفاصيل

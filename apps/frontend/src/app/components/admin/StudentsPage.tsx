@@ -226,8 +226,8 @@ export default function StudentsPage() {
 
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة المستخدمين</h1>
-          <p className="text-gray-600">إضافة وتعديل وحذف المستخدمين</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">إدارة المستخدمين</h1>
+          <p className="text-gray-600 dark:text-gray-400">إضافة وتعديل وحذف المستخدمين</p>
         </div>
         <button
           onClick={handleAdd}
@@ -238,7 +238,7 @@ export default function StudentsPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -247,7 +247,7 @@ export default function StudentsPage() {
               placeholder="ابحث عن مستخدم..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              className="w-full pr-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500"
             />
           </div>
         </div>
@@ -255,31 +255,31 @@ export default function StudentsPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-right py-3 px-4 font-medium text-gray-700">الاسم</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">البريد الإلكتروني</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">الدور</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">الإجراءات</th>
+              <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+                <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الاسم</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">البريد الإلكتروني</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الدور</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={4} className="text-center py-8 text-gray-500">جاري تحميل البيانات...</td></tr>}
-              {!loading && filteredUsers.length === 0 && <tr><td colSpan={4} className="text-center py-8 text-gray-500">لا يوجد مستخدمين</td></tr>}
+              {loading && <tr><td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">جاري تحميل البيانات...</td></tr>}
+              {!loading && filteredUsers.length === 0 && <tr><td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">لا يوجد مستخدمين</td></tr>}
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-gray-900">{user.name}</td>
-                  <td className="py-3 px-4 text-gray-600">{user.email}</td>
+                <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="py-3 px-4 text-gray-900 dark:text-white">{user.name}</td>
+                  <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{user.email}</td>
                   <td className="py-3 px-4">
-                    <span className="px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800">
+                    <span className="px-3 py-1 rounded-full text-sm bg-indigo-100 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300">
                       {user.role}
                     </span>
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(user)} title="تعديل" aria-label="تعديل" className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                      <button onClick={() => handleEdit(user)} title="تعديل" aria-label="تعديل" className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(user.id)} title="حذف" aria-label="حذف" className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                      <button onClick={() => handleDelete(user.id)} title="حذف" aria-label="حذف" className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -290,10 +290,10 @@ export default function StudentsPage() {
           </table>
           
           {/* Pagination Controls */}
-          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4 rounded-b-xl">
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4 rounded-b-xl">
             <div className="flex flex-1 items-center justify-between">
               <div>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
                   الصفحة <span className="font-medium">{page}</span> من <span className="font-medium">{totalPages}</span>
                 </p>
               </div>
@@ -302,14 +302,14 @@ export default function StudentsPage() {
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
                   >
                     <span>السابق</span>
                   </button>
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
                   >
                     <span>التالي</span>
                   </button>
@@ -322,59 +322,59 @@ export default function StudentsPage() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 max-h-screen overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 max-h-screen overflow-y-auto border border-gray-100 dark:border-gray-700">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {editingUser ? 'تعديل مستخدم' : 'إضافة مستخدم جديد'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الاسم الكامل</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم الكامل</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border ${validationErrors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
                 {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">البريد الإلكتروني</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">البريد الإلكتروني</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border ${validationErrors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
                 {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {editingUser ? 'كلمة المرور الجديدة (اتركها فارغة للاحتفاظ بالقديمة)' : 'كلمة المرور'}
                 </label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border ${validationErrors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                   placeholder={editingUser ? '••••••••' : ''}
                 />
                 {validationErrors.password && <p className="text-red-500 text-xs mt-1">{validationErrors.password}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الدور (Role)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الدور (Role)</label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.role ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border ${validationErrors.role ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-purple-500`}
                 >
                   <option value="ADMIN">ADMIN</option>
                   <option value="TEACHER">TEACHER</option>
@@ -386,15 +386,15 @@ export default function StudentsPage() {
               </div>
 
               {(formData.role === 'ONLINE_STUDENT' || formData.role === 'CENTER_STUDENT') && (
-                <div className="pt-4 border-t border-gray-200 mt-4">
-                  <h3 className="text-md font-semibold text-gray-800 mb-3">المستوى الدراسي</h3>
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <h3 className="text-md font-semibold text-gray-800 dark:text-gray-100 mb-3">المستوى الدراسي</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">البلد</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البلد</label>
                       <select
                         value={formData.country}
                         onChange={(e) => setFormData({...formData, country: e.target.value, educationLevel: '', gradeLevel: ''})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                       >
                         {Object.entries(ACADEMIC_CONFIG).map(([key, config]) => (
                           <option key={key} value={key}>{config.label}</option>
@@ -403,11 +403,11 @@ export default function StudentsPage() {
                     </div>
                     {formData.country && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">المرحلة الدراسية</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المرحلة الدراسية</label>
                         <select
                           value={formData.educationLevel}
                           onChange={(e) => setFormData({...formData, educationLevel: e.target.value, gradeLevel: ''})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                         >
                           <option value="">اختر المرحلة</option>
                           {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels).map(([key, level]: [string, any]) => (
@@ -418,11 +418,11 @@ export default function StudentsPage() {
                     )}
                     {formData.country && formData.educationLevel && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الصف الدراسي</label>
                         <select
                           value={formData.gradeLevel}
                           onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                         >
                           <option value="">اختر الصف</option>
                           {Object.entries((ACADEMIC_CONFIG as any)[formData.country].levels[formData.educationLevel].grades).map(([key, label]: [string, any]) => (
@@ -436,8 +436,8 @@ export default function StudentsPage() {
               )}
 
               {(formData.role === 'ONLINE_STUDENT' || formData.role === 'CENTER_STUDENT') && (
-                <div className="pt-4 border-t border-gray-200 mt-4">
-                  <h3 className="text-md font-semibold text-gray-800 mb-3">ارتباط ولي الأمر</h3>
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <h3 className="text-md font-semibold text-gray-800 dark:text-gray-100 mb-3">ارتباط ولي الأمر</h3>
                   <div className="flex gap-4 mb-4">
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -446,7 +446,7 @@ export default function StudentsPage() {
                         checked={parentMode === 'none'}
                         onChange={() => setParentMode('none')}
                       />
-                      <span className="text-sm text-gray-700">بدون</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">بدون</span>
                     </label>
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -455,7 +455,7 @@ export default function StudentsPage() {
                         checked={parentMode === 'link'}
                         onChange={() => setParentMode('link')}
                       />
-                      <span className="text-sm text-gray-700">ربط ولي أمر موجود</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">ربط ولي أمر موجود</span>
                     </label>
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -464,20 +464,20 @@ export default function StudentsPage() {
                         checked={parentMode === 'new'}
                         onChange={() => setParentMode('new')}
                       />
-                      <span className="text-sm text-gray-700">بيانات ولي الأمر</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">بيانات ولي الأمر</span>
                     </label>
                   </div>
 
                   {parentMode === 'link' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">معرف ولي الأمر (Parent ID)</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">معرف ولي الأمر (Parent ID)</label>
                         <input
                           type="text"
                           value={formData.parentId}
                           onChange={(e) => setFormData({...formData, parentId: e.target.value})}
                           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                     </div>
@@ -486,41 +486,41 @@ export default function StudentsPage() {
                   {parentMode === 'new' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">اسم ولي الأمر</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم ولي الأمر</label>
                         <input
                           type="text"
                           value={formData.parentName}
                           onChange={(e) => setFormData({...formData, parentName: e.target.value})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">بريد ولي الأمر</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">بريد ولي الأمر</label>
                         <input
                           type="email"
                           value={formData.parentEmail}
                           onChange={(e) => setFormData({...formData, parentEmail: e.target.value})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">هاتف ولي الأمر</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">هاتف ولي الأمر</label>
                         <input
                           type="text"
                           value={formData.parentPhone}
                           onChange={(e) => setFormData({...formData, parentPhone: e.target.value})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           {editingUser && formData.parentId ? 'كلمة مرور ولي الأمر (اتركها فارغة للاحتفاظ بالقديمة)' : 'كلمة مرور ولي الأمر'}
                         </label>
                         <input
                           type="password"
                           value={formData.parentPassword}
                           onChange={(e) => setFormData({...formData, parentPassword: e.target.value})}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                          className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                     </div>
@@ -530,13 +530,13 @@ export default function StudentsPage() {
 
               {formData.role === 'PARENT' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">معرف الطالب المرتبط (Student ID)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">معرف الطالب المرتبط (Student ID)</label>
                   <input
                     type="text"
                     placeholder="Enter Student ID"
                     value={formData.childId}
                     onChange={(e) => setFormData({...formData, childId: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               )}
@@ -554,7 +554,7 @@ export default function StudentsPage() {
                 <button
                   onClick={() => setShowModal(false)}
                   disabled={isSaving}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                 >
                   إلغاء
                 </button>

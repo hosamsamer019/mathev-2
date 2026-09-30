@@ -43,8 +43,8 @@ const ACADEMIC_CONFIG = {
 } as const;
 
 const videoTypes = [
-  { icon: Youtube, label: 'رابط يوتيوب', color: 'bg-red-100 text-red-700', disabled: false },
-  { icon: Database, label: 'Google Drive', color: 'bg-blue-100 text-blue-700', disabled: false },
+  { icon: Youtube, label: 'رابط يوتيوب', color: 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300', disabled: false },
+  { icon: Database, label: 'Google Drive', color: 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300', disabled: false },
   { icon: Upload, label: 'رفع فيديو محلي', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400', disabled: true },
   { icon: Play, label: 'تسجيل مباشر', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400', disabled: true },
 ];
@@ -927,7 +927,7 @@ export default function TeacherCoursesPage() {
               </div>
             )}
             <div className="mt-8 text-left">
-              <button onClick={() => setSelectedCourse(null)} className="px-6 py-2 rounded-xl bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium">
+              <button onClick={() => setSelectedCourse(null)} className={`px-6 py-2 rounded-xl ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'} font-medium`}>
                 إغلاق
               </button>
             </div>

@@ -1,7 +1,25 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import axios from 'axios';
 import { authApi } from '../services/api';
 
 export type UserRole = 'ONLINE_STUDENT' | 'CENTER_STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT';
+
+export function getDefaultRouteForRole(role?: UserRole | string | null): string {
+  switch (role) {
+    case 'ONLINE_STUDENT':
+      return '/student/online/home';
+    case 'CENTER_STUDENT':
+      return '/student/center/home';
+    case 'TEACHER':
+      return '/teacher/home';
+    case 'PARENT':
+      return '/parent/home';
+    case 'ADMIN':
+      return '/admin/home';
+    default:
+      return '/';
+  }
+}
 
 export interface User {
   id: string;
@@ -22,7 +40,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
-  loginGuest: (name: string, phone: string, code: string) => Promise<{ success: boolean; assessmentId?: string; message?: string }>;
+  loginGuest: (name: string, phone: string, code: string) => Promise<{ success: boolean; assessmentId?: string; message?: string; code?: string; openAt?: string | null; closeAt?: string | null; user?: any }>;
   register: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -75,7 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('edu-user', JSON.stringify(fullUser));
       return true;
     } catch (error) {
-      console.error('Login failed:', error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Expected invalid credentials: do not console.error
+      } else {
+        console.error('Login failed:', error);
+      }
       return false;
     }
   };

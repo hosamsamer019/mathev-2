@@ -274,8 +274,8 @@ export default function ExamsManagementPage() {
 
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة الامتحانات</h1>
-          <p className="text-gray-600">إنشاء وإدارة الامتحانات</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">إدارة الامتحانات</h1>
+          <p className="text-gray-600 dark:text-gray-400">إنشاء وإدارة الامتحانات</p>
         </div>
         <button
           onClick={() => {
@@ -301,27 +301,27 @@ export default function ExamsManagementPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md overflow-x-auto">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="text-right py-3 px-4 font-medium text-gray-700">عنوان الامتحان</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">الدورة</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">المحاولات</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">الإجراءات</th>
+            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">عنوان الامتحان</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الدورة</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">المحاولات</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={4} className="text-center py-8 text-gray-500">جاري تحميل البيانات...</td></tr>}
-            {!loading && exams.length === 0 && <tr><td colSpan={4} className="text-center py-8 text-gray-500">لا يوجد امتحانات</td></tr>}
+            {loading && <tr><td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">جاري تحميل البيانات...</td></tr>}
+            {!loading && exams.length === 0 && <tr><td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">لا يوجد امتحانات</td></tr>}
             
             {exams.map((exam) => (
-              <tr key={exam.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 text-gray-900">
+              <tr key={exam.id} className="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td className="py-3 px-4 text-gray-900 dark:text-white">
                   <div className="font-semibold">{exam.title}</div>
                   {exam.allowExternalStudents && exam.examAccessCode && (
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded font-mono font-bold">
+                      <span className="bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 text-xs px-2 py-0.5 rounded font-mono font-bold">
                         كود: {exam.examAccessCode}
                       </span>
                       <button
@@ -331,7 +331,7 @@ export default function ExamsManagementPage() {
                           navigator.clipboard.writeText(link);
                           showToast('تم نسخ رابط الامتحان الخارجي', 'success');
                         }}
-                        className="text-[11px] bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium transition-colors"
+                        className="text-[11px] bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-700 px-2 py-0.5 rounded flex items-center gap-1 font-medium transition-colors"
                       >
                         <Copy className="w-3 h-3" />
                         نسخ الرابط
@@ -339,30 +339,30 @@ export default function ExamsManagementPage() {
                     </div>
                   )}
                 </td>
-                <td className="py-3 px-4 text-gray-600">{exam.course?.title || exam.courseId}</td>
-                <td className="py-3 px-4 text-gray-600">{exam._count?.attempts || 0}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{exam.course?.title || exam.courseId}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{exam._count?.attempts || 0}</td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleViewAttempts(exam.id)}
-                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
                     >
                       عرض المحاولات
                     </button>
                     <button
                       onClick={() => handleOpenQuestions(exam)}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
                     >
                       الأسئلة
                     </button>
                     <button 
                       onClick={() => handleEdit(exam)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
                       title="تعديل الامتحان"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(exam.id)} className="p-2 text-red-600 hover:bg-red-50 rounded">
+                    <button onClick={() => handleDelete(exam.id)} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -374,35 +374,35 @@ export default function ExamsManagementPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">{editingExam ? 'تعديل امتحان' : 'إضافة امتحان جديد'}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{editingExam ? 'تعديل امتحان' : 'إضافة امتحان جديد'}</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">عنوان الامتحان *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">عنوان الامتحان *</label>
                 <input
                   type="text"
                   placeholder="مثال: امتحان التفاضل والتكامل الشامل"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors?.title ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 border ${validationErrors?.title ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
                 {validationErrors?.title && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.title}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الدورة (الكورس) *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الدورة (الكورس) *</label>
                 {courses.length > 0 ? (
                   <select
                     value={formData.courseId}
                     onChange={(e) => setFormData({...formData, courseId: e.target.value})}
-                    className={`w-full px-4 py-2 border ${validationErrors?.courseId ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500 bg-white`}
+                    className={`w-full px-4 py-2 border ${validationErrors?.courseId ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                   >
                     <option value="">-- اختر الدورة التعليمية --</option>
                     {courses.map(c => (
@@ -415,7 +415,7 @@ export default function ExamsManagementPage() {
                     placeholder="أدخل معرف الدورة (Course ID)"
                     value={formData.courseId}
                     onChange={(e) => setFormData({...formData, courseId: e.target.value})}
-                    className={`w-full px-4 py-2 border ${validationErrors?.courseId ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                    className={`w-full px-4 py-2 border ${validationErrors?.courseId ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                   />
                 )}
                 {validationErrors?.courseId && <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.courseId}</p>}
@@ -423,42 +423,42 @@ export default function ExamsManagementPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">مدة الامتحان (دقائق)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">مدة الامتحان (دقائق)</label>
                   <input
                     type="number"
                     value={formData.duration}
                     onChange={(e) => setFormData({...formData, duration: parseInt(e.target.value) || 60})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">درجة النجاح (%)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">درجة النجاح (%)</label>
                   <input
                     type="number"
                     value={formData.passingScore}
                     onChange={(e) => setFormData({...formData, passingScore: parseInt(e.target.value) || 50})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">وقت البدء (اختياري)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">وقت البدء (اختياري)</label>
                   <input
                     type="datetime-local"
                     value={formData.startTime}
                     onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">وقت الانتهاء (اختياري)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">وقت الانتهاء (اختياري)</label>
                   <input
                     type="datetime-local"
                     value={formData.endTime}
                     onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               </div>
@@ -469,9 +469,9 @@ export default function ExamsManagementPage() {
                   id="randomization"
                   checked={formData.randomization}
                   onChange={(e) => setFormData({...formData, randomization: e.target.checked})}
-                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                  className="w-4 h-4 text-purple-600 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500"
                 />
-                <label htmlFor="randomization" className="text-sm font-medium text-gray-700">ترتيب أسئلة عشوائي</label>
+                <label htmlFor="randomization" className="text-sm font-medium text-gray-700 dark:text-gray-300">ترتيب أسئلة عشوائي</label>
               </div>
 
               <div className="flex items-center gap-2 mt-2">
@@ -480,18 +480,18 @@ export default function ExamsManagementPage() {
                   id="allowExternalStudents"
                   checked={formData.allowExternalStudents}
                   onChange={(e) => setFormData({...formData, allowExternalStudents: e.target.checked})}
-                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                  className="w-4 h-4 text-purple-600 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500"
                 />
-                <label htmlFor="allowExternalStudents" className="text-sm font-medium text-gray-700">السماح للطلاب الخارجيين بالدخول</label>
+                <label htmlFor="allowExternalStudents" className="text-sm font-medium text-gray-700 dark:text-gray-300">السماح للطلاب الخارجيين بالدخول</label>
               </div>
 
               {formData.allowExternalStudents && (
                 <div className="mt-3 space-y-3">
                   {editingExam?.examAccessCode && (
-                    <div className="p-3.5 bg-purple-50 rounded-xl border border-purple-200">
-                      <span className="text-xs text-purple-800 font-semibold block mb-1">كود دخول ورابط الامتحان الخارجي:</span>
+                    <div className="p-3.5 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
+                      <span className="text-xs text-purple-800 dark:text-purple-300 font-semibold block mb-1">كود دخول ورابط الامتحان الخارجي:</span>
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="font-mono font-bold text-purple-700 text-lg tracking-wider">{editingExam.examAccessCode}</span>
+                        <span className="font-mono font-bold text-purple-700 dark:text-purple-300 text-lg tracking-wider">{editingExam.examAccessCode}</span>
                         <div className="flex gap-2">
                           <button
                             type="button"
@@ -516,7 +516,7 @@ export default function ExamsManagementPage() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-[11px] text-gray-500 font-mono break-all bg-white/80 p-1.5 rounded border border-purple-100">
+                      <div className="text-[11px] text-gray-600 dark:text-gray-300 font-mono break-all bg-white/80 dark:bg-gray-900/80 p-1.5 rounded border border-purple-100 dark:border-purple-800">
                         {window.location.origin}/external-exam?code={editingExam.examAccessCode}
                       </div>
                     </div>
@@ -535,7 +535,7 @@ export default function ExamsManagementPage() {
                 <button
                   onClick={() => setShowModal(false)}
                   disabled={isSaving}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
                 >
                   إلغاء
                 </button>
@@ -546,33 +546,33 @@ export default function ExamsManagementPage() {
       )}
 
       {showQuestionModal && selectedExamDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">إدارة أسئلة امتحان: {selectedExamDetails.title}</h2>
-              <button onClick={() => { setShowQuestionModal(false); setEditingQuestion(null); }} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">إدارة أسئلة امتحان: {selectedExamDetails.title}</h2>
+              <button onClick={() => { setShowQuestionModal(false); setEditingQuestion(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X className="w-6 h-6" />
               </button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h3 className="text-lg font-bold mb-4">{editingQuestion ? 'تعديل سؤال' : 'إضافة سؤال جديد'}</h3>
-                <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{editingQuestion ? 'تعديل سؤال' : 'إضافة سؤال جديد'}</h3>
+                <div className="space-y-4 bg-gray-50 dark:bg-gray-900/40 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div>
-                    <label className="block text-sm font-medium mb-1">نص السؤال</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نص السؤال</label>
                     <textarea 
                       value={questionForm.text} 
                       onChange={e => setQuestionForm({...questionForm, text: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded focus:ring-purple-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">نوع السؤال</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع السؤال</label>
                     <select 
                       value={questionForm.type}
                       onChange={e => setQuestionForm({...questionForm, type: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded focus:ring-purple-500"
                     >
                       <option value="multiple_choice">اختيار من متعدد</option>
                       <option value="true_false">صح أو خطأ</option>
@@ -581,7 +581,7 @@ export default function ExamsManagementPage() {
                   </div>
                   {questionForm.type === 'multiple_choice' && (
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium mb-1">الخيارات (اختر الإجابة الصحيحة)</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الخيارات (اختر الإجابة الصحيحة)</label>
                       {questionForm.options.map((opt, i) => (
                         <div key={i} className="flex gap-2 items-center">
                           <input 
@@ -599,7 +599,7 @@ export default function ExamsManagementPage() {
                               setQuestionForm({...questionForm, options: newOpts});
                             }}
                             placeholder={`خيار ${i+1}`}
-                            className="flex-1 px-3 py-1 border border-gray-300 rounded"
+                            className="flex-1 px-3 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded"
                           />
                         </div>
                       ))}
@@ -607,11 +607,11 @@ export default function ExamsManagementPage() {
                   )}
                   {questionForm.type === 'true_false' && (
                     <div>
-                      <label className="block text-sm font-medium mb-1">الإجابة الصحيحة</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الإجابة الصحيحة</label>
                       <select 
                         value={questionForm.correct as any} 
                         onChange={e => setQuestionForm({...questionForm, correct: e.target.value === 'true' ? true : false})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded"
                       >
                         <option value="true">صح</option>
                         <option value="false">خطأ</option>
@@ -619,11 +619,11 @@ export default function ExamsManagementPage() {
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <button onClick={handleSaveQuestion} disabled={isSaving} className="flex-1 bg-purple-600 text-white py-2 rounded">
+                    <button onClick={handleSaveQuestion} disabled={isSaving} className="flex-1 bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition-colors">
                       {isSaving ? 'جاري الحفظ...' : 'حفظ السؤال'}
                     </button>
                     {editingQuestion && (
-                       <button onClick={() => { setEditingQuestion(null); setQuestionForm({ text: '', type: 'multiple_choice', options: ['', '', '', ''], correct: 0 }); }} className="bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                       <button onClick={() => { setEditingQuestion(null); setQuestionForm({ text: '', type: 'multiple_choice', options: ['', '', '', ''], correct: 0 }); }} className="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
                          إلغاء التعديل
                        </button>
                     )}
@@ -632,13 +632,13 @@ export default function ExamsManagementPage() {
               </div>
 
               <div>
-                <h3 className="text-lg font-bold mb-4">الأسئلة الحالية ({examQuestions.length})</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">الأسئلة الحالية ({examQuestions.length})</h3>
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                  {examQuestions.length === 0 && <p className="text-gray-500">لا يوجد أسئلة مضافة</p>}
+                  {examQuestions.length === 0 && <p className="text-gray-500 dark:text-gray-400">لا يوجد أسئلة مضافة</p>}
                   {examQuestions.map((q, idx) => (
-                    <div key={q.id} className="p-3 bg-white border border-gray-200 rounded shadow-sm relative group">
+                    <div key={q.id} className="p-3 bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded shadow-sm relative group">
                       <div className="flex justify-between items-start mb-2">
-                        <span className="font-bold text-sm text-gray-500">سؤال {idx + 1}</span>
+                        <span className="font-bold text-sm text-gray-500 dark:text-gray-400">سؤال {idx + 1}</span>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                           <button onClick={() => { 
                             setEditingQuestion(q);
@@ -648,18 +648,18 @@ export default function ExamsManagementPage() {
                               options: q.options || ['', '', '', ''],
                               correct: q.type === 'multiple_choice' ? (q.options ? q.options.indexOf(q.correct) : 0) : q.correct
                             });
-                          }} className="text-blue-500 hover:text-blue-700">
+                          }} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:text-red-700">
+                          <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
-                      <p className="text-gray-900 font-medium">
+                      <p className="text-gray-900 dark:text-white font-medium">
                         <MathContent content={q.text || ''} />
                       </p>
-                      <span className="text-xs text-gray-500 mt-1 inline-block">النوع: {q.type === 'multiple_choice' ? 'اختيارات' : q.type === 'true_false' ? 'صح/خطأ' : 'نصي'}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 inline-block">النوع: {q.type === 'multiple_choice' ? 'اختيارات' : q.type === 'true_false' ? 'صح/خطأ' : 'نصي'}</span>
                     </div>
                   ))}
                 </div>
@@ -670,23 +670,23 @@ export default function ExamsManagementPage() {
       )}
 
       {showAttemptsModal && selectedExamDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">محاولات الطلاب: {selectedExamDetails.title}</h2>
-              <button onClick={() => setShowAttemptsModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">محاولات الطلاب: {selectedExamDetails.title}</h2>
+              <button onClick={() => setShowAttemptsModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-5 border-b border-gray-200">
+            <div className="flex gap-2 mb-5 border-b border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setAttemptsTab('registered')}
                 className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
                   attemptsTab === 'registered'
-                    ? 'border-purple-600 text-purple-700 bg-purple-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    ? 'border-purple-600 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 طلاب مسجلون ({selectedExamDetails.attempts?.length || 0})
@@ -695,8 +695,8 @@ export default function ExamsManagementPage() {
                 onClick={() => setAttemptsTab('external')}
                 className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
                   attemptsTab === 'external'
-                    ? 'border-orange-500 text-orange-700 bg-orange-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    ? 'border-orange-500 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 طلاب خارجيون ({externalAttempts.length})
@@ -706,11 +706,11 @@ export default function ExamsManagementPage() {
             {/* Registered Students Tab */}
             {attemptsTab === 'registered' && (
               selectedExamDetails.attempts?.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">لا توجد محاولات حتى الآن.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">لا توجد محاولات حتى الآن.</p>
               ) : (
                 <table className="w-full text-right border-collapse">
                   <thead>
-                    <tr className="border-b bg-gray-50 text-gray-700 text-sm font-semibold">
+                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-300 text-sm font-semibold">
                       <th className="py-3 px-4">الطالب</th>
                       <th className="py-3 px-4">الدرجة</th>
                       <th className="py-3 px-4">التاريخ</th>
@@ -719,43 +719,43 @@ export default function ExamsManagementPage() {
                   </thead>
                   <tbody>
                     {selectedExamDetails.attempts?.map((attempt: any) => (
-                      <tr key={attempt.id} className="border-b hover:bg-gray-50 text-gray-700 text-sm">
+                      <tr key={attempt.id} className="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300 text-sm">
                         <td className="py-3 px-4">
-                          <div className="font-semibold">{attempt.student?.name || 'غير معروف'}</div>
+                          <div className="font-semibold text-gray-900 dark:text-white">{attempt.student?.name || 'غير معروف'}</div>
                           {attempt.student?.phone && (
-                            <div className="text-xs text-gray-500 font-mono mt-0.5">{attempt.student.phone}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{attempt.student.phone}</div>
                           )}
                           {attempt.ipAddress && (
-                            <div className="text-xs text-purple-600 font-mono mt-1">IP: {attempt.ipAddress}</div>
+                            <div className="text-xs text-purple-600 dark:text-purple-400 font-mono mt-1">IP: {attempt.ipAddress}</div>
                           )}
                           {attempt.userAgent && (
-                            <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]" title={attempt.userAgent}>
+                            <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 truncate max-w-[200px]" title={attempt.userAgent}>
                               {attempt.userAgent}
                             </div>
                           )}
                         </td>
                         <td className="py-3 px-4 font-bold">
                           {attempt.status === 'CHEATING' ? (
-                            <span className="text-red-600">0% (ملغى للغش)</span>
+                            <span className="text-red-600 dark:text-red-400">0% (ملغى للغش)</span>
                           ) : (
-                            <span className="text-indigo-600">{Math.round(attempt.percentage || 0)}%</span>
+                            <span className="text-indigo-600 dark:text-indigo-400">{Math.round(attempt.percentage || 0)}%</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-xs text-gray-500">
+                        <td className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">
                           {new Date(attempt.createdAt).toLocaleString('ar-EG')}
                         </td>
                         <td className="py-3 px-4 text-xs font-medium">
                           {attempt.status === 'CHEATING' ? (
-                            <div className="text-red-600 font-bold">
+                            <div className="text-red-600 dark:text-red-400 font-bold">
                               <div>رصد غش ({attempt.violationCount} مخالفات)</div>
                               {attempt.cheatingReason && (
-                                <div className="text-xs font-normal text-red-500 mt-1 max-w-xs">{attempt.cheatingReason}</div>
+                                <div className="text-xs font-normal text-red-500 dark:text-red-400 mt-1 max-w-xs">{attempt.cheatingReason}</div>
                               )}
                             </div>
                           ) : attempt.violationCount > 0 ? (
-                            <span className="text-yellow-600 font-bold">{attempt.violationCount} مخالفات</span>
+                            <span className="text-yellow-600 dark:text-yellow-400 font-bold">{attempt.violationCount} مخالفات</span>
                           ) : (
-                            <span className="text-green-600">لا يوجد</span>
+                            <span className="text-green-600 dark:text-green-400">لا يوجد</span>
                           )}
                         </td>
                       </tr>
@@ -768,11 +768,11 @@ export default function ExamsManagementPage() {
             {/* External Students Tab */}
             {attemptsTab === 'external' && (
               externalAttempts.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">لا توجد محاولات من طلاب خارجيين حتى الآن.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">لا توجد محاولات من طلاب خارجيين حتى الآن.</p>
               ) : (
                 <table className="w-full text-right border-collapse">
                   <thead>
-                    <tr className="border-b bg-orange-50 text-gray-700 text-sm font-semibold">
+                    <tr className="border-b border-orange-200 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/30 text-gray-700 dark:text-gray-300 text-sm font-semibold">
                       <th className="py-3 px-4">الاسم</th>
                       <th className="py-3 px-4">الهاتف</th>
                       <th className="py-3 px-4">IP المُرصود</th>
@@ -783,34 +783,34 @@ export default function ExamsManagementPage() {
                   </thead>
                   <tbody>
                     {externalAttempts.map((attempt: any) => (
-                      <tr key={attempt.id} className="border-b hover:bg-orange-50 text-gray-700 text-sm">
+                      <tr key={attempt.id} className="border-b border-orange-100 dark:border-orange-900/20 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 text-gray-700 dark:text-gray-300 text-sm">
                         <td className="py-3 px-4">
-                          <div className="font-semibold">{attempt.studentName}</div>
+                          <div className="font-semibold text-gray-900 dark:text-white">{attempt.studentName}</div>
                           {attempt.userAgent && (
-                            <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[180px]" title={attempt.userAgent}>
+                            <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 truncate max-w-[180px]" title={attempt.userAgent}>
                               {attempt.userAgent}
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-xs font-mono text-gray-500">{attempt.phone || '—'}</td>
+                        <td className="py-3 px-4 text-xs font-mono text-gray-500 dark:text-gray-400">{attempt.phone || '—'}</td>
                         <td className="py-3 px-4">
                           {attempt.ipAddress ? (
-                            <span className="text-xs text-orange-700 font-mono bg-orange-100 px-1.5 py-0.5 rounded">{attempt.ipAddress}</span>
+                            <span className="text-xs text-orange-700 dark:text-orange-300 font-mono bg-orange-100 dark:bg-orange-950/50 px-1.5 py-0.5 rounded">{attempt.ipAddress}</span>
                           ) : '—'}
                         </td>
                         <td className="py-3 px-4 font-bold">
                           {attempt.status === 'CHEATING' ? (
-                            <span className="text-red-600">0% (ملغى)</span>
+                            <span className="text-red-600 dark:text-red-400">0% (ملغى)</span>
                           ) : (
-                            <span className="text-indigo-600">{Math.round(attempt.percentage || 0)}%</span>
+                            <span className="text-indigo-600 dark:text-indigo-400">{Math.round(attempt.percentage || 0)}%</span>
                           )}
                         </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            attempt.status === 'GRADED' ? 'bg-green-100 text-green-800' :
-                            attempt.status === 'CHEATING' ? 'bg-red-100 text-red-800' :
-                            attempt.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-700'
+                            attempt.status === 'GRADED' ? 'bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300' :
+                            attempt.status === 'CHEATING' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300' :
+                            attempt.status === 'SUBMITTED' ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300' :
+                            'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                           }`}>
                             {attempt.status === 'GRADED' ? 'تم التصحيح' :
                              attempt.status === 'CHEATING' ? 'ملغى (غش)' :
@@ -819,7 +819,7 @@ export default function ExamsManagementPage() {
                              attempt.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-xs text-gray-500">
+                        <td className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">
                           {new Date(attempt.createdAt).toLocaleString('ar-EG')}
                         </td>
                       </tr>

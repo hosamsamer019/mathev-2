@@ -189,6 +189,10 @@ model Attendance {
   status    String
   createdAt DateTime @default(now())
   student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([date])
+  @@index([studentId, date])
 }
 
 model Payment {
@@ -278,6 +282,7 @@ model Assessment {
   teacher          User                  @relation("TeacherAssessments", fields: [teacherId], references: [id])
   attempts         AssessmentAttempt[]
   externalAttempts ExternalExamAttempt[]
+  temporaryAssets  TemporaryAsset[]
 }
 
 model ExternalExamAttempt {
@@ -391,14 +396,20 @@ model ChatMessage {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   title     String
   message   String
   type      String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
 
 model QuestionBank {
@@ -572,4 +583,23 @@ enum AttemptStatus {
   TIME_EXPIRED
   GRADED
   CHEATING
+}
+
+model TemporaryAsset {
+  id           String      @id @default(uuid())
+  storageKey   String      @unique
+  url          String?
+  assessmentId String?
+  questionId   String?
+  mimeType     String
+  sizeBytes    Int
+  createdAt    DateTime    @default(now())
+  expiresAt    DateTime?
+  deletedAt    DateTime?
+
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@index([createdAt])
+  @@index([deletedAt])
 }

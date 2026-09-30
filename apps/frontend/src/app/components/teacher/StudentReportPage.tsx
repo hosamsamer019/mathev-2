@@ -269,8 +269,14 @@ export default function StudentReportPage() {
               {report.attendances.map((att: any, idx: number) => (
                 <div key={idx} className={`p-3 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-700/50' : 'border-gray-100 bg-gray-50'} flex justify-between items-center`}>
                   <p className={`text-sm ${textPrimary}`}>{new Date(att.date).toLocaleDateString('ar-EG')}</p>
-                  <span className={`text-xs px-2 py-1 rounded-full ${att.status === 'PRESENT' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {att.status === 'PRESENT' ? 'حاضر' : 'غائب'}
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    att.status === 'PRESENT'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300'
+                      : att.status === 'LATE'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                      : 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                  }`}>
+                    {att.status === 'PRESENT' ? 'حاضر' : att.status === 'LATE' ? 'متأخر' : 'غائب'}
                   </span>
                 </div>
               ))}

@@ -84,13 +84,13 @@ export default function ReportsPage() {
       
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">التقارير والإحصائيات</h1>
-          <p className="text-gray-600">تحليل شامل لأداء المنصة</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">التقارير والإحصائيات</h1>
+          <p className="text-gray-600 dark:text-gray-400">تحليل شامل لأداء المنصة</p>
         </div>
         <button 
           onClick={handleExportPDF}
           disabled={exporting}
-          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-60"
+          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-60 transition-colors"
         >
           {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
           <span>{exporting ? 'جاري التصدير...' : 'تصدير PDF'}</span>
@@ -98,58 +98,58 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">إجمالي المستخدمين</p>
-              <p className="text-3xl font-bold text-blue-600">{overview?.totalUsers || 0}</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">إجمالي المستخدمين</p>
+              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{overview?.totalUsers || 0}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center">
+              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">الدورات النشطة</p>
-              <p className="text-3xl font-bold text-green-600">{overview?.totalCourses || 0}</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">الدورات النشطة</p>
+              <p className="text-3xl font-bold text-green-600 dark:text-green-400">{overview?.totalCourses || 0}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">عدد الامتحانات</p>
-              <p className="text-3xl font-bold text-purple-600">{overview?.totalExams || 0}</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">عدد الامتحانات</p>
+              <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{overview?.totalExams || 0}</p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <Award className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-full flex items-center justify-center">
+              <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">التسليمات</p>
-              <p className="text-3xl font-bold text-orange-600">{overview?.totalSubmissions || 0}</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">التسليمات</p>
+              <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{overview?.totalSubmissions || 0}</p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-orange-600" />
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-full flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">توزيع المستخدمين</h2>
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">توزيع المستخدمين</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -165,13 +165,13 @@ export default function ReportsPage() {
                 ))}
               </Pie>
               <Tooltip />
-              <Legend formatter={(value, entry: any) => <span className="text-gray-700 font-medium mr-1">{value} ({entry.payload.value})</span>} />
+              <Legend formatter={(value, entry: any) => <span className="text-gray-700 dark:text-gray-300 font-medium mr-1">{value} ({entry.payload.value})</span>} />
             </PieChart>
           </ResponsiveContainer>
         </div>
         
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">أداء الدورات</h2>
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">أداء الدورات</h2>
           {data.performanceData && data.performanceData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={data.performanceData}>
@@ -183,8 +183,8 @@ export default function ReportsPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-               <p className="text-gray-500">لا يوجد بيانات كافية لعرض الأداء</p>
+            <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+               <p className="text-gray-500 dark:text-gray-400">لا يوجد بيانات كافية لعرض الأداء</p>
             </div>
           )}
         </div>

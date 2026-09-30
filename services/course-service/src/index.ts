@@ -34,22 +34,28 @@ const PORT = process.env.PORT || 4004;
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
+    if (process.env.NODE_ENV !== 'production' && (origin.startsWith('http://localhost:') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com'))) {
       return callback(null, true);
     }
     const allowedOrigin = process.env.CLIENT_URL || 'https://your-production-domain.com';
-    if (origin === allowedOrigin || origin.includes('vercel.app')) { return callback(null, true); }
+    if (origin === allowedOrigin || origin.includes('vercel.app') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com')) { return callback(null, true); }
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 };
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Serve static uploads
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve static uploads with cross-origin resource policy
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Mount Routes
 app.use('/api/courses', courseRoutes);

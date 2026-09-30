@@ -55,4 +55,28 @@ describe('sanitizeQuestionsForStudent', () => {
     expect(sanitized[0].type).toBe('mcq');
     expect(sanitized[0].options[0].text).toBe('Option A');
   });
+
+  it('should preserve imageUrl while stripping imageStorageKey and imageAssetId', () => {
+    const payloadWithImage = [
+      {
+        id: '20',
+        text: 'Question with image',
+        options: ['Option 1', 'Option 2'],
+        correct: 0,
+        correctAnswer: 'Option 1',
+        imageUrl: 'https://storage.example.com/assessment-assets/img-123.png',
+        imageStorageKey: 'assessment-assets/img-123.png',
+        imageAssetId: 'asset-uuid-456',
+        solutionExplanation: 'Hidden explanation'
+      }
+    ];
+
+    const sanitized = sanitizeQuestionsForStudent(payloadWithImage);
+    expect(sanitized[0].imageUrl).toBe('https://storage.example.com/assessment-assets/img-123.png');
+    expect(sanitized[0].imageStorageKey).toBeUndefined();
+    expect(sanitized[0].imageAssetId).toBeUndefined();
+    expect(sanitized[0].correct).toBeUndefined();
+    expect(sanitized[0].correctAnswer).toBeUndefined();
+    expect(sanitized[0].solutionExplanation).toBeUndefined();
+  });
 });

@@ -129,31 +129,31 @@ export default function ProfilePage() {
         </div>
       )}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">الملف الشخصي</h1>
-        <p className="text-gray-600">عرض وتعديل معلوماتك الشخصية</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">الملف الشخصي</h1>
+        <p className="text-gray-600 dark:text-gray-400">عرض وتعديل معلوماتك الشخصية</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-md p-6 text-center">
-          <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 relative group">
-            <User className="w-16 h-16 text-indigo-600" />
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-center border border-gray-100 dark:border-gray-700">
+          <div className="w-32 h-32 bg-indigo-100 dark:bg-indigo-950/50 rounded-full flex items-center justify-center mx-auto mb-4 relative group">
+            <User className="w-16 h-16 text-indigo-600 dark:text-indigo-400" />
             {editing && (
               <div className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-not-allowed">
                 <p className="text-white text-xs text-center px-2">تغيير الصورة<br/>(غير متاح حالياً)</p>
               </div>
             )}
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">{formData.name}</h2>
-          <p className="text-gray-600 mb-4">{formData.role}</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{formData.name}</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{formData.role}</p>
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">المعلومات الشخصية</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">المعلومات الشخصية</h2>
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
-                className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800"
+                className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
               >
                 <Edit2 className="w-5 h-5" />
                 <span>تعديل</span>
@@ -167,7 +167,7 @@ export default function ProfilePage() {
                     setFormData(prev => ({ ...prev, name: user?.name || '', email: user?.email || '', password: '', country: (user as any)?.country || 'EG', educationLevel: (user as any)?.educationLevel || '', gradeLevel: (user as any)?.gradeLevel || '' }));
                   }}
                   disabled={isSaving}
-                  className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                  className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                 >
                   إلغاء
                 </button>
@@ -185,7 +185,7 @@ export default function ProfilePage() {
 
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 الاسم الكامل
               </label>
               <div className="flex flex-col gap-1">
@@ -196,10 +196,10 @@ export default function ProfilePage() {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className={`flex-1 px-4 py-2 border ${validationErrors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-indigo-500`}
+                      className={`flex-1 px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border ${validationErrors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-indigo-500`}
                     />
                   ) : (
-                    <span className="text-gray-900">{formData.name}</span>
+                    <span className="text-gray-900 dark:text-white">{formData.name}</span>
                   )}
                 </div>
                 {editing && validationErrors.name && <p className="text-red-500 text-xs mr-8">{validationErrors.name}</p>}
@@ -207,7 +207,7 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 البريد الإلكتروني
               </label>
               <div className="flex flex-col gap-1">
@@ -218,10 +218,10 @@ export default function ProfilePage() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`flex-1 px-4 py-2 border ${validationErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-indigo-500`}
+                      className={`flex-1 px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border ${validationErrors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-indigo-500`}
                     />
                   ) : (
-                    <span className="text-gray-900">{formData.email}</span>
+                    <span className="text-gray-900 dark:text-white">{formData.email}</span>
                   )}
                 </div>
                 {editing && validationErrors.email && <p className="text-red-500 text-xs mr-8">{validationErrors.email}</p>}
@@ -229,23 +229,23 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 معرف الحساب (Account ID)
               </label>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
                   <User className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-900 font-mono text-sm bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 select-all cursor-text flex-1">
+                  <span className="text-gray-900 dark:text-white font-mono text-sm bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 select-all cursor-text flex-1">
                     {user?.id}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mr-8 mt-1">يمكن استخدام هذا المعرف لربط حساب الطالب مع ولي الأمر.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mr-8 mt-1">يمكن استخدام هذا المعرف لربط حساب الطالب مع ولي الأمر.</p>
               </div>
             </div>
 
             {editing && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   تغيير كلمة المرور (اختياري)
                 </label>
                 <div className="flex flex-col gap-1">
@@ -256,7 +256,7 @@ export default function ProfilePage() {
                       placeholder="أدخل كلمة مرور جديدة أو اتركه فارغاً"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className={`flex-1 px-4 py-2 border ${validationErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-indigo-500`}
+                      className={`flex-1 px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border ${validationErrors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-indigo-500`}
                     />
                   </div>
                   {validationErrors.password && <p className="text-red-500 text-xs mr-8">{validationErrors.password}</p>}
@@ -265,28 +265,28 @@ export default function ProfilePage() {
             )}
 
             {(user?.role === 'ONLINE_STUDENT' || user?.role === 'CENTER_STUDENT') && (
-              <div className="pt-6 border-t border-gray-200">
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-gray-900">المستوى الدراسي</h3>
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium border border-gray-200">للقراءة فقط</span>
+                  <h3 className="font-medium text-gray-900 dark:text-white">المستوى الدراسي</h3>
+                  <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded font-medium border border-gray-200 dark:border-gray-600">للقراءة فقط</span>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                    <p className="text-gray-600 flex items-center gap-2">
+                  <div className="space-y-2 bg-gray-50/50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
                       <span className="font-medium w-32">البلد:</span>
-                      <span className="text-gray-900 font-medium">{formData.country ? (ACADEMIC_CONFIG as any)[formData.country]?.label : 'غير محدد'}</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{formData.country ? (ACADEMIC_CONFIG as any)[formData.country]?.label : 'غير محدد'}</span>
                     </p>
-                    <p className="text-gray-600 flex items-center gap-2">
+                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
                       <span className="font-medium w-32">المرحلة الدراسية:</span>
-                      <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.label : 'غير محدد'}</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{formData.country && formData.educationLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.label : 'غير محدد'}</span>
                     </p>
-                    <p className="text-gray-600 flex items-center gap-2">
+                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
                       <span className="font-medium w-32">الصف الدراسي:</span>
-                      <span className="text-gray-900 font-medium">{formData.country && formData.educationLevel && formData.gradeLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.grades[formData.gradeLevel] : 'غير محدد'}</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{formData.country && formData.educationLevel && formData.gradeLevel ? (ACADEMIC_CONFIG as any)[formData.country]?.levels[formData.educationLevel]?.grades[formData.gradeLevel] : 'غير محدد'}</span>
                     </p>
                   </div>
-                  <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100 mt-4 flex justify-center items-center gap-2">
-                    <p className="text-sm text-indigo-700 font-medium">
+                  <div className="bg-indigo-50 dark:bg-indigo-950/30 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/40 mt-4 flex justify-center items-center gap-2">
+                    <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">
                       لتغيير الصف الدراسي، يرجى التواصل مع الإدارة.
                     </p>
                   </div>
@@ -295,11 +295,11 @@ export default function ProfilePage() {
             )}
             
             {user?.role === 'CENTER_STUDENT' && (
-              <div className="pt-6 border-t border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-4">معلومات السنتر</h3>
-                  <p className="text-gray-600 flex items-center gap-2">
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-medium text-gray-900 dark:text-white mb-4">معلومات السنتر</h3>
+                  <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
                     <span className="font-medium w-24">اسم السنتر:</span>
-                    <span className="text-gray-900 font-medium">{formData.center}</span>
+                    <span className="text-gray-900 dark:text-white font-medium">{formData.center}</span>
                   </p>
               </div>
             )}

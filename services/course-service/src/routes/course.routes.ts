@@ -18,7 +18,8 @@ import {
   getUploads,
   postLessonEvents,
   confirmTeacherCompletion,
-  getStudentVideoAnalytics
+  getStudentVideoAnalytics,
+  streamLessonVideo
 } from '../controllers/course.controller.js';
 import { verifyToken, checkRole } from '../middlewares/auth.middleware.js';
 
@@ -29,6 +30,7 @@ router.get('/available', verifyToken, getAvailableCourses);
 router.post('/:id/enroll', verifyToken, enrollCourse);
 router.get('/lessons', verifyToken, getLessons);
 router.get('/lessons/:id', verifyToken, getLessonDetails);
+router.get('/lessons/:id/stream', verifyToken, streamLessonVideo);
 router.get('/:id', verifyToken, getCourseDetails);
 router.post('/lessons/:id/quiz/:quizId/submit', verifyToken, submitLessonQuiz);
 
