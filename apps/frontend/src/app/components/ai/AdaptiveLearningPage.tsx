@@ -247,7 +247,7 @@ export default function AdaptiveLearningPage() {
                       المرحلة {stage.stage}
                     </span>
                     {stage.status === 'current' && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full animate-pulse">جارية الآن</span>
+                      <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full animate-pulse">جارية الآن</span>
                     )}
                   </div>
                   <h3 className={`font-semibold ${textPrimary}`}>{stage.title}</h3>
@@ -320,7 +320,11 @@ export default function AdaptiveLearningPage() {
                 <span className={`text-xs flex items-center gap-1 ${textSecondary}`}>
                   <Clock className="w-3 h-3" /> {rec.duration}
                 </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${rec.priority === 'عالية' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  rec.priority === 'عالية'
+                    ? (isDark ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-red-700')
+                    : (isDark ? 'bg-yellow-900/40 text-yellow-300' : 'bg-yellow-100 text-yellow-700')
+                }`}>
                   {rec.priority}
                 </span>
               </div>

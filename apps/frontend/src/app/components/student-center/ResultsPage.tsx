@@ -72,8 +72,8 @@ export default function ResultsPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">النتائج والتقارير</h1>
-          <p className="text-gray-600">تابع أداءك وتقدمك الدراسي</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">النتائج والتقارير</h1>
+          <p className="text-gray-600 dark:text-gray-400">تابع أداءك وتقدمك الدراسي</p>
         </div>
         <button 
           onClick={handleExportPDF}
@@ -84,116 +84,116 @@ export default function ResultsPage() {
         </button>
       </div>
 
-      <div id="report-content" className="bg-gray-50 p-4 rounded-xl">
+      <div id="report-content" className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl">
         <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-indigo-600" />
+            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-950/40 rounded-full flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">{overview.overallRate}%</div>
-              <div className="text-sm text-gray-600">المعدل العام</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{overview.overallRate}%</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">المعدل العام</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <Award className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-950/40 rounded-full flex items-center justify-center">
+              <Award className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">{overview.examsCompleted}</div>
-              <div className="text-sm text-gray-600">امتحانات مكتملة</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{overview.examsCompleted}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">امتحانات مكتملة</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-              <Target className="w-6 h-6 text-yellow-600" />
+            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-950/40 rounded-full flex items-center justify-center">
+              <Target className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">{overview.homeworksCompleted}</div>
-              <div className="text-sm text-gray-600">واجبات مكتملة</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{overview.homeworksCompleted}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">واجبات مكتملة</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <Star className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-950/40 rounded-full flex items-center justify-center">
+              <Star className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">المرتبة {overview.rank}</div>
-              <div className="text-sm text-gray-600">الترتيب التقريبي</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">المرتبة {overview.rank}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">الترتيب التقريبي</div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">نتائج الامتحانات</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">نتائج الامتحانات</h2>
           {Array.isArray(charts?.examResults) && charts.examResults.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={charts.examResults}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.3} />
                 <XAxis dataKey="name" />
                 <YAxis domain={[0, 100]} />
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--tooltip-bg, #1f2937)', borderColor: '#374151', color: '#fff', borderRadius: '0.5rem' }} />
                 <Bar dataKey="score" fill="#4f46e5" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500">لا توجد نتائج امتحانات بعد</div>
+            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">لا توجد نتائج امتحانات بعد</div>
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">نتائج الواجبات</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">نتائج الواجبات</h2>
           {Array.isArray(charts?.homeworkResults) && charts.homeworkResults.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={charts.homeworkResults}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.3} />
                 <XAxis dataKey="name" />
                 <YAxis domain={[0, 100]} />
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--tooltip-bg, #1f2937)', borderColor: '#374151', color: '#fff', borderRadius: '0.5rem' }} />
                 <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500">لا توجد نتائج واجبات بعد</div>
+            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">لا توجد نتائج واجبات بعد</div>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">النتائج الأخيرة</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">النتائج الأخيرة</h2>
         {Array.isArray(recentResults) && recentResults.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">العنوان</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">النوع</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">النتيجة</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">التاريخ</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-700">إجراءات</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">العنوان</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">النوع</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">النتيجة</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">التاريخ</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {recentResults.map((result, idx) => (
-                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-900">{result.title}</td>
+                  <tr key={idx} className="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="py-3 px-4 text-gray-900 dark:text-white">{result.title}</td>
                     <td className="py-3 px-4">
                       <span className={`px-3 py-1 rounded-full text-sm ${
                         result.type === 'امتحان'
-                          ? 'bg-indigo-100 text-indigo-800'
-                          : 'bg-green-100 text-green-800'
+                          ? 'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300'
+                          : 'bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300'
                       }`}>
                         {result.type}
                       </span>
@@ -201,20 +201,20 @@ export default function ResultsPage() {
                     <td className="py-3 px-4">
                       <span className={`font-bold ${
                         result.score >= 90
-                          ? 'text-green-600'
+                          ? 'text-green-600 dark:text-green-400'
                           : result.score >= 70
-                          ? 'text-yellow-600'
-                          : 'text-red-600'
+                          ? 'text-yellow-600 dark:text-yellow-400'
+                          : 'text-red-600 dark:text-red-400'
                       }`}>
                         {result.score}%
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{result.date}</td>
+                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{result.date}</td>
                     <td className="py-3 px-4">
                       {result.assessmentId && result.id && (
                         <button
                           onClick={() => navigate(`/student/center/assessment/${result.assessmentId}/review/${result.id}`)}
-                          className="text-indigo-600 hover:text-indigo-800 font-bold text-sm bg-indigo-50 px-3 py-1 rounded-md transition-colors"
+                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold text-sm bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1 rounded-md transition-colors"
                         >
                           عرض النتيجة التفصيلية
                         </button>
@@ -226,7 +226,7 @@ export default function ResultsPage() {
             </table>
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-8">لا توجد أنشطة مسجلة بعد</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-8">لا توجد أنشطة مسجلة بعد</div>
         )}
       </div>
       </div>

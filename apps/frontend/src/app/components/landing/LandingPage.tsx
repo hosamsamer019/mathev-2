@@ -148,33 +148,33 @@ export default function LandingPage() {
   const [activePlan, setActivePlan] = useState<'monthly' | 'yearly'>('monthly');
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
+    <div className="min-h-screen bg-white dark:bg-gray-950" dir="rtl">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.jpeg" alt="AL-SADEN Logo" className="w-10 h-10 rounded-xl object-contain bg-white" />
             <div>
-              <h1 className="font-bold text-gray-900 leading-none">AL-SADEN</h1>
-              <p className="text-xs text-gray-500">AL-SADEN</p>
+              <h1 className="font-bold text-gray-900 dark:text-white leading-none">AL-SADEN</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">AL-SADEN</p>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">المميزات</a>
-            <a href="#pricing" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">الأسعار</a>
-            <a href="#testimonials" className="text-sm text-gray-600 hover:text-brand-600 transition-colors">آراء المستخدمين</a>
+            <a href="#features" className="text-sm text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">المميزات</a>
+            <a href="#pricing" className="text-sm text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">الأسعار</a>
+            <a href="#testimonials" className="text-sm text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">آراء المستخدمين</a>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => navigate('/external-exam')}
-              className="text-xs sm:text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 font-bold px-3 sm:px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-1"
+              className="text-xs sm:text-sm bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-700 font-bold px-3 sm:px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-1"
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
               دخول امتحان بكود
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="text-sm text-brand-600 font-medium hover:text-brand-700 transition-colors px-3 py-2 rounded-lg hover:bg-brand-50"
+              className="text-sm text-brand-600 dark:text-brand-400 font-medium hover:text-brand-700 dark:hover:text-brand-300 transition-colors px-3 py-2 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-950/40"
             >
               تسجيل الدخول
             </button>
@@ -250,17 +250,17 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 bg-gray-50">
+      <section id="features" className="py-24 bg-gray-50 dark:bg-gray-900 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-2 rounded-full text-sm mb-4">
+            <div className="inline-flex items-center gap-2 bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 px-4 py-2 rounded-full text-sm mb-4">
               <Cpu className="w-4 h-4" />
               مميزات المنصة
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
               كل ما تحتاجه لتفوق رياضي حقيقي
             </h2>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
               منظومة تعليمية متكاملة مدعومة بالذكاء الاصطناعي لضمان أفضل تجربة تعليمية
             </p>
           </div>
@@ -273,13 +273,13 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 viewport={{ once: true }}
-                className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow group"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all group"
               >
                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
                   <feature.icon className="w-7 h-7 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{feature.title}</h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -328,7 +328,7 @@ export default function LandingPage() {
             </div>
 
             {/* AI Chat Preview */}
-            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
               <div className="bg-gradient-to-l from-brand-600 to-brand-accent-600 px-6 py-4 flex items-center gap-3">
                 <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
                   <Brain className="w-5 h-5 text-white" />
@@ -339,21 +339,21 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="p-6 space-y-4">
-                <div className="bg-gray-100 rounded-2xl rounded-tl-none p-4 max-w-xs">
-                  <p className="text-gray-700 text-sm">كيف أحل المعادلة: 2x² + 5x - 3 = 0؟</p>
+                <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-none p-4 max-w-xs">
+                  <p className="text-gray-700 dark:text-gray-200 text-sm">كيف أحل المعادلة: 2x² + 5x - 3 = 0؟</p>
                 </div>
-                <div className="bg-brand-50 rounded-2xl rounded-tr-none p-4 mr-auto max-w-sm">
-                  <p className="text-brand-900 text-sm font-medium mb-2">سأحل هذه المعادلة التربيعية خطوة بخطوة:</p>
-                  <div className="space-y-2 text-sm text-brand-800">
+                <div className="bg-brand-50 dark:bg-brand-950/50 rounded-2xl rounded-tr-none p-4 mr-auto max-w-sm">
+                  <p className="text-brand-900 dark:text-brand-200 text-sm font-medium mb-2">سأحل هذه المعادلة التربيعية خطوة بخطوة:</p>
+                  <div className="space-y-2 text-sm text-brand-800 dark:text-brand-300">
                     <p>📌 الخطوة ١: نحدد المعاملات</p>
-                    <p className="bg-white rounded-lg px-3 py-2 font-mono">a=2, b=5, c=-3</p>
+                    <p className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2 font-mono text-gray-900 dark:text-white">a=2, b=5, c=-3</p>
                     <p>📌 الخطوة ٢: نطبق قانون الحل</p>
-                    <p className="bg-white rounded-lg px-3 py-2 font-mono">x = (-b ± √(b²-4ac)) / 2a</p>
+                    <p className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2 font-mono text-gray-900 dark:text-white">x = (-b ± √(b²-4ac)) / 2a</p>
                     <p>✅ الجواب: x = 0.5 أو x = -3</p>
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-gray-500 text-xs text-center">هل تريد تمارين مشابهة على المعادلات التربيعية؟</p>
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                  <p className="text-gray-500 dark:text-gray-400 text-xs text-center">هل تريد تمارين مشابهة على المعادلات التربيعية؟</p>
                 </div>
               </div>
             </div>
@@ -362,28 +362,28 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-white">
+      <section id="pricing" className="py-24 bg-white dark:bg-gray-950 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm mb-4">
+            <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 px-4 py-2 rounded-full text-sm mb-4">
               <Zap className="w-4 h-4" />
               خطط الاشتراك
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">أسعار تناسب الجميع</h2>
-            <p className="text-gray-600 text-lg mb-8">جرب مجاناً لمدة ١٤ يوماً بدون بطاقة ائتمان</p>
-            <div className="inline-flex items-center bg-gray-100 rounded-xl p-1">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">أسعار تناسب الجميع</h2>
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-8">جرب مجاناً لمدة ١٤ يوماً بدون بطاقة ائتمان</p>
+            <div className="inline-flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
               <button
                 onClick={() => setActivePlan('monthly')}
-                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${activePlan === 'monthly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${activePlan === 'monthly' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 شهري
               </button>
               <button
                 onClick={() => setActivePlan('yearly')}
-                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${activePlan === 'yearly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${activePlan === 'yearly' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 سنوي
-                <span className="mr-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">وفر ٢٠٪</span>
+                <span className="mr-2 text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">وفر ٢٠٪</span>
               </button>
             </div>
           </div>
@@ -396,10 +396,10 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 viewport={{ once: true }}
-                className={`relative rounded-3xl p-8 border-2 transition-all ${
+                className={`relative rounded-3xl p-8 border-2 transition-all bg-white dark:bg-gray-900 ${
                   plan.popular
-                    ? 'border-brand-500 shadow-2xl shadow-brand-100 scale-105'
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-lg'
+                    ? 'border-brand-500 shadow-2xl shadow-brand-100 dark:shadow-none scale-105'
+                    : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-lg'
                 }`}
               >
                 {plan.popular && (
@@ -412,20 +412,20 @@ export default function LandingPage() {
                 <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-6`}>
                   <Zap className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                <p className="text-gray-500 text-sm mb-6">{plan.description}</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{plan.name}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{plan.description}</p>
                 <div className="flex items-end gap-1 mb-8">
-                  <span className="text-5xl font-bold text-gray-900">
+                  <span className="text-5xl font-bold text-gray-900 dark:text-white">
                     {activePlan === 'yearly' ? Math.floor(parseInt(plan.price.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())) * 0.8).toString() : plan.price}
                   </span>
-                  <span className="text-gray-500 mb-2">ج.م / {plan.period}</span>
+                  <span className="text-gray-500 dark:text-gray-400 mb-2">ج.م / {plan.period}</span>
                 </div>
                 <button
                   onClick={() => navigate('/login')}
                   className={`w-full py-3.5 rounded-2xl font-bold text-sm transition-all mb-8 ${
                     plan.popular
                       ? `bg-gradient-to-l ${plan.color} text-white hover:opacity-90 shadow-lg`
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
                   ابدأ مجاناً
@@ -434,13 +434,13 @@ export default function LandingPage() {
                   {plan.features.map((feature, fIdx) => (
                     <div key={fIdx} className="flex items-center gap-3">
                       <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700 text-sm">{feature}</span>
+                      <span className="text-gray-700 dark:text-gray-300 text-sm">{feature}</span>
                     </div>
                   ))}
                   {plan.notIncluded.map((feature, fIdx) => (
                     <div key={fIdx} className="flex items-center gap-3 opacity-40">
-                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex-shrink-0" />
-                      <span className="text-gray-500 text-sm line-through">{feature}</span>
+                      <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded-full flex-shrink-0" />
+                      <span className="text-gray-500 dark:text-gray-400 text-sm line-through">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -451,14 +451,14 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials */}
-      <section id="testimonials" className="py-24 bg-gray-50">
+      <section id="testimonials" className="py-24 bg-gray-50 dark:bg-gray-900 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm mb-4">
+            <div className="inline-flex items-center gap-2 bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 px-4 py-2 rounded-full text-sm mb-4">
               <Star className="w-4 h-4" />
               آراء المستخدمين
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">ماذا يقول مستخدمونا؟</h2>
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">ماذا يقول مستخدمونا؟</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, idx) => (
@@ -468,21 +468,21 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 viewport={{ once: true }}
-                className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700"
               >
                 <div className="flex items-center gap-1 mb-6">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
                   ))}
                 </div>
-                <p className="text-gray-700 leading-relaxed mb-6 text-sm">"{testimonial.text}"</p>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 text-sm">"{testimonial.text}"</p>
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-accent-600 flex items-center justify-center text-white font-bold">
                     {testimonial.avatar}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">{testimonial.name}</p>
-                    <p className="text-gray-500 text-xs">{testimonial.role}</p>
+                    <p className="font-bold text-gray-900 dark:text-white">{testimonial.name}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">{testimonial.role}</p>
                   </div>
                 </div>
               </motion.div>

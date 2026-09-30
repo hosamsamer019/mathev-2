@@ -19,7 +19,7 @@ export default function SplashScreen() {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8, ease: 'easeInOut' }}
-          className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center pointer-events-none"
+          className="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 flex flex-col items-center justify-center pointer-events-none transition-colors"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -37,12 +37,12 @@ export default function SplashScreen() {
               />
             </div>
             
-            <h1 className="text-3xl font-bold text-gray-900 mb-8 tracking-wide">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 tracking-wide">
               AL-SADEN
             </h1>
 
             {/* Elegant progress indicator */}
-            <div className="w-48 h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div className="w-48 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}

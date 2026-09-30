@@ -19,22 +19,22 @@ export default function LessonsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8" dir="rtl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">الدروس التعليمية</h1>
-        <p className="text-gray-600">شاهد الدروس وسجل تقدمك مباشرة داخل المنصة</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">الدروس التعليمية</h1>
+        <p className="text-gray-600 dark:text-gray-400">شاهد الدروس وسجل تقدمك مباشرة داخل المنصة</p>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="mr-3 text-gray-600 font-medium">جاري تحميل الدروس...</span>
+          <span className="mr-3 text-gray-600 dark:text-gray-400 font-medium">جاري تحميل الدروس...</span>
         </div>
       )}
 
       {!loading && lessons.length === 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
           <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-lg font-bold text-gray-700">لا توجد دروس متاحة حالياً</p>
-          <p className="text-sm text-gray-500 mt-1">سيتم إضافة الدروس التعليمية قريباً</p>
+          <p className="text-lg font-bold text-gray-700 dark:text-gray-200">لا توجد دروس متاحة حالياً</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">سيتم إضافة الدروس التعليمية قريباً</p>
         </div>
       )}
 
@@ -53,7 +53,7 @@ export default function LessonsPage() {
               <div
                 key={lesson.id}
                 onClick={() => navigate(`/student/center/videos/${lesson.id}`)}
-                className="group bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
+                className="group bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
               >
                 {/* Thumbnail */}
                 <div className="relative aspect-video bg-gray-900 overflow-hidden">
@@ -87,15 +87,15 @@ export default function LessonsPage() {
                 {/* Content */}
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-emerald-600">
+                    <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       <BookOpen className="w-3.5 h-3.5" />
                       <span>{lesson.course?.title || 'دورة تعليمية'}</span>
                     </div>
-                    <h3 className="font-bold text-gray-900 text-base leading-snug group-hover:text-emerald-600 transition-colors line-clamp-2">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
                       {lesson.title}
                     </h3>
                     {lesson.description && (
-                      <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">
                         {lesson.description}
                       </p>
                     )}
@@ -103,7 +103,7 @@ export default function LessonsPage() {
 
                   <button
                     type="button"
-                    className="mt-4 w-full py-2.5 px-4 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-sm group-hover:bg-emerald-600 group-hover:text-white transition-all duration-200 flex items-center justify-center gap-2"
+                    className="mt-4 w-full py-2.5 px-4 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl text-sm group-hover:bg-emerald-600 group-hover:text-white dark:group-hover:bg-emerald-600 dark:group-hover:text-white transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <Play className="w-4 h-4 fill-current" />
                     <span>مشاهدة الدرس في المنصة</span>

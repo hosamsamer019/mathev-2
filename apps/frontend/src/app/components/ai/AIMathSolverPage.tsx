@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, Send, Sparkles, RefreshCw, BookOpen, ChevronLeft, History, Star } from 'lucide-react';
+import { Brain, Sparkles, RefreshCw, History, Star } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { aiApi } from '../../services/api';
 import { MathContent } from '../ui/MathContent';
@@ -10,7 +10,12 @@ interface SolverStep {
   content: string;
   formula?: string;
 }
-// Restored features
+
+interface MathSolution {
+  answer: string;
+  steps: SolverStep[];
+}
+
 const sampleProblems: string[] = [
   'حل المعادلة: 2x² + 5x - 3 = 0',
   'احسب مشتقة: f(x) = x³ + 2x² - 5x + 1',
@@ -20,13 +25,150 @@ const sampleProblems: string[] = [
   'جد مجموع المتسلسلة: 1 + 2 + 3 + ... + 100',
 ];
 
+/**
+ * Safely repairs and parses JSON that may contain LaTeX backslashes or markdown code blocks.
+ */
+function repairAndParseJson(raw: string): any {
+  if (!raw || typeof raw !== 'string') return null;
+
+  let cleaned = raw.trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch {}
+
+  let repaired = '';
+  let inString = false;
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+
+    if (inString) {
+      if (char === '\\') {
+        const nextChar = cleaned[i + 1];
+        const restOfWord = cleaned.slice(i + 1, i + 10);
+        const isLatexCommand = /^(?:frac|sqrt|pm|Delta|delta|alpha|beta|theta|pi|times|div|le|ge|neq|cdot|approx|sum|int|infty|begin|end|bar|text|quad|left|right|mathbb)/.test(restOfWord);
+
+        if (isLatexCommand) {
+          repaired += '\\\\';
+        } else if (nextChar === '"' || nextChar === '\\' || nextChar === '/' || nextChar === 'n' || nextChar === 'r' || nextChar === 't') {
+          repaired += '\\' + nextChar;
+          i++;
+        } else if (nextChar === 'u' && /^[0-9a-fA-F]{4}/.test(cleaned.slice(i + 2, i + 6))) {
+          repaired += '\\' + cleaned.slice(i + 1, i + 6);
+          i += 5;
+        } else {
+          repaired += '\\\\';
+        }
+      } else if (char === '"') {
+        inString = false;
+        repaired += '"';
+      } else if (char === '\n') {
+        repaired += '\\n';
+      } else if (char === '\r') {
+        repaired += '\\r';
+      } else if (char === '\t') {
+        repaired += '\\t';
+      } else if (char.charCodeAt(0) === 8) {
+        repaired += '\\\\b';
+      } else if (char.charCodeAt(0) === 12) {
+        repaired += '\\\\f';
+      } else {
+        repaired += char;
+      }
+    } else {
+      if (char === '"') inString = true;
+      repaired += char;
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(repaired);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Normalizes backend response data into a safe internal MathSolution structure.
+ * Guaranteed to prevent raw JSON strings from being rendered as user content.
+ */
+function normalizeMathSolution(data: any): MathSolution {
+  if (!data) {
+    return {
+      answer: 'تعذر الحصول على حل للمسألة.',
+      steps: [{ step: 1, title: 'خطأ', content: 'لم يتم العثور على حل صالح.' }]
+    };
+  }
+
+  let obj = data;
+
+  if (typeof obj === 'string') {
+    const parsed = repairAndParseJson(obj);
+    obj = parsed || { answer: 'تم الحل', steps: [{ step: 1, title: 'الحل التفصيلي', content: obj }] };
+  }
+
+  if (obj && typeof obj.solution === 'string') {
+    const parsed = repairAndParseJson(obj.solution);
+    if (parsed) obj = parsed;
+    else obj = { answer: 'تم الحل', steps: [{ step: 1, title: 'الحل التفصيلي', content: obj.solution }] };
+  } else if (obj && typeof obj.solution === 'object' && obj.solution !== null) {
+    obj = obj.solution;
+  }
+
+  // Unpack nested JSON inside single step content
+  if (obj && Array.isArray(obj.steps) && obj.steps.length === 1 && typeof obj.steps[0]?.content === 'string') {
+    const nestedParsed = repairAndParseJson(obj.steps[0].content);
+    if (nestedParsed && nestedParsed.answer && Array.isArray(nestedParsed.steps)) {
+      obj = nestedParsed;
+    }
+  }
+
+  const answer = (typeof obj?.answer === 'string' && obj.answer.trim().length > 0)
+    ? obj.answer.trim()
+    : 'تم الحل';
+
+  let rawSteps: any[] = Array.isArray(obj?.steps) ? obj.steps : [];
+  if (rawSteps.length === 0) {
+    rawSteps = [{ step: 1, title: 'الحل التفصيلي', content: typeof obj === 'string' ? obj : 'تم إتمام خطوات الحل.' }];
+  }
+
+  const steps: SolverStep[] = rawSteps.map((s, idx) => {
+    let content = typeof s?.content === 'string' ? s.content : '';
+    // Prevent raw JSON from leaking into step text
+    if (content.trim().startsWith('{') && content.trim().endsWith('}')) {
+      const inner = repairAndParseJson(content);
+      if (inner && inner.steps && Array.isArray(inner.steps)) {
+        content = inner.steps.map((st: any) => `${st.title ? `### ${st.title}\n` : ''}${st.content}`).join('\n\n');
+      }
+    }
+
+    return {
+      step: typeof s?.step === 'number' ? s.step : idx + 1,
+      title: (typeof s?.title === 'string' && s.title.trim().length > 0) ? s.title.trim() : `الخطوة ${idx + 1}`,
+      content: content.trim(),
+      formula: typeof s?.formula === 'string' && s.formula.trim().length > 0 ? s.formula.trim() : undefined,
+    };
+  });
+
+  return { answer, steps };
+}
+
 export default function AIMathSolverPage() {
   const { isDark } = useTheme();
   const [problem, setProblem] = useState('');
   const [solving, setSolving] = useState(false);
-  const [solution, setSolution] = useState<{ answer: string; steps: SolverStep[] } | null>(null);
+  const [solution, setSolution] = useState<MathSolution | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [activeStep, setActiveStep] = useState<number | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -34,7 +176,6 @@ export default function AIMathSolverPage() {
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
 
-  // Restored handlers
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true);
@@ -62,47 +203,15 @@ export default function AIMathSolverPage() {
     }
   };
 
-  const handleSimilar = async () => {
-    try {
-      const res = await aiApi.post('/similar', { problem });
-      if (res.data?.similarProblem) {
-        setProblem(res.data.similarProblem);
-        setSolution(null);
-      } else {
-        alert('لا توجد مسائل مشابهة حالياً');
-      }
-    } catch (err) {
-      console.error('Failed to fetch similar', err);
-    }
-  };
-
   const handleSolve = async () => {
     if (!problem.trim()) return;
     setSolving(true);
     setSolution(null);
-    setActiveStep(null);
-    
+
     try {
       const response = await aiApi.post('/solve', { problem, level: 'high_school' });
-      const { solution: explanation } = response.data;
-      
-      let parsedSolution;
-      try {
-        parsedSolution = JSON.parse(explanation);
-      } catch (err) {
-        parsedSolution = {
-          answer: 'تم الحل (انظر التفاصيل)',
-          steps: [
-            {
-              step: 1,
-              title: 'خطوات الحل والشرح التفصيلي',
-              content: explanation || 'لم يتم العثور على حل.',
-            }
-          ]
-        };
-      }
-      
-      setSolution(parsedSolution);
+      const parsed = normalizeMathSolution(response.data);
+      setSolution(parsed);
     } catch (error) {
       console.error('AI Solver failed:', error);
       alert('حدث خطأ أثناء حل المسألة');
@@ -110,7 +219,6 @@ export default function AIMathSolverPage() {
       setSolving(false);
     }
   };
-
 
   return (
     <div className={`p-4 sm:p-6 lg:p-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} min-h-full`}>
@@ -128,12 +236,15 @@ export default function AIMathSolverPage() {
           </div>
           <button
             onClick={handleToggleHistory}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600'} hover:bg-gray-50 dark:hover:bg-gray-700`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border ${
+              isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
           >
             <History className="w-4 h-4" /> السجل
           </button>
         </div>
       </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Input Section */}
         <div className="lg:col-span-2 space-y-6">
@@ -146,7 +257,9 @@ export default function AIMathSolverPage() {
               placeholder="مثال: حل المعادلة 2x² + 5x - 3 = 0، أو احسب ∫(x²+1)dx"
               rows={4}
               className={`w-full px-4 py-3 rounded-xl border text-sm resize-none ${
-                isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                  : 'bg-gray-50 border-gray-200 text-gray-900'
               } focus:outline-none focus:ring-2 focus:ring-purple-500`}
             />
             <div className="flex items-center justify-between mt-4">
@@ -154,8 +267,12 @@ export default function AIMathSolverPage() {
                 {['×', '÷', '√', '∫', '∑', 'π', '±', '∞'].map((sym) => (
                   <button
                     key={sym}
-                    onClick={() => setProblem(prev => prev + sym)}
-                    className={`w-8 h-8 rounded-lg text-sm font-mono ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} transition-colors`}
+                    onClick={() => setProblem((prev) => prev + sym)}
+                    className={`w-8 h-8 rounded-lg text-sm font-mono ${
+                      isDark
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    } transition-colors`}
                   >
                     {sym}
                   </button>
@@ -202,14 +319,16 @@ export default function AIMathSolverPage() {
           )}
 
           {solution && (
-            <div className={`${cardBg} border rounded-2xl overflow-hidden`}>
+            <div className={`${cardBg} border rounded-2xl overflow-hidden shadow-sm`}>
               {/* Answer Banner */}
               <div className="bg-gradient-to-l from-purple-600 to-indigo-700 p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-5 h-5 text-yellow-400" />
                   <span className="text-white font-bold">الإجابة النهائية</span>
                 </div>
-                <p className="text-2xl font-bold text-white font-mono">{solution.answer}</p>
+                <div className="text-2xl font-bold text-white overflow-x-auto py-1">
+                  <MathContent content={solution.answer} />
+                </div>
               </div>
 
               {/* Steps */}
@@ -217,21 +336,32 @@ export default function AIMathSolverPage() {
                 <h3 className={`font-bold ${textPrimary} mb-4`}>الحل التفصيلي خطوة بخطوة</h3>
                 <div className="space-y-6">
                   {solution.steps.map((step) => (
-                    <div key={step.step} className={`p-6 rounded-2xl border ${isDark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-100 bg-gray-50'}`}>
+                    <div
+                      key={step.step}
+                      className={`p-6 rounded-2xl border ${
+                        isDark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-100 bg-gray-50'
+                      }`}
+                    >
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm">
                           {step.step}
                         </div>
                         <h4 className={`text-lg font-bold ${textPrimary}`}>{step.title}</h4>
                       </div>
-                      
+
                       <div className="mb-4 leading-relaxed text-right">
                         <MathContent content={step.content} className={`text-base ${textPrimary}`} />
                       </div>
-                      
+
                       {step.formula && (
                         <div className="mt-4 p-4 rounded-xl overflow-x-auto text-center" style={{ direction: 'ltr' }}>
-                          <MathContent content={step.formula.startsWith('$$') ? step.formula : `\$\$${step.formula}\$\$`} />
+                          <MathContent
+                            content={
+                              step.formula.startsWith('$$') || step.formula.startsWith('\\[')
+                                ? step.formula
+                                : `\\[${step.formula}\\]`
+                            }
+                          />
                         </div>
                       )}
                     </div>
@@ -239,13 +369,27 @@ export default function AIMathSolverPage() {
                 </div>
 
                 <div className="flex gap-3 mt-6">
-                  {/* <button onClick={handleSimilar} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                    <BookOpen className="w-4 h-4" /> تمارين مشابهة
-                  </button> */}
-                  <button onClick={handleSaveSolution} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  <button
+                    onClick={handleSaveSolution}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${
+                      isDark
+                        ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
                     <Star className="w-4 h-4" /> حفظ الحل
                   </button>
-                  <button onClick={() => { setSolution(null); setProblem(''); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  <button
+                    onClick={() => {
+                      setSolution(null);
+                      setProblem('');
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border ${
+                      isDark
+                        ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
                     <RefreshCw className="w-4 h-4" /> مسألة جديدة
                   </button>
                 </div>
@@ -264,7 +408,9 @@ export default function AIMathSolverPage() {
                   key={idx}
                   onClick={() => setProblem(sample)}
                   className={`w-full text-right p-3 rounded-xl text-sm border transition-colors ${
-                    isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-700' : 'border-gray-100 text-gray-700 hover:bg-gray-50'
+                    isDark
+                      ? 'border-gray-700 text-gray-300 hover:bg-gray-700'
+                      : 'border-gray-100 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   {sample}
@@ -277,7 +423,10 @@ export default function AIMathSolverPage() {
             <h3 className={`font-bold ${textPrimary} mb-4`}>المواضيع المتاحة</h3>
             <div className="flex flex-wrap gap-2">
               {['جبر', 'هندسة', 'تفاضل', 'تكامل', 'إحصاء', 'مثلثات', 'أعداد', 'دوال'].map((topic) => (
-                <span key={topic} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                <span
+                  key={topic}
+                  className="text-xs px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                >
                   {topic}
                 </span>
               ))}
@@ -297,13 +446,17 @@ export default function AIMathSolverPage() {
                     <button
                       key={item.id}
                       onClick={() => setProblem(item.problem)}
-                      className={`w-full text-right p-3 rounded-xl border ${isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-100 hover:bg-gray-50'} transition-colors`}
+                      className={`w-full text-right p-3 rounded-xl border ${
+                        isDark ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-100 hover:bg-gray-50'
+                      } transition-colors`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className={`text-sm ${textPrimary} line-clamp-2`}>{item.problem}</p>
                         {item.saved && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />}
                       </div>
-                      <p className={`text-xs ${textSecondary} mt-1`}>{new Date(item.createdAt || Date.now()).toLocaleDateString()}</p>
+                      <p className={`text-xs ${textSecondary} mt-1`}>
+                        {new Date(item.createdAt || Date.now()).toLocaleDateString('ar-EG')}
+                      </p>
                     </button>
                   ))}
                 </div>

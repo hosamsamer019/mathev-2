@@ -33,15 +33,15 @@ export default function VideosPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8" dir="rtl">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">الفيديوهات التعليمية</h1>
-        <p className="text-sm text-gray-600">شاهد الدروس وسجل تقدمك مباشرة داخل المنصة</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">الفيديوهات التعليمية</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400">شاهد الدروس وسجل تقدمك مباشرة داخل المنصة</p>
       </div>
 
       {videos.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
           <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-lg font-bold text-gray-700">لا توجد فيديوهات تعليمية متاحة حالياً</p>
-          <p className="text-sm text-gray-500 mt-1">سيتم إضافة الدروس التعليمية قريباً</p>
+          <p className="text-lg font-bold text-gray-700 dark:text-gray-200">لا توجد فيديوهات تعليمية متاحة حالياً</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">سيتم إضافة الدروس التعليمية قريباً</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
@@ -54,7 +54,7 @@ export default function VideosPage() {
             return (
               <div
                 key={video.id}
-                className="group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 hover:border-indigo-500/30 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
+                className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 dark:border-gray-700 hover:border-indigo-500/30 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
                 onClick={() => navigate(`/student/online/videos/${video.id}`)}
               >
                 <div className="relative aspect-video bg-gray-900 overflow-hidden">
@@ -91,18 +91,18 @@ export default function VideosPage() {
 
                 <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-semibold mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-semibold mb-1.5">
                       <BookOpen className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{video.course?.title || video.courseName || 'دورة تعليمية'}</span>
                     </div>
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {video.title}
                     </h3>
                   </div>
 
                   <button
                     type="button"
-                    className="mt-4 w-full py-2.5 px-4 bg-indigo-50 text-indigo-700 font-bold rounded-xl text-xs sm:text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-200 flex items-center justify-center gap-2"
+                    className="mt-4 w-full py-2.5 px-4 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold rounded-xl text-xs sm:text-sm group-hover:bg-indigo-600 group-hover:text-white dark:group-hover:bg-indigo-600 dark:group-hover:text-white transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <Play className="w-4 h-4 fill-current" />
                     <span>مشاهدة الدرس في المنصة</span>

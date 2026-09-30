@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import axios from 'axios';
 import { authApi } from '../services/api';
 
 export type UserRole = 'ONLINE_STUDENT' | 'CENTER_STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT';
@@ -92,7 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('edu-user', JSON.stringify(fullUser));
       return true;
     } catch (error) {
-      console.error('Login failed:', error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Expected invalid credentials: do not console.error
+      } else {
+        console.error('Login failed:', error);
+      }
       return false;
     }
   };

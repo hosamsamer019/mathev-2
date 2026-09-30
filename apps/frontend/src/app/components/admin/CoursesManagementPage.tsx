@@ -99,8 +99,8 @@ export default function CoursesManagementPage() {
 
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة الدورات</h1>
-          <p className="text-gray-600">إنشاء وتعديل الدورات التعليمية</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">إدارة الدورات</h1>
+          <p className="text-gray-600 dark:text-gray-400">إنشاء وتعديل الدورات التعليمية</p>
         </div>
         <button
           onClick={() => {
@@ -116,30 +116,30 @@ export default function CoursesManagementPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading && <div className="col-span-3 text-center py-8 text-gray-500">جاري تحميل الدورات...</div>}
-        {!loading && courses.length === 0 && <div className="col-span-3 text-center py-8 text-gray-500">لا توجد دورات حالياً</div>}
+        {loading && <div className="col-span-3 text-center py-8 text-gray-500 dark:text-gray-400">جاري تحميل الدورات...</div>}
+        {!loading && courses.length === 0 && <div className="col-span-3 text-center py-8 text-gray-500 dark:text-gray-400">لا توجد دورات حالياً</div>}
         {courses.map((course) => (
-          <div key={course.id} className="bg-white rounded-xl shadow-md p-6">
+          <div key={course.id} className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md p-6">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="font-bold text-gray-900 text-lg">{course.title}</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg">{course.title}</h3>
             </div>
 
             <div className="space-y-2 mb-4">
-              <p className="text-sm text-gray-600">الوصف: {course.description}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">الوصف: {course.description}</p>
               {course.teacher && (
-                <p className="text-sm text-gray-600">المعلم: {course.teacher.name} ({course.teacher.email})</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">المعلم: {course.teacher.name} ({course.teacher.email})</p>
               )}
               <div className="flex gap-4 mt-2">
-                <p className="text-sm font-semibold text-purple-700">السعر: {course.price}ج</p>
-                <p className={`text-sm font-semibold ${course.status === 'PUBLISHED' ? 'text-green-600' : 'text-orange-500'}`}>
+                <p className="text-sm font-semibold text-purple-700 dark:text-purple-400">السعر: {course.price}ج</p>
+                <p className={`text-sm font-semibold ${course.status === 'PUBLISHED' ? 'text-green-600 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>
                   الحالة: {course.status === 'PUBLISHED' ? 'منشور' : 'مسودة'}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-2">
-                <p className="text-sm text-gray-600">عدد الدروس: {course._count?.lessons || 0}</p>
-                <p className="text-sm text-gray-600">عدد الطلاب: {course._count?.enrollments || 0}</p>
-                <p className="text-sm text-gray-600">الامتحانات: {course._count?.exams || 0}</p>
-                <p className="text-sm text-gray-600">الواجبات: {course._count?.homeworks || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">عدد الدروس: {course._count?.lessons || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">عدد الطلاب: {course._count?.enrollments || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">الامتحانات: {course._count?.exams || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">الواجبات: {course._count?.homeworks || 0}</p>
               </div>
             </div>
 
@@ -156,12 +156,12 @@ export default function CoursesManagementPage() {
                   });
                   setShowModal(true);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-100 text-blue-700 hover:bg-blue-200 py-2 rounded-lg"
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 py-2 rounded-lg transition-colors"
               >
                 <Edit className="w-4 h-4" />
                 <span>تعديل</span>
               </button>
-              <button onClick={() => handleDelete(course.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">
+              <button onClick={() => handleDelete(course.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors">
                 <Trash2 className="w-4 h-4" />
                 <span>حذف</span>
               </button>
@@ -171,68 +171,68 @@ export default function CoursesManagementPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8 max-w-md w-full mx-4 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">{editingCourse ? 'تعديل دورة' : 'إضافة دورة جديدة'}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{editingCourse ? 'تعديل دورة' : 'إضافة دورة جديدة'}</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الدورة</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عنوان الدورة</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 border ${validationErrors.title ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
                 {validationErrors.title && <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الوصف</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الوصف</label>
                 <textarea
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.description ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 border ${validationErrors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                 ></textarea>
                 {validationErrors.description && <p className="text-red-500 text-xs mt-1">{validationErrors.description}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">معرف المعلم (Teacher ID)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">معرف المعلم (Teacher ID)</label>
                 <input
                   type="text"
                   placeholder="Enter Teacher ID"
                   value={formData.teacherId}
                   onChange={(e) => setFormData({...formData, teacherId: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.teacherId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 border ${validationErrors.teacherId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
                 {validationErrors.teacherId && <p className="text-red-500 text-xs mt-1">{validationErrors.teacherId}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">السعر (بالجنيه)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">السعر (بالجنيه)</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.price}
                   onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
-                  className={`w-full px-4 py-2 border ${validationErrors.price ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 border ${validationErrors.price ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                 />
                 {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الحالة</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الحالة</label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  className={`w-full px-4 py-2 border ${validationErrors.status ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-purple-500`}
+                  className={`w-full px-4 py-2 border ${validationErrors.status ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500`}
                 >
                   <option value="PUBLISHED">منشور (Published)</option>
                   <option value="DRAFT">مسودة (Draft)</option>
@@ -251,7 +251,7 @@ export default function CoursesManagementPage() {
                 <button
                   onClick={() => setShowModal(false)}
                   disabled={isSaving}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                 >
                   إلغاء
                 </button>

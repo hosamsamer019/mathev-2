@@ -136,10 +136,13 @@ export default function SharedLayout({
           </div>
           {user?.subscriptionPlan && (
             <div className="mt-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.subscriptionPlan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-                  user.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-600'
-                }`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                user.subscriptionPlan === 'enterprise'
+                  ? (isDark ? 'bg-purple-900/50 text-purple-300' : 'bg-purple-100 text-purple-700')
+                  : user.subscriptionPlan === 'pro'
+                    ? (isDark ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700')
+                    : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')
+              }`}>
                 {user.subscriptionPlan === 'enterprise' ? '⭐ مؤسسي' : user.subscriptionPlan === 'pro' ? '🚀 احترافي' : '🔹 أساسي'}
               </span>
             </div>
@@ -235,7 +238,7 @@ export default function SharedLayout({
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute top-4 end-4 p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+          className={`absolute top-4 end-4 p-2 rounded-lg ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}
         >
           <X className="w-5 h-5" />
         </button>

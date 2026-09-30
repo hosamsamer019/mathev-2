@@ -9,6 +9,7 @@ import katex from 'katex';
  *  - Inline math:   \( ... \)  or  $ ... $
  *  - Display math:  \[ ... \]  or  $$ ... $$
  *  - Double-escaped LaTeX from AI output:  \\( ... \\)  =>  \( ... \)
+ *  - Auto-detection of unescaped LaTeX math commands (e.g. \frac, \sqrt, \pm, \Delta)
  *  - Matrices, fractions, Greek letters, powers, roots, coordinate pairs
  */
 
@@ -18,30 +19,53 @@ function renderKatex(latex: string, displayMode: boolean): string {
       displayMode,
       throwOnError: false,
       errorColor: '#cc0000',
-      trust: false,
+      trust: false, // Strict security against script injection
     });
   } catch {
-    // If KaTeX itself throws, show the raw LaTeX wrapped in code
-    return `<code class="math-error">${latex}</code>`;
+    // If KaTeX itself throws, show the raw LaTeX wrapped safely
+    return `<code class="math-error text-red-500 font-mono text-sm">${latex}</code>`;
   }
 }
 
 /**
- * Normalize double-escaped LaTeX from AI output.
- * AI models sometimes produce \\( instead of \( due to JSON escaping.
+ * Normalize double-escaped LaTeX, control characters, and auto-detect raw LaTeX commands.
  */
 function normalizeLatex(text: string): string {
   if (typeof text !== 'string') return '';
   
   let t = text;
+
+  // Clean ASCII control characters (e.g., 0x08 backspace, 0x0C form feed from JSON parsing)
+  t = t.replace(/\x08/g, '\\b').replace(/\x0C/g, '\\f');
+
   // Convert double-escaped delimiters into single-escaped ones
   t = t.replace(/\\\\\(/g, '\\(').replace(/\\\\\)/g, '\\)');
   t = t.replace(/\\\\\[/g, '\\[').replace(/\\\\\]/g, '\\]');
   
-  // Matrix newline handling:
-  // AI might output \\\\\\\\ (8 slashes in JSON, 4 inside JS string) 
-  // We need to convert 4 backslashes into 2 backslashes for KaTeX to see it as a newline.
+  // Matrix newline handling
   t = t.replace(/\\\\\\\\/g, '\\\\');
+
+  // Check if string contains standard LaTeX math delimiters
+  const hasDelimiters = /\\\[|\\\(|\$\$|\$/.test(t);
+
+  // If delimiters are missing but LaTeX math commands are present
+  const hasLatexCommands = /\\(?:frac|sqrt|pm|Delta|delta|alpha|beta|theta|pi|int|sum|times|div|le|ge|neq|cdot|approx|quad|text|begin|left|right|mathbb)/.test(t);
+
+  if (!hasDelimiters && hasLatexCommands) {
+    // Check if it's pure math without Arabic text
+    if (!/[\u0600-\u06FF]/.test(t)) {
+      t = `\\[${t.trim()}\\]`;
+    } else {
+      // Mixed Arabic text and raw LaTeX commands — auto-wrap math expressions in \( ... \)
+      t = t.replace(/((?:[a-zA-Z0-9_^\+\-\*\/=\(\)\s\\]*(?:\\(?:frac|sqrt|pm|Delta|delta|alpha|beta|theta|pi|times|div|le|ge|neq|cdot|approx|quad|text|begin|left|right)[a-zA-Z0-9_^\+\-\*\/=\(\)\s\\\{\}]*))+)/g, (m) => {
+        const trimmed = m.trim();
+        if (trimmed.length > 0 && !/[\u0600-\u06FF]/.test(trimmed)) {
+          return ` \\(${trimmed}\\) `;
+        }
+        return m;
+      });
+    }
+  }
   
   return t;
 }
@@ -116,16 +140,6 @@ interface MathContentProps {
 
 /**
  * Renders a string that may contain LaTeX math mixed with Arabic/English text.
- *
- * Example input:
- *   "أوجد المميز للمعادلة التربيعية \(2x^2 - 5x + 3 = 0\)"
- *
- * Rendered output:
- *   أوجد المميز للمعادلة التربيعية   [KaTeX-typeset: 2x² − 5x + 3 = 0]
- *
- * Example with double-escaped input (from AI):
- *   "ما هو محدد المصفوفة \\(\\begin{bmatrix}3 & 5 \\\\\\\\ 2 & 4\\end{bmatrix}\\)?"
- *   => normalized to \( ... \) then rendered as a properly typeset matrix
  */
 export const MathContent: React.FC<MathContentProps> = ({ content, className }) => {
   if (!content) return null;
@@ -137,6 +151,7 @@ export const MathContent: React.FC<MathContentProps> = ({ content, className }) 
     <span className={className} dir="rtl">
       {segments.map((seg, i) => {
         if (seg.type === 'text') {
+          // Render plain text directly (safe against HTML/JS injection)
           return <span key={i}>{seg.content}</span>;
         }
 
@@ -148,8 +163,8 @@ export const MathContent: React.FC<MathContentProps> = ({ content, className }) 
             dir="ltr"
             className={
               seg.type === 'display-math'
-                ? 'block my-2 overflow-x-auto max-w-full text-center py-1 px-2'
-                : 'inline-block max-w-full overflow-x-auto align-middle mx-1 py-0.5'
+                ? 'block my-2 overflow-x-auto max-w-full text-center py-1 px-2 text-inherit'
+                : 'inline-block max-w-full overflow-x-auto align-middle mx-1 py-0.5 text-inherit'
             }
             dangerouslySetInnerHTML={{ __html: html }}
           />

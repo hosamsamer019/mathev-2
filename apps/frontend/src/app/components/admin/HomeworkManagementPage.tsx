@@ -89,8 +89,8 @@ export default function HomeworkManagementPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">إدارة الواجبات</h1>
-          <p className="text-gray-600">إنشاء وإدارة الواجبات المنزلية</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">إدارة الواجبات</h1>
+          <p className="text-gray-600 dark:text-gray-400">إنشاء وإدارة الواجبات المنزلية</p>
         </div>
         <button
           onClick={() => {
@@ -105,27 +105,27 @@ export default function HomeworkManagementPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md overflow-x-auto">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="text-right py-3 px-4 font-medium text-gray-700">عنوان الواجب</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">الدورة</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">عدد الأسئلة</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">الموعد النهائي</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">الحالة</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">الإجراءات</th>
+            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">عنوان الواجب</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الدورة</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">عدد الأسئلة</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الموعد النهائي</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الحالة</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
             {homeworks.map((hw) => (
-              <tr key={hw.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 text-gray-900">{hw.title}</td>
-                <td className="py-3 px-4 text-gray-600">{hw.course}</td>
-                <td className="py-3 px-4 text-gray-600">{hw.questions}</td>
-                <td className="py-3 px-4 text-gray-600">{hw.deadline}</td>
+              <tr key={hw.id} className="border-b border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{hw.title}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{hw.course}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{hw.questions}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{hw.deadline}</td>
                 <td className="py-3 px-4">
-                  <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                  <span className="px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300">
                     {hw.status}
                   </span>
                 </td>
@@ -133,14 +133,14 @@ export default function HomeworkManagementPage() {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => handleEdit(hw)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
                       title="تعديل"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleDelete(hw.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                       title="حذف"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -154,33 +154,33 @@ export default function HomeworkManagementPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8 max-w-md w-full mx-4 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">{editingHomework ? 'تعديل واجب' : 'إضافة واجب جديد'}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{editingHomework ? 'تعديل واجب' : 'إضافة واجب جديد'}</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الواجب</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عنوان الواجب</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
                   placeholder="مثال: واجب الجبر"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الدورة</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الدورة</label>
                 <select 
                   value={formData.courseId}
                   onChange={(e) => setFormData({...formData, courseId: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">اختر الدورة</option>
                   <option value="1">الجبر</option>
@@ -189,23 +189,23 @@ export default function HomeworkManagementPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الموعد النهائي</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموعد النهائي</label>
                 <input
                   type="date"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
               </div>
 
               <div className="mt-8 flex justify-end gap-4">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
                 حفظ
               </button>

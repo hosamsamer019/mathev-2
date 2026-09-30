@@ -167,8 +167,8 @@ export default function ChatbotPage() {
     <div className="p-4 sm:p-6 lg:p-8 h-[calc(100vh-6rem)] flex flex-col">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">المساعد الذكي</h1>
-          <p className="text-gray-600">اسأل أي سؤال متعلق بالرياضيات</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">المساعد الذكي</h1>
+          <p className="text-gray-600 dark:text-gray-400">اسأل أي سؤال متعلق بالرياضيات</p>
         </div>
         <button onClick={createNewSession} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
           <Plus className="w-4 h-4" />
@@ -179,14 +179,14 @@ export default function ChatbotPage() {
       <div className="flex flex-col md:flex-row flex-1 gap-4 overflow-hidden">
         {/* Sessions sidebar */}
         {sessions.length > 0 && (
-          <div className="hidden md:block w-64 bg-white rounded-xl shadow-md p-4 overflow-y-auto flex-shrink-0">
-            <h3 className="font-bold text-gray-700 mb-3 text-sm">المحادثات السابقة</h3>
+          <div className="hidden md:block w-64 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 overflow-y-auto flex-shrink-0 border border-gray-100 dark:border-gray-700">
+            <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-3 text-sm">المحادثات السابقة</h3>
             <div className="space-y-2">
               {(Array.isArray(sessions) ? sessions : []).map(s => (
                 <button
                   key={s.id}
                   onClick={() => loadSession(s.id)}
-                  className={`w-full text-right p-3 rounded-lg text-sm transition-colors flex items-center gap-2 ${sessionId === s.id ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-100 text-gray-600'}`}
+                  className={`w-full text-right p-3 rounded-lg text-sm transition-colors flex items-center gap-2 ${sessionId === s.id ? 'bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
                 >
                   <MessageCircle className="w-4 h-4 flex-shrink-0" />
                   <span className="truncate">{s.messages?.[0]?.content?.substring(0, 30) || 'محادثة جديدة'}</span>
@@ -197,7 +197,7 @@ export default function ChatbotPage() {
         )}
 
         {/* Chat area */}
-        <div className="flex-1 bg-white rounded-xl shadow-md flex flex-col overflow-hidden">
+        <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-md flex flex-col overflow-hidden border border-gray-100 dark:border-gray-700">
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {(Array.isArray(messages) ? messages : []).map((message) => (
               <div
@@ -205,12 +205,12 @@ export default function ChatbotPage() {
                 className={`flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.sender === 'bot' ? 'bg-indigo-100' : 'bg-green-100'
+                  message.sender === 'bot' ? 'bg-indigo-100 dark:bg-indigo-950/50' : 'bg-green-100 dark:bg-green-950/50'
                 }`}>
                   {message.sender === 'bot' ? (
-                    <Bot className="w-6 h-6 text-indigo-600" />
+                    <Bot className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                   ) : (
-                    <User className="w-6 h-6 text-green-600" />
+                    <User className="w-6 h-6 text-green-600 dark:text-green-400" />
                   )}
                 </div>
                 <div className={`flex flex-col max-w-md ${
@@ -218,25 +218,25 @@ export default function ChatbotPage() {
                 }`}>
                   <div className={`px-4 py-3 rounded-2xl ${
                     message.sender === 'bot'
-                      ? 'bg-gray-100 text-gray-900'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                       : 'bg-indigo-600 text-white'
                   }`}>
                     <p>{message.text}</p>
                   </div>
-                  <span className="text-xs text-gray-500 mt-1">{message.time}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{message.time}</span>
                 </div>
               </div>
             ))}
             {loading && (
               <div className="flex gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-100">
-                  <Bot className="w-6 h-6 text-indigo-600" />
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-950/50">
+                  <Bot className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <div className="px-4 py-3 rounded-2xl bg-gray-100">
+                <div className="px-4 py-3 rounded-2xl bg-gray-100 dark:bg-gray-700">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </div>
               </div>
@@ -246,13 +246,13 @@ export default function ChatbotPage() {
 
           {messages.length <= 1 && (
             <div className="px-6 pb-4">
-              <p className="text-sm text-gray-600 mb-3">أسئلة مقترحة:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">أسئلة مقترحة:</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {(Array.isArray(suggestedQuestions) ? suggestedQuestions : []).map((question, idx) => (
                   <button
                     key={idx}
                     onClick={() => setInput(question)}
-                    className="text-right p-3 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors text-sm"
+                    className="text-right p-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-gray-800 dark:text-gray-200 transition-colors text-sm"
                   >
                     {question}
                   </button>
@@ -261,7 +261,7 @@ export default function ChatbotPage() {
             </div>
           )}
 
-          <div className="p-4 sm:p-6 border-t border-gray-200">
+          <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700">
             <div className="flex gap-3">
               <input
                 type="text"
@@ -270,12 +270,12 @@ export default function ChatbotPage() {
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="اكتب سؤالك هنا..."
                 disabled={loading}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100"
+                className="flex-1 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800"
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || loading}
-                className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
               >
                 <Send className="w-6 h-6" />
               </button>
