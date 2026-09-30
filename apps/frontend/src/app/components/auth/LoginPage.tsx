@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Building2, GraduationCap, Users, ChevronLeft, Eye, EyeOff, Sparkles, Lock, Mail, ShieldCheck, KeyRound } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useAuth, UserRole } from '../../contexts/AuthContext';
+import { useAuth, UserRole, getDefaultRouteForRole } from '../../contexts/AuthContext';
 
 type LoginStep = 'role' | 'type' | 'form';
 
@@ -33,7 +33,7 @@ const roles: RoleOption[] = [
     icon: Building2,
     color: 'text-green-600',
     gradient: 'from-orange-500 to-rose-500',
-    path: '/student/center/lessons',
+    path: '/student/center/home',
   },
   {
     role: 'TEACHER',
@@ -60,19 +60,26 @@ const roles: RoleOption[] = [
     icon: KeyRound,
     color: 'text-brand-accent-600',
     gradient: 'from-slate-700 to-slate-900',
-    path: '/admin/dashboard',
+    path: '/admin/home',
   },
 ];
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
   const [step, setStep] = useState<LoginStep>('role');
   const [selectedRole, setSelectedRole] = useState<RoleOption | null>(null);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // If already authenticated, redirect to role's dashboard
+  useEffect(() => {
+    if (isAuthenticated && user?.role) {
+      navigate(getDefaultRouteForRole(user.role), { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleRoleSelect = (role: RoleOption) => {
     setSelectedRole(role);
@@ -94,7 +101,7 @@ export default function LoginPage() {
     const success = await login(formData.email, formData.password, selectedRole.role);
     
     if (success) {
-      navigate(selectedRole.path);
+      navigate(getDefaultRouteForRole(selectedRole.role));
     } else {
       setError('البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى التحقق من البيانات.');
     }

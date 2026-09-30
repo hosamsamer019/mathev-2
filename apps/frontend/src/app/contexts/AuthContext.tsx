@@ -3,6 +3,23 @@ import { authApi } from '../services/api';
 
 export type UserRole = 'ONLINE_STUDENT' | 'CENTER_STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT';
 
+export function getDefaultRouteForRole(role?: UserRole | string | null): string {
+  switch (role) {
+    case 'ONLINE_STUDENT':
+      return '/student/online/home';
+    case 'CENTER_STUDENT':
+      return '/student/center/home';
+    case 'TEACHER':
+      return '/teacher/home';
+    case 'PARENT':
+      return '/parent/home';
+    case 'ADMIN':
+      return '/admin/home';
+    default:
+      return '/';
+  }
+}
+
 export interface User {
   id: string;
   name: string;
