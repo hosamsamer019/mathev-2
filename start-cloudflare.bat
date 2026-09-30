@@ -13,20 +13,34 @@ echo.
 echo Tunnel Target:
 echo http://localhost:80
 echo.
-echo Checking cloudflared...
+echo [1/3] Checking cloudflared...
 
 where cloudflared >nul 2>nul
 if %errorlevel% neq 0 goto :cloudflared_missing
 
 echo [OK] cloudflared is installed.
 echo.
-echo Checking Nginx / port 80...
+echo [2/3] Checking Nginx gateway and HTTP responsiveness on port 80...
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$conn = Get-NetTCPConnection -State Listen -LocalPort 80 -ErrorAction SilentlyContinue; if ($conn) { exit 0 } else { exit 1 }" >nul 2>nul
-if %errorlevel% neq 0 goto :port80_missing
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$conn = Get-NetTCPConnection -State Listen -LocalPort 80 -ErrorAction SilentlyContinue; if (!$conn) { exit 1 }; try { $res = Invoke-WebRequest -Uri 'http://localhost/' -UseBasicParsing -TimeoutSec 3; if ($res.StatusCode -ge 200 -and $res.StatusCode -lt 500) { exit 0 } else { exit 2 } } catch { if ($_.Exception.Response.StatusCode.value__ -lt 500) { exit 0 } else { exit 2 } }" >nul 2>nul
+set HTTP_CHECK_RESULT=%errorlevel%
 
-echo [OK] Port 80 is active and listening.
+if %HTTP_CHECK_RESULT% equ 1 goto :port80_missing
+if %HTTP_CHECK_RESULT% equ 2 goto :gateway_502
+
+echo [OK] Port 80 is active and responding.
 echo.
+echo [3/3] Checking for existing cloudflared processes...
+
+tasklist /FI "IMAGENAME eq cloudflared.exe" 2>nul | find /I /N "cloudflared.exe">nul
+if %errorlevel% equ 0 (
+    echo [INFO] Found existing cloudflared process. Terminating stale instance...
+    taskkill /F /IM cloudflared.exe >nul 2>nul
+    timeout /t 1 /nobreak >nul
+)
+echo [OK] Ready to establish Quick Tunnel.
+echo.
+echo ======================================================================
 echo Starting Cloudflare Quick Tunnel...
 echo.
 echo Keep this window open.
@@ -63,7 +77,16 @@ echo.
 echo [ERROR] Port 80 is NOT listening on localhost!
 echo.
 echo Nginx gateway must be running on port 80 before starting the tunnel.
-echo Please ensure the Nginx reverse proxy is started and try again.
+echo Please ensure Docker / Nginx reverse proxy is started (e.g. docker start math_platform_nginx).
+echo.
+pause
+exit /b 1
+
+:gateway_502
+echo.
+echo [ERROR] Port 80 is listening, but the Nginx upstream returned a 502/server error.
+echo.
+echo Please ensure Vite dev server is running on port 5173 and backend services are active.
 echo.
 pause
 exit /b 1

@@ -247,7 +247,7 @@ export default function SharedLayout({
       {/* Main Content Column */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Bar */}
-        <header className={`sticky top-0 z-20 flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm px-4 lg:px-6 py-3 flex items-center gap-4`}>
+        <header className={`sticky top-0 z-50 flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm px-4 lg:px-6 py-3 flex items-center gap-4`}>
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileOpen(true)}
@@ -323,11 +323,6 @@ export default function SharedLayout({
           <ScrollToTopButton containerId="main-content" />
         </main>
       </div>
-
-      {/* Click outside notifications */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-10" onClick={() => setShowNotifications(false)} />
-      )}
     </div>
   );
 }

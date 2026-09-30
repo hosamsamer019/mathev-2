@@ -4,6 +4,8 @@ import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { z } from 'zod';
 import { checkUserEnrollment } from '../utils/enrollment.js';
 import { io } from '../index.js';
+import https from 'node:https';
+import http from 'node:http';
 
 const courseCreateSchema = z.object({
   title: z.string().min(3),
@@ -809,6 +811,7 @@ export const updateVideoProgress = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const now = new Date();
     const videoProgress = await db.videoProgress.upsert({
       where: {
         studentId_lessonId: {
@@ -817,16 +820,31 @@ export const updateVideoProgress = async (req: AuthRequest, res: Response) => {
         }
       },
       update: {
-        progress,
-        ...(finalWatched ? { watched: true } : {}),
-        lastTimestamp: lastTimestamp !== undefined ? lastTimestamp : undefined
+        ...(progress !== undefined ? { progress } : {}),
+        ...(finalWatched ? {
+          watched: true,
+          status: 'COMPLETED',
+          completedAt: now,
+          completionSource: 'VIDEO_PLAYER'
+        } : (progress && progress > 0 ? { status: 'IN_PROGRESS' } : {})),
+        ...(lastTimestamp !== undefined ? { lastTimestamp } : {}),
+        lastActivityAt: now,
+        lastProgressUpdateAt: now,
+        updatedAt: now
       },
       create: {
         studentId,
         lessonId,
-        progress,
+        progress: progress || 0,
         watched: finalWatched,
+        status: finalWatched ? 'COMPLETED' : (progress && progress > 0 ? 'IN_PROGRESS' : 'NOT_STARTED'),
+        completedAt: finalWatched ? now : null,
+        completionSource: finalWatched ? 'VIDEO_PLAYER' : 'NONE',
         lastTimestamp: lastTimestamp || 0,
+        firstOpenedAt: now,
+        firstActivityAt: now,
+        lastActivityAt: now,
+        lastProgressUpdateAt: now,
         answeredQuizzes: []
       }
     });
@@ -928,3 +946,195 @@ export const getUploads = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error fetching uploads', error: error.message });
   }
 };
+
+const driveSessionCache = new Map<string, { directUrl: string; cookies: string; expiresAt: number }>();
+
+function extractDriveFileId(url: string): string | null {
+  if (!url) return null;
+  const idMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                  url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                  url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return idMatch ? idMatch[1] : null;
+}
+
+function fetchHttps(targetUrl: string, headers: Record<string, string> = {}, maxRedirects = 5): Promise<http.IncomingMessage> {
+  return new Promise((resolve, reject) => {
+    https.get(targetUrl, { headers }, (res) => {
+      const isRedirect = res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode);
+      if (isRedirect && res.headers.location && maxRedirects > 0) {
+        res.resume(); // discard redirected response body
+        const nextUrl = new URL(res.headers.location, targetUrl).toString();
+
+        let newHeaders = { ...headers };
+        if (res.headers['set-cookie']) {
+          const extraCookies = res.headers['set-cookie'].map((c: string) => c.split(';')[0]).join('; ');
+          const currentCookies = newHeaders['Cookie'] || '';
+          newHeaders['Cookie'] = currentCookies ? `${currentCookies}; ${extraCookies}` : extraCookies;
+        }
+
+        fetchHttps(nextUrl, newHeaders, maxRedirects - 1).then(resolve).catch(reject);
+      } else {
+        resolve(res);
+      }
+    }).on('error', reject);
+  });
+}
+
+function readBodyText(stream: http.IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    stream.on('data', chunk => data += chunk);
+    stream.on('end', () => resolve(data));
+    stream.on('error', reject);
+  });
+}
+
+async function getDriveDirectSession(fileId: string) {
+  const cached = driveSessionCache.get(fileId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached;
+  }
+
+  const initUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+  const initialRes = await fetchHttps(initUrl, {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  }, 0);
+
+  let cookies = initialRes.headers['set-cookie']
+    ? initialRes.headers['set-cookie'].map((c: string) => c.split(';')[0]).join('; ')
+    : '';
+
+  let html = '';
+  if (initialRes.headers.location) {
+    const directRes = await fetchHttps(initialRes.headers.location, {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Cookie': cookies
+    }, 0);
+    if (directRes.headers['set-cookie']) {
+      const extraCookies = directRes.headers['set-cookie'].map((c: string) => c.split(';')[0]).join('; ');
+      cookies = cookies ? `${cookies}; ${extraCookies}` : extraCookies;
+    }
+    html = await readBodyText(directRes);
+  } else {
+    html = await readBodyText(initialRes);
+  }
+
+  const uuidMatch = typeof html === 'string' ? html.match(/name="uuid"\s+value="([^"]+)"/) : null;
+  const uuid = uuidMatch ? uuidMatch[1] : '';
+  const confirmMatch = typeof html === 'string' ? html.match(/name="confirm"\s+value="([^"]+)"/) : null;
+  const confirm = confirmMatch ? confirmMatch[1] : 't';
+
+  const directUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=${confirm}${uuid ? '&uuid=' + uuid : ''}`;
+  const session = {
+    directUrl,
+    cookies,
+    expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes cache
+  };
+  driveSessionCache.set(fileId, session);
+  return session;
+}
+
+function normalizeRangeHeader(clientRange?: string, chunkSize: number = 2 * 1024 * 1024): string {
+  if (!clientRange) {
+    return `bytes=0-${chunkSize - 1}`;
+  }
+  const match = clientRange.trim().match(/^bytes=(\d+)-(\d*)$/);
+  if (!match) {
+    return `bytes=0-${chunkSize - 1}`;
+  }
+  const start = parseInt(match[1], 10);
+  if (isNaN(start) || start < 0) {
+    return `bytes=0-${chunkSize - 1}`;
+  }
+  if (match[2] && match[2].length > 0) {
+    const end = parseInt(match[2], 10);
+    if (!isNaN(end) && end >= start) {
+      const maxChunk = 5 * 1024 * 1024;
+      if (end - start + 1 > maxChunk) {
+        return `bytes=${start}-${start + maxChunk - 1}`;
+      }
+      return `bytes=${start}-${end}`;
+    }
+  }
+  return `bytes=${start}-${start + chunkSize - 1}`;
+}
+
+export const streamLessonVideo = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const lesson = await db.lesson.findUnique({
+      where: { id },
+      include: { course: true }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+
+    // Check enrollment
+    const isEnrolled = await checkUserEnrollment(req.user, lesson.courseId);
+    if (!isEnrolled) {
+      return res.status(403).json({ message: 'Not enrolled in this course' });
+    }
+
+    if (!lesson.videoUrl) {
+      return res.status(404).json({ message: 'No video attached to this lesson' });
+    }
+
+    // Handle Google Drive Video with Native Range Streaming
+    const driveFileId = extractDriveFileId(lesson.videoUrl);
+    if (driveFileId && (lesson.videoUrl.includes('drive.google.com') || lesson.videoUrl.includes('docs.google.com'))) {
+      const upstreamRange = normalizeRangeHeader(req.headers.range);
+
+      let session = await getDriveDirectSession(driveFileId);
+      let upstreamStream = await fetchHttps(session.directUrl, {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Cookie': session.cookies,
+        'Range': upstreamRange
+      });
+
+      // If upstream returned error or HTML confirmation warning (e.g. session expired), clear cache and retry
+      const isHtmlResponse = upstreamStream.headers['content-type']?.includes('text/html');
+      if (isHtmlResponse || (upstreamStream.statusCode && upstreamStream.statusCode >= 400)) {
+        driveSessionCache.delete(driveFileId);
+        session = await getDriveDirectSession(driveFileId);
+        upstreamStream = await fetchHttps(session.directUrl, {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Cookie': session.cookies,
+          'Range': upstreamRange
+        });
+      }
+
+      // If upstream is still HTML or error (e.g. Quota exceeded / Access Denied), do not pipe HTML to <video>
+      if (upstreamStream.headers['content-type']?.includes('text/html') || (upstreamStream.statusCode && upstreamStream.statusCode >= 400)) {
+        return res.status(502).json({
+          message: 'تعذر تشغيل الفيديو من المصدر الخارجي (تم تجاوز حد التحميل أو المصدر غير متاح حالياً).',
+          error: 'UPSTREAM_MEDIA_UNAVAILABLE'
+        });
+      }
+
+      res.status(upstreamStream.statusCode || 206);
+      res.setHeader('Content-Type', upstreamStream.headers['content-type'] || 'video/mp4');
+      if (upstreamStream.headers['content-length']) res.setHeader('Content-Length', upstreamStream.headers['content-length']);
+      if (upstreamStream.headers['content-range']) res.setHeader('Content-Range', upstreamStream.headers['content-range']);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      req.on('close', () => {
+        upstreamStream.destroy();
+      });
+
+      upstreamStream.pipe(res);
+      return;
+    }
+
+    // Direct / Hosted / Cloudflare R2 / Upload video
+    return res.redirect(lesson.videoUrl);
+  } catch (error: any) {
+    console.error('streamLessonVideo Error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Error streaming video', error: error.message });
+    }
+  }
+};
+
