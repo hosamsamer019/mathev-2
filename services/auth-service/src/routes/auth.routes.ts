@@ -6,6 +6,7 @@ import { validate } from '@shared/utils';
 
 const router = Router();
 
+router.get('/health', (_req, res) => res.json({ status: 'OK', service: 'Auth Service', timestamp: new Date().toISOString() }));
 router.post('/register', registerRateLimiter, validate(registerSchema), register);
 router.post('/login', loginRateLimiter, validate(loginSchema), login);
 router.post('/logout', logout);

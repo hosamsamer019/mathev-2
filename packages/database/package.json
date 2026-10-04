@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npm run generate && tsc",
+    "build": "npm run generate && tsc && node -e \"const fs=require('fs'); if(fs.existsSync('dist/src/index.js')) fs.copyFileSync('dist/src/index.js', 'dist/index.js'); if(fs.existsSync('dist/src/index.d.ts')) fs.copyFileSync('dist/src/index.d.ts', 'dist/index.d.ts');\"",
     "generate": "prisma generate"
   },
   "dependencies": {

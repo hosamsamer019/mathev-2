@@ -9,7 +9,8 @@ COPY package*.json ./
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared/package.json ./packages/shared/
 
-RUN npm install
+ENV CYPRESS_INSTALL_BINARY=0
+RUN npm install --ignore-scripts
 
 # Copy source code
 COPY apps/frontend ./apps/frontend
@@ -56,6 +57,6 @@ USER nginxuser
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:80/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:80/health || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
