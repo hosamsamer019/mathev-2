@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { db } from '../../../../packages/database/src/index.js';
 import { sendEmail, buildPasswordResetEmail } from '../services/email.service.js';
-import { isValidAcademicProfile } from '@shared/utils';
+import { isValidAcademicProfile, blocklistToken, isTokenBlocklisted, setPasswordResetToken, getPasswordResetEmail, deletePasswordResetToken } from '@shared/utils';
 
 export const registerSchema = z.object({
   name: z.string().min(2),
@@ -22,6 +22,12 @@ export const loginSchema = z.object({
   password: z.string(),
   role: z.enum(['ONLINE_STUDENT', 'CENTER_STUDENT', 'TEACHER', 'ADMIN', 'PARENT'])
 });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'كلمة المرور الحالية مطلوبة'),
+  newPassword: z.string().min(6, 'كلمة المرور الجديدة يجب ألا تقل عن 6 أحرف')
+});
+
 
 export const register = async (req: Request, res: Response) => {
   return res.status(403).json({ 
@@ -55,10 +61,11 @@ export const login = async (req: Request, res: Response) => {
       throw new Error('FATAL ERROR: JWT_SECRET or REFRESH_TOKEN_SECRET is not defined');
     }
 
+    // Short-lived access token (15 minutes)
     const token = jwt.sign(
       { userId: user.id, role: user.role, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '15m' }
     );
 
     const jti = crypto.randomUUID();
@@ -116,6 +123,22 @@ export const getMe = async (req: any, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
+  try {
+    const token = req.cookies?.refreshToken;
+    if (token && process.env.REFRESH_TOKEN_SECRET) {
+      try {
+        const decoded: any = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+        if (decoded?.jti) {
+          const remainingSecs = Math.max(60, Math.floor(((decoded.exp || 0) * 1000 - Date.now()) / 1000));
+          await blocklistToken(decoded.jti, remainingSecs);
+        }
+      } catch {
+        // Token already invalid or expired
+      }
+    }
+  } catch (err) {
+    console.error('Logout token blocklist error:', err);
+  }
   res.clearCookie('refreshToken');
   res.json({ message: 'Logged out successfully' });
 };
@@ -130,18 +153,27 @@ export const refreshToken = async (req: Request, res: Response) => {
     }
 
     const decoded: any = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-    const user = await db.user.findUnique({ where: { id: decoded.userId } });
+    if (!decoded?.userId) return res.status(401).json({ message: 'Invalid token' });
 
+    // Check if token JTI is blocklisted in Redis
+    if (decoded.jti && (await isTokenBlocklisted(decoded.jti))) {
+      res.clearCookie('refreshToken');
+      return res.status(401).json({ message: 'Refresh token has been revoked' });
+    }
+
+    const user = await db.user.findUnique({ where: { id: decoded.userId } });
     if (!user) return res.status(401).json({ message: 'User not found' });
 
-    // In a production environment with Redis, we would check if decoded.jti is in the blocklist here.
-    // If it is, we would revoke all tokens for this user.
-    // For now, we prepare the architecture by generating a new JTI and overwriting the cookie (Rotation).
+    // Invalidate old JTI upon rotation
+    if (decoded.jti) {
+      const remainingSecs = Math.max(60, Math.floor(((decoded.exp || 0) * 1000 - Date.now()) / 1000));
+      await blocklistToken(decoded.jti, remainingSecs);
+    }
 
     const newToken = jwt.sign(
       { userId: user.id, role: user.role, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '15m' } // Shortened access token lifespan
+      { expiresIn: '15m' }
     );
 
     const newJti = crypto.randomUUID();
@@ -168,10 +200,6 @@ export const refreshToken = async (req: Request, res: Response) => {
 // PASSWORD RESET FLOW
 // ─────────────────────────────────────────────────────────────────────────────
 
-// In-memory reset token store (use Redis in production for multi-instance)
-// Token format: { email, hashedToken, expiresAt }
-const resetTokenStore = new Map<string, { email: string; expiresAt: number }>();
-
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email } = z.object({ email: z.string().email() }).parse(req.body);
@@ -187,10 +215,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-    resetTokenStore.set(tokenHash, {
-      email: user.email,
-      expiresAt: Date.now() + 60 * 60 * 1000 // 1 hour
-    });
+    // Store token in Redis (or memory fallback) with 1 hour expiration
+    await setPasswordResetToken(tokenHash, user.email, 3600);
 
     const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
     const resetUrl = `${CLIENT_URL}/reset-password?token=${rawToken}`;
@@ -219,13 +245,13 @@ export const resetPassword = async (req: Request, res: Response) => {
     }).parse(req.body);
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const record = resetTokenStore.get(tokenHash);
+    const email = await getPasswordResetEmail(tokenHash);
 
-    if (!record || record.expiresAt < Date.now()) {
+    if (!email) {
       return res.status(400).json({ message: 'Reset token is invalid or has expired.' });
     }
 
-    const user = await db.user.findUnique({ where: { email: record.email } });
+    const user = await db.user.findUnique({ where: { email } });
     if (!user) {
       return res.status(400).json({ message: 'User not found.' });
     }
@@ -236,8 +262,8 @@ export const resetPassword = async (req: Request, res: Response) => {
       data: { password: hashedPassword }
     });
 
-    // Invalidate the token after use
-    resetTokenStore.delete(tokenHash);
+    // Invalidate the token after single use
+    await deletePasswordResetToken(tokenHash);
 
     res.json({ message: 'Password reset successful. You can now log in.' });
   } catch (error) {
@@ -379,3 +405,70 @@ export const validateGuestExamCode = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'حدث خطأ في معالجة طلبك، يرجى المحاولة مرة أخرى لاحقاً' });
   }
 };
+
+export const changePassword = async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'غير مصرح لك بإجراء هذه العملية' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await db.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة' });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    // Invalidate refresh token session in Redis / JTI if present
+    try {
+      const token = req.cookies?.refreshToken;
+      if (token && process.env.REFRESH_TOKEN_SECRET) {
+        try {
+          const decoded: any = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+          if (decoded?.jti) {
+            const remainingSecs = Math.max(60, Math.floor(((decoded.exp || 0) * 1000 - Date.now()) / 1000));
+            await blocklistToken(decoded.jti, remainingSecs);
+          }
+        } catch {
+          // Token already invalid or expired
+        }
+      }
+    } catch (err) {
+      console.error('Password change token blocklist error:', err);
+    }
+
+    res.clearCookie('refreshToken');
+
+    return res.json({
+      success: true,
+      message: 'تم تغيير كلمة المرور بنجاح'
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ errors: error.errors });
+    }
+    console.error('changePassword error:', error);
+    return res.status(500).json({ message: 'حدث خطأ في الخادم أثناء تغيير كلمة المرور' });
+  }
+};
+

@@ -61,6 +61,15 @@ export const assessmentApi = axios.create({
   baseURL: ASSESSMENT_URL,
 });
 
+// Interceptor to add Token to authApi requests
+authApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Interceptor to add Token to requests and handle 401s
 [userApi, attendanceApi, aiApi, courseApi, examApi, homeworkApi, analyticsApi, notificationApi, questionApi, assessmentApi].forEach(api => {
   api.interceptors.request.use((config) => {
@@ -71,11 +80,13 @@ export const assessmentApi = axios.create({
     return config;
   });
 
+
   api.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      const isAuthError = error.response?.status === 401 || (error.response?.status === 403 && (error.response?.data?.message?.toLowerCase().includes('expired') || error.response?.data?.message?.toLowerCase().includes('token')));
+      if (isAuthError && !originalRequest._retry) {
         originalRequest._retry = true;
         try {
           const res = await authApi.post('/refresh-token');

@@ -26,3 +26,13 @@ export const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => process.env.NODE_ENV !== 'production'
 });
+
+export const passwordChangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 password change requests per 15 minutes
+  message: { message: 'Too many password change attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.NODE_ENV !== 'production'
+});
+

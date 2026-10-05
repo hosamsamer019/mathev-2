@@ -1,4 +1,4 @@
-import { userApi, attendanceApi } from './api';
+import { userApi, attendanceApi, authApi } from './api';
 import { User, UserRole } from '../contexts/AuthContext';
 
 export interface UpdateProfileData {
@@ -23,6 +23,12 @@ export const userService = {
     const response = await userApi.put(`/users/${id}`, data);
     return response.data.user;
   },
+
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    const response = await authApi.post('/change-password', { currentPassword, newPassword });
+    return response.data;
+  },
+
 
   getUsers: async (filters: UserFilters): Promise<{ data: User[], total: number, page: number, limit: number, totalPages: number }> => {
     const response = await userApi.get('/users', { params: filters });
