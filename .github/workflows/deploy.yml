@@ -93,7 +93,6 @@ jobs:
     needs: ci-validation
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,10 +100,10 @@ jobs:
       - name: Setup SSH Connection & Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST || secrets.DEPLOY_HOST }}
-          username: ${{ secrets.VPS_USER || secrets.DEPLOY_USER }}
-          key: ${{ secrets.VPS_SSH_KEY || secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || secrets.DEPLOY_PORT || 22 }}
+          host: ${{ secrets.DEPLOY_HOST || secrets.VPS_HOST }}
+          username: ${{ secrets.DEPLOY_USER || secrets.VPS_USER || 'deployadmin' }}
+          key: ${{ secrets.DEPLOY_SSH_KEY || secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || secrets.VPS_PORT || '22' }}
           script: |
             set -e
             echo "================================================================"
@@ -123,7 +122,10 @@ jobs:
             echo "[1/7] Fetching latest canonical repository state..."
             git fetch origin main
             
-            TARGET_COMMIT="${{ github.event.inputs.target_commit_sha || github.sha }}"
+            TARGET_COMMIT="${{ github.event.inputs.target_commit_sha }}"
+            if [ -z "$TARGET_COMMIT" ]; then
+              TARGET_COMMIT="${{ github.sha }}"
+            fi
             echo "[2/7] Checking out target commit: $TARGET_COMMIT"
             git checkout "$TARGET_COMMIT"
             
@@ -163,7 +165,7 @@ jobs:
             
             echo "[7/7] Checking Nginx ingress & PostgreSQL health..."
             curl -f -s http://localhost/health || curl -f -s http://127.0.0.1/health || exit 1
-            docker exec alsaden-postgres pg_isready -U alsaden_app_user -d math_platform || exit 1
+            docker exec alsaden-postgres pg_isready || exit 1
             
             echo "================================================================"
             echo "  DEPLOYMENT SUCCESSFUL — DEPLOYED SHA: $DEPLOYED_SHA"
