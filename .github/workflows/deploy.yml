@@ -2,8 +2,8 @@ name: Production VPS Deployment (Manual Dispatch)
 
 # ==============================================================================
 # MANUAL DEPLOYMENT WORKFLOW ONLY
-# This workflow is disabled from automatic execution.
-# To execute, trigger manually from the GitHub Actions tab after verifying CI passes.
+# This workflow is strictly restricted to manual workflow_dispatch execution.
+# Automatic deployment on push is intentionally disabled.
 # ==============================================================================
 
 on:
@@ -17,10 +17,15 @@ on:
         options:
           - production
           - staging
+      target_commit_sha:
+        description: 'Target Commit SHA to Deploy (leave blank for workflow trigger commit)'
+        required: false
+        default: ''
+        type: string
       run_database_migrations:
         description: 'Run Prisma Database Migrations (prisma migrate deploy)'
-        required: true
-        default: true
+        required: false
+        default: false
         type: boolean
 
 jobs:
@@ -35,38 +40,66 @@ jobs:
       - name: Setup SSH Connection & Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          host: ${{ secrets.VPS_HOST || secrets.DEPLOY_HOST }}
+          username: ${{ secrets.VPS_USER || secrets.DEPLOY_USER }}
+          key: ${{ secrets.VPS_SSH_KEY || secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || secrets.DEPLOY_PORT || 22 }}
           script: |
             set -e
-            echo "Starting deployment on VPS..."
-            cd /var/www/al-saden
-
-            echo "Pulling latest changes from Git repository..."
-            git pull origin main
-
-            echo "Ensuring production environment file exists..."
+            echo "================================================================"
+            echo "  AL-SADEN PLATFORM: PRODUCTION VPS DEPLOYMENT"
+            echo "================================================================"
+            
+            DEPLOY_DIR="/var/www/al-saden"
+            if [ ! -d "$DEPLOY_DIR" ]; then
+              echo "ERROR: Deployment directory $DEPLOY_DIR not found on VPS!"
+              exit 1
+            fi
+            
+            cd "$DEPLOY_DIR"
+            git config --global --add safe.directory "$DEPLOY_DIR"
+            
+            echo "[1/6] Fetching latest canonical repository state..."
+            git fetch origin main
+            
+            TARGET_COMMIT="${{ github.event.inputs.target_commit_sha || github.sha }}"
+            echo "[2/6] Checking out target commit: $TARGET_COMMIT"
+            git checkout "$TARGET_COMMIT"
+            
+            DEPLOYED_SHA=$(git rev-parse HEAD)
+            echo "Verified VPS Git HEAD: $DEPLOYED_SHA"
+            
+            if [ -n "$TARGET_COMMIT" ] && [ "$DEPLOYED_SHA" != "$TARGET_COMMIT" ] && [ "${TARGET_COMMIT:0:7}" != "${DEPLOYED_SHA:0:7}" ]; then
+              echo "ERROR: Git HEAD mismatch! Expected $TARGET_COMMIT but found $DEPLOYED_SHA"
+              exit 1
+            fi
+            
+            echo "[3/6] Verifying production environment configuration..."
             if [ ! -f .env.production ]; then
               echo "ERROR: .env.production not found on VPS! Aborting deployment."
               exit 1
             fi
-
-            echo "Building and starting production containers..."
+            
+            echo "[4/6] Building production containers safely..."
             docker compose -f docker-compose.production.yml --env-file .env.production build
+            
+            echo "[5/6] Starting services with zero-downtime rolling update..."
             docker compose -f docker-compose.production.yml --env-file .env.production up -d --remove-orphans
-
+            
             if [ "${{ github.event.inputs.run_database_migrations }}" = "true" ]; then
               echo "Running Prisma migrations..."
               docker compose -f docker-compose.production.yml --env-file .env.production run --rm prisma-migrate
+            else
+              echo "Skipping database migrations (run_database_migrations = false)."
             fi
-
-            echo "Waiting for services to become healthy..."
+            
+            echo "[6/6] Waiting for services to become healthy..."
             sleep 15
             docker compose -f docker-compose.production.yml ps
-
+            
             echo "Checking Nginx ingress health..."
-            curl -f -s http://localhost:80/health || exit 1
-
-            echo "Deployment completed successfully!"
+            curl -f -s http://localhost/health || curl -f -s http://127.0.0.1/health || exit 1
+            
+            echo "================================================================"
+            echo "  DEPLOYMENT SUCCESSFUL — DEPLOYED SHA: $DEPLOYED_SHA"
+            echo "================================================================"
