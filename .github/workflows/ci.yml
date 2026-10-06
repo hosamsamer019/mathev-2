@@ -22,11 +22,17 @@ jobs:
         run: npm install --include=dev
 
       - name: Build Shared Packages & Database Client
+        env:
+          DATABASE_URL: "postgresql://mock_user:mock_pass@localhost:5432/mock_db"
+          DIRECT_URL: "postgresql://mock_user:mock_pass@localhost:5432/mock_db"
         run: |
           npm run build --prefix packages/shared
           npm run build --prefix packages/database
 
       - name: Validate Prisma Schema
+        env:
+          DATABASE_URL: "postgresql://mock_user:mock_pass@localhost:5432/mock_db"
+          DIRECT_URL: "postgresql://mock_user:mock_pass@localhost:5432/mock_db"
         run: npx prisma validate --schema=packages/database/prisma/schema.prisma
 
       - name: Frontend Typecheck
