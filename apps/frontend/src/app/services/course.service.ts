@@ -114,4 +114,7 @@ export const courseService = {
 
   getUploads: () =>
     courseApi.get('/uploads'),
+
+  getVideoTicket: (lessonId: string) =>
+    courseApi.get<{ ticket: string }>(`/lessons/${lessonId}/video-ticket`),
 };

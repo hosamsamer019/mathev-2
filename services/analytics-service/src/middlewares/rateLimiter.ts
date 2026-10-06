@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { rateLimit } from 'express-rate-limit';
 
 export const analyticsRateLimiter = rateLimit({
@@ -6,5 +7,5 @@ export const analyticsRateLimiter = rateLimit({
   message: { message: 'Too many analytics requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => process.env.NODE_ENV !== 'production'
+  skip: (req: Request) => process.env.NODE_ENV !== 'production'
 });

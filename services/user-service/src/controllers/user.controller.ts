@@ -108,7 +108,7 @@ export const getRisks = async (req: AuthRequest, res: Response) => {
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
     const skip = (page - 1) * limit;
     const search = req.query.search as string;
     const roleFilter = req.query.role as string;
@@ -380,6 +380,15 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Insufficient permissions to update this user' });
     }
 
+    // Strict Authorization checks for non-admin self-updates (evaluated early)
+    if (requesterRole !== 'ADMIN') {
+      const forbiddenFields = ['country', 'educationLevel', 'gradeLevel', 'academicLevel', 'role', 'parentId', 'parentEmail', 'parentPassword', 'parentName', 'parentPhone', 'centerGroupId', 'childId'];
+      const hasForbiddenField = forbiddenFields.some(field => Object.prototype.hasOwnProperty.call(req.body, field));
+      if (hasForbiddenField) {
+        return res.status(403).json({ message: 'Only administrators can modify academic profile, role, center group, or parent account associations/credentials' });
+      }
+    }
+
     const existingUser = await db.user.findUnique({ where: { id } });
     if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
@@ -387,15 +396,6 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
     const validatedData = updateUserSchema.parse(req.body);
     const { name, email, role, parentId, centerGroupId, password, childId, academicLevel, country, educationLevel, gradeLevel, language, parentName, parentEmail, parentPassword, parentPhone } = validatedData;
-    
-    // Strict Academic Profile Authorization check
-    if (requesterRole !== 'ADMIN') {
-      const forbiddenFields = ['country', 'educationLevel', 'gradeLevel', 'academicLevel'];
-      const hasForbiddenField = forbiddenFields.some(field => Object.prototype.hasOwnProperty.call(req.body, field));
-      if (hasForbiddenField) {
-        return res.status(403).json({ message: 'Only administrators can modify the academic profile' });
-      }
-    }
     
     if (['ONLINE_STUDENT', 'CENTER_STUDENT'].includes((role || existingUser.role) as any)) {
       const c = country !== undefined ? country : existingUser.country;
@@ -415,7 +415,8 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
       let resolvedParentId = parentId;
 
-      if (parentName && parentEmail) {
+      // Parent creation / linking logic is strictly restricted to ADMIN
+      if (requesterRole === 'ADMIN' && parentName && parentEmail) {
         const existingParent = await tx.user.findFirst({
           where: { email: parentEmail }
         });
@@ -446,7 +447,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
           });
           resolvedParentId = newParent.id;
         }
-      } else if (userToUpdate.parentId && (parentName || parentPhone)) {
+      } else if (requesterRole === 'ADMIN' && userToUpdate.parentId && (parentName || parentPhone)) {
         const parentUpdateData: any = {};
         if (parentName) parentUpdateData.name = parentName;
         if (parentPhone) parentUpdateData.phone = parentPhone;
@@ -461,23 +462,27 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       const updateData: any = {
         name,
         email,
-        academicLevel,
-        country,
-        educationLevel,
-        gradeLevel,
         language,
-        ...(requesterRole === 'ADMIN' && role ? { role } : {}),
-        ...(centerGroupId !== undefined ? { centerGroupId } : {}),
+        ...(requesterRole === 'ADMIN' ? {
+          academicLevel,
+          country,
+          educationLevel,
+          gradeLevel,
+          ...(role ? { role } : {}),
+          ...(centerGroupId !== undefined ? { centerGroupId } : {}),
+        } : {}),
       };
 
       if (password) {
         updateData.password = await bcrypt.hash(password, 10);
       }
 
-      if (resolvedParentId === null || resolvedParentId === '') {
-        updateData.parentId = null;
-      } else if (resolvedParentId) {
-        updateData.parentId = resolvedParentId;
+      if (requesterRole === 'ADMIN') {
+        if (resolvedParentId === null || resolvedParentId === '') {
+          updateData.parentId = null;
+        } else if (resolvedParentId) {
+          updateData.parentId = resolvedParentId;
+        }
       }
 
       Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);

@@ -42,10 +42,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     allowedHosts: true,
-    hmr: {
-      port: 5173,
-      clientPort: 5173
-    },
+    hmr: true,
     proxy: {
       '/api/auth': {
         target: 'http://localhost:4001',

@@ -33,22 +33,73 @@ export const getRedisClient = () => redisClient;
  * When a user logs out, we take their refresh token's JTI and add it to Redis with an expiration 
  * matching the token's remaining TTL.
  */
+const memoryResetStore = new Map<string, { email: string; expiresAt: number }>();
+const memoryBlocklist = new Map<string, number>();
+
 export const blocklistToken = async (jti: string, expiresInSecs: number) => {
-  if (!redisClient) return;
-  try {
-    await redisClient.setEx(`blocklist:jti:${jti}`, expiresInSecs, 'true');
-  } catch (err) {
-    logger.error('Redis blocklist error:', err);
+  if (redisClient) {
+    try {
+      await redisClient.setEx(`blocklist:jti:${jti}`, expiresInSecs, 'true');
+      return;
+    } catch (err) {
+      logger.error('Redis blocklist error:', err);
+    }
   }
+  memoryBlocklist.set(jti, Date.now() + expiresInSecs * 1000);
 };
 
 export const isTokenBlocklisted = async (jti: string): Promise<boolean> => {
-  if (!redisClient) return false;
-  try {
-    const exists = await redisClient.get(`blocklist:jti:${jti}`);
-    return exists === 'true';
-  } catch (err) {
-    logger.error('Redis blocklist check error:', err);
-    return false; // Fail open (or closed, depending on security posture)
+  if (redisClient) {
+    try {
+      const exists = await redisClient.get(`blocklist:jti:${jti}`);
+      return exists === 'true';
+    } catch (err) {
+      logger.error('Redis blocklist check error:', err);
+    }
   }
+  const expiry = memoryBlocklist.get(jti);
+  if (expiry && expiry > Date.now()) {
+    return true;
+  }
+  return false;
 };
+
+export const setPasswordResetToken = async (tokenHash: string, email: string, ttlSeconds: number = 3600) => {
+  if (redisClient) {
+    try {
+      await redisClient.setEx(`reset:${tokenHash}`, ttlSeconds, email);
+      return;
+    } catch (err) {
+      logger.error('Redis setPasswordResetToken error:', err);
+    }
+  }
+  memoryResetStore.set(tokenHash, { email, expiresAt: Date.now() + ttlSeconds * 1000 });
+};
+
+export const getPasswordResetEmail = async (tokenHash: string): Promise<string | null> => {
+  if (redisClient) {
+    try {
+      const email = await redisClient.get(`reset:${tokenHash}`);
+      if (email) return email;
+    } catch (err) {
+      logger.error('Redis getPasswordResetEmail error:', err);
+    }
+  }
+  const mem = memoryResetStore.get(tokenHash);
+  if (mem && mem.expiresAt > Date.now()) {
+    return mem.email;
+  }
+  return null;
+};
+
+export const deletePasswordResetToken = async (tokenHash: string) => {
+  if (redisClient) {
+    try {
+      await redisClient.del(`reset:${tokenHash}`);
+    } catch (err) {
+      logger.error('Redis deletePasswordResetToken error:', err);
+    }
+  }
+  memoryResetStore.delete(tokenHash);
+};
+

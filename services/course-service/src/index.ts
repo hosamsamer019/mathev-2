@@ -13,36 +13,17 @@ import assessmentRoutes from './routes/assessment.routes.js';
 
 import http from 'http';
 import { Server } from 'socket.io';
-import { logger, globalErrorHandler, validateEnv } from '@shared/utils';
+import { logger, globalErrorHandler, validateEnv, createCorsOptions, configureTrustProxy } from '@shared/utils';
 import { setupRiskEngineJob } from './jobs/riskEngine.job.js';
 
 dotenv.config();
 validateEnv();
 
 const app = express();
-const trustProxy = process.env.TRUST_PROXY || 'loopback';
-if (trustProxy === 'true' || trustProxy === '1') {
-  app.set('trust proxy', true);
-} else if (trustProxy === 'false' || trustProxy === '0') {
-  app.set('trust proxy', false);
-} else {
-  app.set('trust proxy', trustProxy);
-}
+configureTrustProxy(app);
 
 const PORT = process.env.PORT || 4004;
-
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' && (origin.startsWith('http://localhost:') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com'))) {
-      return callback(null, true);
-    }
-    const allowedOrigin = process.env.CLIENT_URL || 'https://your-production-domain.com';
-    if (origin === allowedOrigin || origin.includes('vercel.app') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com')) { return callback(null, true); }
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-};
+const corsOptions = createCorsOptions();
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
@@ -73,10 +54,13 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.use(globalErrorHandler);
 
+import { setIO } from './socket.js';
+
 const server = http.createServer(app);
 export const io = new Server(server, {
   cors: corsOptions
 });
+setIO(io);
 
 import jwt from 'jsonwebtoken';
 import { db } from '../../../packages/database/src/index.js';
@@ -119,7 +103,7 @@ io.on('connection', (socket) => {
   });
 });
 
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
   server.listen(PORT, () => {
     logger.info(`🚀 Course Service (w/ Socket.IO) running on http://localhost:${PORT}`);
     setupRiskEngineJob().catch(console.error);

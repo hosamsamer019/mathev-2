@@ -29,20 +29,8 @@ RUN addgroup -g 1001 -S nginxuser && \
 # Copy built assets
 COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
 
-# Replace default nginx config to support SPA routing and security headers
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files $uri $uri/ /index.html =404; \
-    } \
-    # Health check \
-    location /health { \
-        access_log off; \
-        return 200 "healthy\n"; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Copy custom nginx configuration for SPA routing and strict static asset handling
+COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Give nginx user ownership of required directories
 RUN chown -R nginxuser:nginxuser /usr/share/nginx/html && \

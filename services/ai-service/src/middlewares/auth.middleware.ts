@@ -28,6 +28,6 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Invalid or expired token' });
+    return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };

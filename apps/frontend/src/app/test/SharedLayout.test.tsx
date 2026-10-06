@@ -98,4 +98,43 @@ describe('SharedLayout Sidebar RTL & Collapse/Expand Direction', () => {
     expect(desktopAside?.className).toContain('w-64');
     expect(screen.getByLabelText('طي القائمة الجانبية')).toBeInTheDocument();
   });
+
+  it('toggles mobile sidebar between closed (Menu / hamburger) and open (X) icon state', async () => {
+    let renderResult: any;
+    await act(async () => {
+      renderResult = renderLayout();
+    });
+
+    const mobileToggle = screen.getByLabelText('Open menu');
+    expect(mobileToggle).toBeInTheDocument();
+    expect(mobileToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(mobileToggle.querySelector('.lucide-menu')).toBeInTheDocument();
+    expect(mobileToggle.querySelector('.lucide-x')).toBeNull();
+
+    const mobileAside = renderResult.container.querySelector('aside.lg\\:hidden');
+    expect(mobileAside?.className).toContain('translate-x-full');
+
+    // Click to open mobile menu
+    await act(async () => {
+      fireEvent.click(mobileToggle);
+    });
+
+    expect(screen.getByLabelText('Close menu')).toBeInTheDocument();
+    expect(mobileToggle.getAttribute('aria-expanded')).toBe('true');
+    expect(mobileToggle.querySelector('.lucide-x')).toBeInTheDocument();
+    expect(mobileToggle.querySelector('.lucide-menu')).toBeNull();
+    expect(mobileAside?.className).toContain('translate-x-0');
+
+    // Click to close mobile menu
+    await act(async () => {
+      fireEvent.click(mobileToggle);
+    });
+
+    expect(screen.getByLabelText('Open menu')).toBeInTheDocument();
+    expect(mobileToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(mobileToggle.querySelector('.lucide-menu')).toBeInTheDocument();
+    expect(mobileToggle.querySelector('.lucide-x')).toBeNull();
+    expect(mobileAside?.className).toContain('translate-x-full');
+  });
 });
+

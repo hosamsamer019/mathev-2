@@ -1,22 +1,29 @@
 export const isGoogleDriveUrl = (url?: string | null): boolean => {
   if (!url) return false;
-  return url.includes('drive.google.com') || url.includes('docs.google.com/file');
+  const trimmed = url.trim().toLowerCase();
+  return trimmed.includes('drive.google.com') ||
+         trimmed.includes('docs.google.com') ||
+         trimmed.includes('drive.usercontent.google.com') ||
+         trimmed.includes('googleusercontent.com');
 };
 
 export const extractGoogleDriveId = (url?: string | null): string | null => {
   if (!url) return null;
-  // Match standard /file/d/ID/view or edit or preview
-  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return match[1];
+  const trimmed = url.trim();
+  // Match /file/d/ID or /d/ID
+  const fileMatch = trimmed.match(/\/(?:file\/)?d\/([a-zA-Z0-9_-]{10,})/);
+  if (fileMatch && fileMatch[1]) {
+    return fileMatch[1];
   }
-
-  // Match id=ID
-  const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+  // Match ?id=ID or &id=ID
+  const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
   if (idMatch && idMatch[1]) {
     return idMatch[1];
   }
-
+  // If raw file ID
+  if (/^[a-zA-Z0-9_-]{25,50}$/.test(trimmed)) {
+    return trimmed;
+  }
   return null;
 };
 
@@ -116,7 +123,7 @@ export const formatVideoTimeRemaining = (current: number, duration: number): str
 };
 
 export const getLessonMediaStreamUrl = (lessonId: string, token?: string): string => {
-  const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+  const env: any = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
   const baseUrl = env.VITE_COURSE_API_URL || '/api/courses';
   const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '') || '';
   return `${baseUrl}/lessons/${lessonId}/stream${authToken ? `?token=${encodeURIComponent(authToken)}` : ''}`;

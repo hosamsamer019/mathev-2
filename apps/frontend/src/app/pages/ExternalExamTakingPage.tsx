@@ -13,6 +13,7 @@ import { MathRenderer } from '../components/ui/MathRenderer';
 import { GeometryDiagram } from '../components/ui/GeometryDiagram';
 import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { normalizeAssessmentResult } from '../utils/assessmentResultNormalizer';
 import { getMediaUrl } from '../utils/mediaUrl';
 import ScrollToTopButton from '../components/ui/ScrollToTopButton';
@@ -38,6 +39,7 @@ export default function ExternalExamTakingPage() {
   const { assessmentId } = useParams<{ assessmentId: string }>();
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const { logout } = useAuth();
 
   // Student and Exam states
   const [studentName, setStudentName] = useState<string>('');
@@ -418,7 +420,10 @@ export default function ExternalExamTakingPage() {
           <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">تعذر الدخول إلى الامتحان</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{error}</p>
           <button
-            onClick={() => navigate('/external-exam')}
+            onClick={async () => {
+              await logout();
+              navigate('/external-exam');
+            }}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-colors text-sm"
           >
             العودة لصفحة كود الامتحان
@@ -446,7 +451,10 @@ export default function ExternalExamTakingPage() {
             <div className="mt-1"><strong>عدد المخالفات:</strong> 3 مخالفات</div>
           </div>
           <button
-            onClick={() => navigate('/external-exam')}
+            onClick={async () => {
+              await logout();
+              navigate('/external-exam');
+            }}
             className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl transition-colors text-sm"
           >
             الخروج من الصفحة
@@ -517,9 +525,8 @@ export default function ExternalExamTakingPage() {
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
-                onClick={() => {
-                  localStorage.removeItem('token');
-                  localStorage.removeItem('edu-user');
+                onClick={async () => {
+                  await logout();
                   navigate('/external-exam');
                 }}
                 className="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors text-sm shadow-md flex items-center justify-center gap-2"

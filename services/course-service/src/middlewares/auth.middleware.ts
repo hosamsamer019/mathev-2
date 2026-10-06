@@ -27,6 +27,15 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
     req.user = decoded;
 
+    // Reject video tickets on normal API endpoints
+    if (decoded.purpose === 'video-stream') {
+      const isStreamingEndpoint = req.originalUrl.includes('/stream') || req.path.includes('/stream');
+      const requestedLessonId = req.params?.id;
+      if (!isStreamingEndpoint || (requestedLessonId && decoded.lessonId !== requestedLessonId)) {
+        return res.status(403).json({ message: 'Forbidden: Video stream ticket cannot be used for standard API requests.' });
+      }
+    }
+
     // Enforce guest access scope
     if (decoded.isGuest && decoded.guestAssessmentId) {
       const isAssessmentsEndpoint = req.baseUrl === '/api/assessments' || req.originalUrl.startsWith('/api/assessments');
@@ -53,8 +62,7 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
 
     next();
   } catch (error) {
-    console.error('verifyToken Error:', error);
-    return res.status(403).json({ message: 'Invalid or expired token' });
+    return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 

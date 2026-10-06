@@ -27,7 +27,7 @@ export const stripeWebhook = async (req: Request, res: Response) => {
   let stripe: any;
   try {
     const Stripe = (await import('stripe')).default;
-    stripe = new Stripe(stripeKey, { apiVersion: '2026-07-29.dahlia' });
+    stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' as any });
   } catch {
     return res.status(500).json({ message: 'Stripe SDK failed to load' });
   }

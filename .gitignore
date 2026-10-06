@@ -23,3 +23,11 @@ k6_bin/
 *.pub
 credentials.json
 secret.json
+scratch/
+dist_screenshots/
+*.dump
+__pycache__/
+*.py[cod]
+token.json
+packages/*/src/*.js
+packages/*/src/*.d.ts

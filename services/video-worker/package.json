@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",
-    "@shared/utils": "*",
+    "@shared/utils": "file:../../packages/shared",
     "@smartmath/database": "file:../../packages/database",
     "bullmq": "^4.0.0",
     "dotenv": "^16.3.1",

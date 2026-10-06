@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
-import { io } from '../index.js';
+import { io } from '../socket.js';
 import { normalizeExamQuestions } from '../utils/question.helper.js';
 import { sanitizeQuestionsForStudent, generateExamAccessCode, linkQuestionAssetsToAssessment } from './assessment.controller.js';
 
@@ -23,7 +23,7 @@ export const getAllExams = async (req: AuthRequest, res: Response) => {
     }
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
     const skip = (page - 1) * limit;
 
     const exams = await db.exam.findMany({
@@ -106,17 +106,9 @@ export const getExamDetails = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const exam = await db.exam.findUnique({
       where: { id },
-      include: {} // do not fetch old attempts
+      include: { course: { select: { id: true, teacherId: true } } }
     });
     if (!exam) return res.status(404).json({ message: 'Exam not found' });
-
-    // Fetch unified AssessmentAttempt records instead
-    const attempts = await db.assessmentAttempt.findMany({
-      where: { assessmentId: id },
-      include: {
-        student: { select: { name: true, email: true } },
-      }
-    });
 
     const assessData = await db.assessment.findUnique({
       where: { id },
@@ -124,6 +116,50 @@ export const getExamDetails = async (req: AuthRequest, res: Response) => {
     });
 
     const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+
+    // Authorization & Enrollment checks
+    if (requesterRole === 'TEACHER') {
+      if (exam.course && exam.course.teacherId !== requesterId) {
+        return res.status(403).json({ message: 'Forbidden: You do not own this course or exam.' });
+      }
+    } else if (requesterRole !== 'ADMIN') {
+      // Student, Parent, Guest, External Student
+      if (exam.courseId) {
+        const isEnrolled = await checkUserEnrollment(req.user, exam.courseId);
+        const isAllowedGuest = assessData?.allowExternalStudents && (req.user?.isGuest || req.user?.isExternalStudent);
+        if (!isEnrolled && !isAllowedGuest) {
+          return res.status(403).json({ message: 'Not enrolled in this course.' });
+        }
+      }
+    }
+
+    // Fetch attempts scoped strictly by role
+    let attempts: any[] = [];
+    if (requesterRole === 'ADMIN' || requesterRole === 'TEACHER') {
+      attempts = await db.assessmentAttempt.findMany({
+        where: { assessmentId: id },
+        include: {
+          student: { select: { name: true, email: true } },
+        }
+      });
+    } else if (requesterRole === 'PARENT') {
+      attempts = await db.assessmentAttempt.findMany({
+        where: { assessmentId: id, student: { parentId: requesterId } },
+        include: {
+          student: { select: { name: true, email: true } },
+        }
+      });
+    } else {
+      // Student: only own attempts
+      attempts = await db.assessmentAttempt.findMany({
+        where: { assessmentId: id, studentId: requesterId },
+        include: {
+          student: { select: { name: true, email: true } },
+        }
+      });
+    }
+
     if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
       exam.questions = sanitizeQuestionsForStudent(exam.questions as any) as any;
     }
@@ -131,8 +167,8 @@ export const getExamDetails = async (req: AuthRequest, res: Response) => {
     res.json({
       ...exam,
       allowExternalStudents: assessData?.allowExternalStudents ?? false,
-      examAccessCode: assessData?.examAccessCode ?? null,
-      allowedIps: assessData?.allowedIps ?? null,
+      examAccessCode: requesterRole === 'ADMIN' || requesterRole === 'TEACHER' ? (assessData?.examAccessCode ?? null) : null,
+      allowedIps: requesterRole === 'ADMIN' || requesterRole === 'TEACHER' ? (assessData?.allowedIps ?? null) : null,
       attempts
     });
   } catch (error: any) {

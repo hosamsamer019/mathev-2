@@ -3,28 +3,18 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import analyticsRoutes from './routes/analytics.routes.js';
-import { logger, globalErrorHandler, validateEnv, initSentry } from '@shared/utils';
+import { logger, globalErrorHandler, validateEnv, initSentry, createCorsOptions, configureTrustProxy } from '@shared/utils';
 import { analyticsRateLimiter } from './middlewares/rateLimiter';
 
 dotenv.config();
 validateEnv();
 
 const app = express();
+configureTrustProxy(app);
 const PORT = process.env.PORT || 4005;
 
 app.use(helmet());
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' && (origin.startsWith('http://localhost:') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com'))) {
-      return callback(null, true);
-    }
-    const allowedOrigin = process.env.CLIENT_URL || 'https://your-production-domain.com';
-    if (origin === allowedOrigin || origin.includes('vercel.app') || origin.endsWith('.trycloudflare.com') || origin.includes('trycloudflare.com')) { return callback(null, true); }
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-};
+const corsOptions = createCorsOptions();
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(analyticsRateLimiter);
@@ -38,7 +28,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.use(globalErrorHandler);
 
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     logger.info(`🚀 Analytics Service running on http://localhost:${PORT}`);
   });

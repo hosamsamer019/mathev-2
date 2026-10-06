@@ -3,7 +3,8 @@ import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { z } from 'zod';
 import { checkUserEnrollment } from '../utils/enrollment.js';
-import { io } from '../index.js';
+import { io } from '../socket.js';
+import { generateVideoTicket } from '../services/videoToken.service.js';
 import https from 'node:https';
 import http from 'node:http';
 
@@ -62,7 +63,7 @@ const lessonUpdateSchema = z.object({
 export const getCourses = async (req: AuthRequest, res: Response) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
     const skip = (page - 1) * limit;
 
     let whereClause: any = {};
@@ -434,7 +435,7 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
     }
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
     const skip = (page - 1) * limit;
 
     const lessons = await db.lesson.findMany({
@@ -462,6 +463,14 @@ export const getLessons = async (req: AuthRequest, res: Response) => {
   }
 };
 
+function sanitizeQuizzesForStudent(quizzes: any[]): any[] {
+  if (!Array.isArray(quizzes)) return [];
+  return quizzes.map(q => {
+    const { correctAnswer, ...rest } = q;
+    return rest;
+  });
+}
+
 export const getLessonDetails = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -481,6 +490,11 @@ export const getLessonDetails = async (req: AuthRequest, res: Response) => {
     const isEnrolled = await checkUserEnrollment(req.user, lesson.courseId);
     if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
     
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+      lesson.quizzes = sanitizeQuizzesForStudent(lesson.quizzes);
+    }
+
     res.json(lesson);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching lesson details', error: error.message });
@@ -513,6 +527,13 @@ export const getCourseDetails = async (req: AuthRequest, res: Response) => {
       }
       const isEnrolled = await checkUserEnrollment(req.user, id);
       if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
+    }
+
+    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
+      course.lessons = course.lessons.map((lesson: any) => ({
+        ...lesson,
+        quizzes: sanitizeQuizzesForStudent(lesson.quizzes)
+      }));
     }
 
     res.json(course);
@@ -957,13 +978,62 @@ function extractDriveFileId(url: string): string | null {
   return idMatch ? idMatch[1] : null;
 }
 
+function isAllowedGoogleStreamUrl(urlString: string): boolean {
+  try {
+    const parsed = new URL(urlString);
+    if (parsed.protocol !== 'https:') return false;
+    
+    const hostname = parsed.hostname.toLowerCase();
+    
+    // Check for IP literal addresses or localhost
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '0.0.0.0' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('169.254.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    ) {
+      return false;
+    }
+
+    // Explicitly allow legitimate Google Drive / Google content domains only
+    const allowedExactHosts = [
+      'drive.google.com',
+      'docs.google.com',
+      'drive.usercontent.google.com',
+      'video.google.com'
+    ];
+    if (allowedExactHosts.includes(hostname)) return true;
+
+    // Check *.googleusercontent.com or *.drive.google.com with strict subdomain dot
+    if (hostname.endsWith('.googleusercontent.com') || hostname.endsWith('.drive.google.com') || hostname.endsWith('.docs.google.com')) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function fetchHttps(targetUrl: string, headers: Record<string, string> = {}, maxRedirects = 5): Promise<http.IncomingMessage> {
   return new Promise((resolve, reject) => {
+    if (!isAllowedGoogleStreamUrl(targetUrl)) {
+      return reject(new Error('SSRF_BLOCKED: Untrusted or non-whitelisted streaming target URL.'));
+    }
+
     https.get(targetUrl, { headers }, (res) => {
       const isRedirect = res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode);
       if (isRedirect && res.headers.location && maxRedirects > 0) {
         res.resume(); // discard redirected response body
         const nextUrl = new URL(res.headers.location, targetUrl).toString();
+
+        if (!isAllowedGoogleStreamUrl(nextUrl)) {
+          return reject(new Error('SSRF_BLOCKED: Redirected to untrusted destination.'));
+        }
 
         let newHeaders = { ...headers };
         if (res.headers['set-cookie']) {
@@ -995,7 +1065,7 @@ async function getDriveDirectSession(fileId: string) {
     return cached;
   }
 
-  const initUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+  const initUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download`;
   const initialRes = await fetchHttps(initUrl, {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   }, 0);
@@ -1004,20 +1074,7 @@ async function getDriveDirectSession(fileId: string) {
     ? initialRes.headers['set-cookie'].map((c: string) => c.split(';')[0]).join('; ')
     : '';
 
-  let html = '';
-  if (initialRes.headers.location) {
-    const directRes = await fetchHttps(initialRes.headers.location, {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Cookie': cookies
-    }, 0);
-    if (directRes.headers['set-cookie']) {
-      const extraCookies = directRes.headers['set-cookie'].map((c: string) => c.split(';')[0]).join('; ');
-      cookies = cookies ? `${cookies}; ${extraCookies}` : extraCookies;
-    }
-    html = await readBodyText(directRes);
-  } else {
-    html = await readBodyText(initialRes);
-  }
+  let html = await readBodyText(initialRes);
 
   const uuidMatch = typeof html === 'string' ? html.match(/name="uuid"\s+value="([^"]+)"/) : null;
   const uuid = uuidMatch ? uuidMatch[1] : '';
@@ -1058,6 +1115,36 @@ function normalizeRangeHeader(clientRange?: string, chunkSize: number = 2 * 1024
   }
   return `bytes=${start}-${start + chunkSize - 1}`;
 }
+
+export const generateLessonVideoTicket = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const lesson = await db.lesson.findUnique({
+      where: { id },
+      include: { course: true }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+
+    // Check enrollment
+    const isEnrolled = await checkUserEnrollment(req.user, lesson.courseId);
+    if (!isEnrolled) {
+      return res.status(403).json({ message: 'Not enrolled in this course' });
+    }
+
+    const ticket = generateVideoTicket({
+      userId: req.user!.userId,
+      lessonId: id,
+      expiresInSeconds: 14400 // 4 hours viewing session
+    });
+
+    res.json({ ticket });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error generating video ticket', error: error.message });
+  }
+};
 
 export const streamLessonVideo = async (req: AuthRequest, res: Response) => {
   try {
@@ -1119,6 +1206,15 @@ export const streamLessonVideo = async (req: AuthRequest, res: Response) => {
       if (upstreamStream.headers['content-range']) res.setHeader('Content-Range', upstreamStream.headers['content-range']);
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      upstreamStream.on('error', (err) => {
+        console.error('Upstream media stream error:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({ message: 'Stream error', error: err.message });
+        } else {
+          res.end();
+        }
+      });
 
       req.on('close', () => {
         upstreamStream.destroy();

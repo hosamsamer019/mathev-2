@@ -3,7 +3,7 @@ import http from 'http';
 import jwt from 'jsonwebtoken';
 
 const AI_URL = 'http://localhost:4003/api/ai';
-const JWT_SECRET = '4685c8216cff4502cea1cf993d197d0dcbe6704215d2e2d29055b1e8fec1e02b';
+const JWT_SECRET = process.env.JWT_SECRET || 'test-temporary-development-secret';
 const token = jwt.sign({ userId: 'test-user', role: 'TEACHER' }, JWT_SECRET, { expiresIn: '1h' });
 
 const authHeaders = { Authorization: `Bearer ${token}` };

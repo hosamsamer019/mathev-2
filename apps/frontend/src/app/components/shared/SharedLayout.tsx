@@ -253,10 +253,12 @@ export default function SharedLayout({
         <header className={`sticky top-0 z-50 flex-shrink-0 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm px-4 lg:px-6 py-3 flex items-center gap-4`}>
           {/* Mobile Menu Button */}
           <button
-            onClick={() => setMobileOpen(true)}
-            className={`lg:hidden p-2 rounded-lg ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+            className={`lg:hidden p-2 rounded-lg transition-colors cursor-pointer ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
           >
-            <Menu className="w-5 h-5" />
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
           {/* Search */}

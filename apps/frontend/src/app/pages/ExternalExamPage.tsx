@@ -27,7 +27,7 @@ export default function ExternalExamPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { examCode: routeExamCode } = useParams<{ examCode?: string }>();
-  const { loginGuest } = useAuth();
+  const { user, loginGuest, logout } = useAuth();
   const { isDark } = useTheme();
 
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -204,6 +204,11 @@ export default function ExternalExamPage() {
 
         <Link
           to="/"
+          onClick={() => {
+            if ((user?.role as string) === 'EXTERNAL_STUDENT' || (user as any)?.isGuest) {
+              logout();
+            }
+          }}
           className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg border transition-colors ${
             isDark ? 'border-gray-700 bg-gray-900/60 text-gray-300 hover:bg-gray-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
           }`}

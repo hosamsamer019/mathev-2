@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@shared/utils": "*",
+    "@shared/utils": "file:../../packages/shared",
     "@smartmath/database": "file:../../packages/database",
     "@types/jsonwebtoken": "^9.0.10",
     "cors": "^2.8.5",

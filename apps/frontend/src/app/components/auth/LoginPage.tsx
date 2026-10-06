@@ -66,7 +66,7 @@ const roles: RoleOption[] = [
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, login } = useAuth();
+  const { user, isAuthenticated, login, logout } = useAuth();
   const [step, setStep] = useState<LoginStep>('role');
   const [selectedRole, setSelectedRole] = useState<RoleOption | null>(null);
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -74,12 +74,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // If already authenticated, redirect to role's dashboard
+  // If already authenticated as a registered user, redirect to role's dashboard.
+  // If the active session is a guest/external student exam session, clear it so login is displayed.
   useEffect(() => {
     if (isAuthenticated && user?.role) {
+      if ((user.role as string) === 'EXTERNAL_STUDENT' || (user as any).isGuest) {
+        logout();
+        return;
+      }
       navigate(getDefaultRouteForRole(user.role), { replace: true });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, logout]);
 
   const handleRoleSelect = (role: RoleOption) => {
     setSelectedRole(role);

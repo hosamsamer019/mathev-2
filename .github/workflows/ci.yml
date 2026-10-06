@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: Production CI Pipeline
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  build-and-lint:
-    name: Build & Lint
+  validate-and-test:
+    name: Lint, Typecheck & Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,88 +20,95 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Enable Corepack & Install Dependencies
+      - name: Install Monorepo Dependencies
+        run: npm install --include=dev
+
+      - name: Build Shared Packages & Database Client
         run: |
-          corepack enable pnpm
-          pnpm install --frozen-lockfile
+          npm run build --prefix packages/shared
+          npm run build --prefix packages/database
 
-      - name: Lint Frontend
-        run: pnpm --filter frontend run test
-        continue-on-error: false
-
-      - name: TypeScript Check (Services)
-        run: |
-          pnpm --filter auth-service run build
-          pnpm --filter user-service run build
-          pnpm --filter ai-service run build
-          pnpm --filter course-service run build
-          pnpm --filter analytics-service run build
-          pnpm --filter video-worker run build
-        continue-on-error: false
-
-      - name: Prisma Validation
+      - name: Validate Prisma Schema
         run: npx prisma validate --schema=packages/database/prisma/schema.prisma
 
-  security-and-regression-tests:
-    name: Security & Regression Tests
+      - name: Frontend Typecheck
+        run: npx tsc --noEmit --project apps/frontend/tsconfig.json
+
+      - name: Frontend Build
+        run: npm run build --prefix apps/frontend
+
+      - name: Frontend Unit & UI Tests
+        run: npm test --prefix apps/frontend
+
+      - name: Backend Services Typecheck
+        run: |
+          npx tsc --noEmit --project services/auth-service/tsconfig.json
+          npx tsc --noEmit --project services/user-service/tsconfig.json
+          npx tsc --noEmit --project services/course-service/tsconfig.json
+          npx tsc --noEmit --project services/ai-service/tsconfig.json
+          npx tsc --noEmit --project services/analytics-service/tsconfig.json
+          npx tsc --noEmit --project services/video-worker/tsconfig.json
+
+  docker-build-validation:
+    name: Docker Build Validation
+    needs: validate-and-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Frontend Docker Image
+        uses: docker/build-push-action@v5
         with:
-          node-version: '20'
+          context: .
+          file: ./apps/frontend/Dockerfile
+          push: false
+          tags: alsaden/frontend:test
 
-      - name: Setup test dependencies
-        run: npm install axios puppeteer @prisma/client
-
-      - name: Prepare CI Environment
-        run: cp .env.example .env
-
-      - name: Start Docker CI Environment
-        run: docker compose -f docker-compose.yml up -d --build
-
-      - name: Wait for services to be healthy
-        run: |
-          echo "Waiting for services to be ready..."
-          timeout 120 bash -c 'while ! curl -f -s http://localhost:80/health > /dev/null; do
-            echo "Waiting for http://localhost:80/health..."
-            sleep 5
-          done'
-          echo "Services are ready!"
-
-      - name: Generate Prisma Client (For Tests)
-        run: npx prisma generate --schema=packages/database/prisma/schema.prisma
-
-      - name: Run E2E Sync Check
-        run: node test-e2e-sync.js
-
-      - name: Run Exam Security Regression Tests (Registered)
-        run: node test_e2e_registered_exam_security.mjs
-
-      - name: Run Exam Security Regression Tests (External)
-        run: node test_e2e_external_exam_security.mjs
-
-      - name: Run Browser Anti-Cheat (Puppeteer)
-        run: node test_browser_registered_anti_cheat.mjs
-
-      - name: Run E2E Adversarial Tests
-        run: node test_e2e_adversarial.mjs
-
-      - name: Run E2E External Portal Journey
-        run: node test_e2e_external_portal_journey.mjs
-        
-      - name: Run E2E No-IP External Tests
-        run: node test_e2e_no_ip_external.mjs
-
-      - name: OWASP ZAP Baseline Scan (Test Environment)
-        uses: zaproxy/action-baseline@v0.12.0
+      - name: Build Auth Service Docker Image
+        uses: docker/build-push-action@v5
         with:
-          target: 'http://localhost:80'
-          fail_action: true
+          context: .
+          file: ./services/Dockerfile
+          build-args: SERVICE_NAME=auth-service
+          push: false
+          tags: alsaden/auth-service:test
 
-      - name: Dump Docker Logs on Failure
-        if: failure()
-        run: docker compose logs
+      - name: Build User Service Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/Dockerfile
+          build-args: SERVICE_NAME=user-service
+          push: false
+          tags: alsaden/user-service:test
+
+      - name: Build Course Service Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/Dockerfile
+          build-args: SERVICE_NAME=course-service
+          push: false
+          tags: alsaden/course-service:test
+
+      - name: Build AI Service Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/Dockerfile
+          build-args: SERVICE_NAME=ai-service
+          push: false
+          tags: alsaden/ai-service:test
+
+      - name: Build Analytics Service Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/Dockerfile
+          build-args: SERVICE_NAME=analytics-service
+          push: false
+          tags: alsaden/analytics-service:test

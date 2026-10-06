@@ -46,6 +46,7 @@ export default function UnifiedVideoPlayer({ lessonId, backUrl, mode = 'online' 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showPlaylistDrawer, setShowPlaylistDrawer] = useState(false);
+  const [videoTicket, setVideoTicket] = useState<string>('');
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -88,9 +89,10 @@ export default function UnifiedVideoPlayer({ lessonId, backUrl, mode = 'online' 
   // Source categorization
   const videoSourceType = getVideoSourceType(lesson?.videoUrl);
   const isNativePlayable = videoSourceType === 'direct' || videoSourceType === 'google-drive';
-  const playableMediaUrl = videoSourceType === 'google-drive' ? getLessonMediaStreamUrl(lessonId) : lesson?.videoUrl;
+  const playableMediaUrl = videoSourceType === 'google-drive' ? getLessonMediaStreamUrl(lessonId, videoTicket) : lesson?.videoUrl;
   const ytVideoId = extractYouTubeVideoId(lesson?.videoUrl);
   const vimeoId = extractVimeoId(lesson?.videoUrl);
+  const drivePreviewUrl = getGoogleDrivePreviewUrl(lesson?.videoUrl);
 
   // Keep refs in sync for unmount persistence
   useEffect(() => {
@@ -139,6 +141,16 @@ export default function UnifiedVideoPlayer({ lessonId, backUrl, mode = 'online' 
 
       const lessonData = res.data;
       setLesson(lessonData);
+
+      // Fetch short-lived 60s scoped video ticket for stream authentication
+      try {
+        const ticketRes = await courseService.getVideoTicket(lessonId);
+        if (ticketRes.data?.ticket) {
+          setVideoTicket(ticketRes.data.ticket);
+        }
+      } catch {
+        // Non-blocking fallback
+      }
 
       // Handle Existing Progress from DB
       if (lessonData.progress && lessonData.progress.length > 0) {
@@ -554,21 +566,46 @@ export default function UnifiedVideoPlayer({ lessonId, backUrl, mode = 'online' 
   };
 
   const toggleFullscreen = () => {
-    if (!playerContainerRef.current) return;
-    if (!document.fullscreenElement) {
-      if (playerContainerRef.current.requestFullscreen) {
-        playerContainerRef.current.requestFullscreen().catch(() => {});
-      } else if ((playerContainerRef.current as any).webkitRequestFullscreen) {
-        (playerContainerRef.current as any).webkitRequestFullscreen();
-      }
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
+    const isCurrentlyFs = Boolean(
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      isFullscreen
+    );
+
+    if (isCurrentlyFs) {
+      // Exit fullscreen
+      if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
-      } else if ((document as any).webkitExitFullscreen) {
+      } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
+      } else if ((htmlVideoRef.current as any)?.webkitDisplayingFullscreen && (htmlVideoRef.current as any)?.webkitExitFullscreen) {
+        (htmlVideoRef.current as any).webkitExitFullscreen();
       }
       setIsFullscreen(false);
+      document.body.style.overflow = '';
+    } else {
+      // Enter fullscreen
+      let enteredNative = false;
+      if (playerContainerRef.current?.requestFullscreen) {
+        playerContainerRef.current.requestFullscreen().then(() => {
+          enteredNative = true;
+        }).catch(() => {});
+      } else if ((playerContainerRef.current as any)?.webkitRequestFullscreen) {
+        try {
+          (playerContainerRef.current as any).webkitRequestFullscreen();
+          enteredNative = true;
+        } catch {}
+      }
+
+      // iOS Safari fallback on video element if container fullscreen is not supported
+      if (!enteredNative && isNativePlayable && htmlVideoRef.current && (htmlVideoRef.current as any).webkitEnterFullscreen) {
+        try {
+          (htmlVideoRef.current as any).webkitEnterFullscreen();
+        } catch {}
+      }
+
+      setIsFullscreen(true);
+      document.body.style.overflow = 'hidden';
     }
   };
 
@@ -586,18 +623,44 @@ export default function UnifiedVideoPlayer({ lessonId, backUrl, mode = 'online' 
     }
   };
 
-  // Fullscreen change listener
+  // Fullscreen change & orientation listeners
   useEffect(() => {
     const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isNativeFs = Boolean(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement
+      );
+      if (!isNativeFs && isFullscreen) {
+        setIsFullscreen(false);
+        document.body.style.overflow = '';
+      } else if (isNativeFs) {
+        setIsFullscreen(true);
+        document.body.style.overflow = 'hidden';
+      }
     };
+
+    const handleWebkitVideoEndFullscreen = () => {
+      setIsFullscreen(false);
+      document.body.style.overflow = '';
+    };
+
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);
+    
+    const videoEl = htmlVideoRef.current;
+    if (videoEl) {
+      videoEl.addEventListener('webkitendfullscreen', handleWebkitVideoEndFullscreen);
+    }
+
     return () => {
       document.removeEventListener('fullscreenchange', handleFsChange);
       document.removeEventListener('webkitfullscreenchange', handleFsChange);
+      if (videoEl) {
+        videoEl.removeEventListener('webkitendfullscreen', handleWebkitVideoEndFullscreen);
+      }
+      document.body.style.overflow = '';
     };
-  }, []);
+  }, [isFullscreen]);
 
   // Controls Visibility Auto-Hide
   const handleUserActivity = () => {
@@ -745,10 +808,26 @@ export default function UnifiedVideoPlayer({ lessonId, backUrl, mode = 'online' 
               onContextMenu={(e) => e.preventDefault()}
               className={`group relative bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-800 transition-all ${
                 isFullscreen
-                  ? 'fixed inset-0 w-screen h-screen z-[9999] rounded-none border-none flex flex-col justify-center bg-black'
+                  ? 'fixed inset-0 w-full h-[100dvh] max-h-[100dvh] z-[99999] rounded-none border-none flex flex-col justify-center items-center bg-black'
                   : 'aspect-video w-full'
               }`}
             >
+              {/* Floating Exit Fullscreen Button on Top-Right (always accessible on mobile & desktop) */}
+              {isFullscreen && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFullscreen();
+                  }}
+                  className="absolute top-4 start-4 z-40 bg-black/75 hover:bg-black text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 shadow-2xl active:scale-95 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                  title="خروج من ملء الشاشة"
+                  aria-label="خروج من ملء الشاشة"
+                >
+                  <Minimize className="w-5 h-5 text-white" />
+                </button>
+              )}
+
               {/* Dynamic Anti-Piracy Watermark */}
               {user && (
                 <div
@@ -938,6 +1017,7 @@ export default function UnifiedVideoPlayer({ lessonId, backUrl, mode = 'online' 
                       src={`https://player.vimeo.com/video/${vimeoId}?autoplay=0&title=0&byline=0&portrait=0`}
                       className="w-full h-full border-0"
                       allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
                       title={lesson?.title}
                     />
                   )}

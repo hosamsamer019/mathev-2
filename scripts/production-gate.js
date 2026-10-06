@@ -9,8 +9,8 @@ const fs = require('fs');
 const path = require('path');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = '4685c8216cff4502cea1cf993d197d0dcbe6704215d2e2d29055b1e8fec1e02b';
-const REFRESH_SECRET = '8a9f262fa15f04a193f2d2a6a102cc98c1fe96e77448d9ce88e2844197b9e37b';
+const JWT_SECRET = process.env.JWT_SECRET || 'test-temporary-development-secret';
+const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || 'test-temporary-development-refresh-secret';
 
 const URLS = {
   auth: 'http://localhost:4001',

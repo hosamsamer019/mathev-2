@@ -114,6 +114,11 @@ services:
       - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-mistralai/mistral-small-24b-instruct-2501}
+      - OPENROUTER_FALLBACK_MODEL=${OPENROUTER_FALLBACK_MODEL:-meta-llama/llama-3.3-70b-instruct}
+      - OPENROUTER_EMERGENCY_MODEL=${OPENROUTER_EMERGENCY_MODEL:-qwen/qwen-2.5-72b-instruct}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       - CLIENT_URL=${CLIENT_URL}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-${CLIENT_URL}}
       - TRUST_PROXY=${TRUST_PROXY:-1}
@@ -281,20 +286,23 @@ services:
     # No public port binding — isolated strictly on platform-network
 
   # ============================================================================
-  # Automated Database Backup Service
+  # Automated Database Backup Service (Google Drive Off-Site Storage)
   # ============================================================================
   pg-backup:
     image: postgres:15-alpine
     container_name: alsaden-pg-backup
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - CLOUDFLARE_R2_ENDPOINT=${CLOUDFLARE_R2_ENDPOINT}
-      - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
-      - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
-      - CLOUDFLARE_R2_BUCKET_NAME=${CLOUDFLARE_R2_BUCKET_NAME}
+      - GDRIVE_CLIENT_ID=${GDRIVE_CLIENT_ID}
+      - GDRIVE_CLIENT_SECRET=${GDRIVE_CLIENT_SECRET}
+      - GDRIVE_REFRESH_TOKEN=${GDRIVE_REFRESH_TOKEN}
+      - GDRIVE_FOLDER_PATH=${GDRIVE_FOLDER_PATH:-AL-SADEN-Backups/PostgreSQL}
+      - LOCAL_RETENTION_DAYS=${LOCAL_RETENTION_DAYS:-7}
+      - REMOTE_RETENTION_COUNT=${REMOTE_RETENTION_COUNT:-30}
     volumes:
-      - ./scripts/pg_backup.sh:/pg_backup.sh:ro
-    entrypoint: ["/bin/sh", "-c", "apk add --no-cache aws-cli && echo '0 3 * * * /pg_backup.sh' | crontab - && crond -f -d 8"]
+      - ./scripts:/scripts:ro
+      - postgres-backups:/backups
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache python3 && printenv | grep -E '^(DATABASE_URL|GDRIVE_|LOCAL_RETENTION|REMOTE_RETENTION|BACKUP_DIR|PG|PATH)=' > /container.env && chmod 600 /container.env && echo '0 3 * * * /bin/sh /scripts/pg_backup.sh >> /var/log/cron.log 2>&1' | crontab - && crond -f -d 8"]
     restart: always
     networks:
       - platform-network
@@ -311,3 +319,5 @@ volumes:
     name: alsaden-redis-data
   course-uploads:
     name: alsaden-course-uploads
+  postgres-backups:
+    name: alsaden-postgres-backups

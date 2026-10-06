@@ -9,21 +9,34 @@ import { AuthRequest } from '../middlewares/auth.middleware.js';
  */
 export const createPayment = async (req: AuthRequest, res: Response) => {
   try {
-    const { provider: providerName, courseId, amount } = req.body;
+    const { provider: providerName, courseId, amount: clientAmount } = req.body;
     const userId = req.user?.userId;
     const userEmail = req.user?.email || '';
     const userName = (req.user as any)?.name || 'Student';
 
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    if (!providerName || !courseId || !amount) {
-      return res.status(400).json({ message: 'Missing required fields: provider, courseId, amount' });
+    if (!providerName || !courseId) {
+      return res.status(400).json({ message: 'Missing required fields: provider, courseId' });
+    }
+
+    // Authoritative course lookup from database
+    const course = await (db as any).course.findUnique({ where: { id: courseId } });
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    const authoritativeAmount = Number(course.price) || 0;
+
+    // Reject client-side price tampering if client attempted to send custom amount
+    if (clientAmount !== undefined && Math.abs(Number(clientAmount) - authoritativeAmount) > 0.01) {
+      return res.status(400).json({ message: 'Invalid payment amount. Course price mismatch.' });
     }
 
     const provider = getPaymentProvider(providerName);
 
-    // Create payment intent on the external provider
+    // Create payment intent on the external provider with authoritative DB price
     const intent = await provider.createPaymentIntent({
-      amount,
+      amount: authoritativeAmount,
       currency: 'EGP',
       userId,
       courseId,
@@ -35,7 +48,7 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
     const payment = await (db as any).payment.create({
       data: {
         userId,
-        amount,
+        amount: authoritativeAmount,
         currency: 'EGP',
         status: 'PENDING',
         provider: providerName,
@@ -78,9 +91,28 @@ export const handleWebhook = async (req: Request, res: Response) => {
       await (db as any).$transaction(async (tx: any) => {
         const payment = await tx.payment.findFirst({
           where: { providerOrderId: verification.providerOrderId },
+          include: { course: true }
         });
 
-        if (payment && payment.status !== 'COMPLETED') {
+        if (!payment) {
+          return;
+        }
+
+        // Validate paid amount against authoritative DB payment and course price
+        const expectedAmount = Number(payment.amount);
+        const paidAmount = Number(verification.amount ?? expectedAmount);
+        const expectedCurrency = 'EGP';
+
+        if (paidAmount < expectedAmount || (verification.currency && verification.currency !== expectedCurrency)) {
+          console.error(`🚨 Payment underpayment / currency tampering detected: expected ${expectedAmount} ${expectedCurrency}, got ${paidAmount} ${verification.currency}`);
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: { status: 'FAILED' },
+          });
+          return;
+        }
+
+        if (payment.status !== 'COMPLETED') {
           await tx.payment.update({
             where: { id: payment.id },
             data: { status: 'COMPLETED' },

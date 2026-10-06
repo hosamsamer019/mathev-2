@@ -12,3 +12,12 @@ uploads
 docker-compose*.yml
 testsprite_tests
 .vercel
+*.zip
+*.tar.gz
+k6_bin
+scratch
+scripts/scratch
+dist_screenshots
+debug_*.png
+debug_*.html
+*.md

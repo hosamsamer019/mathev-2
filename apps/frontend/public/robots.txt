@@ -1,0 +1,24 @@
+# robots.txt for AL-SADEN Platform (https://al-saden.net)
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /external-exam
+
+# Disallow authenticated private routes and internal APIs
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /student
+Disallow: /student/
+Disallow: /teacher
+Disallow: /teacher/
+Disallow: /parent
+Disallow: /parent/
+Disallow: /profile
+Disallow: /settings
+Disallow: /api/
+Disallow: /uploads/
+
+# Sitemap reference
+Sitemap: https://al-saden.net/sitemap.xml

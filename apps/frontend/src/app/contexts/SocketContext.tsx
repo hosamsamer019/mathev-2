@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useAuth } from './AuthContext';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -16,10 +17,22 @@ export const useSocket = () => useContext(SocketContext);
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
+  const auth = useAuth();
+  const user = auth?.user;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     
+    // Only establish real-time socket connection when a valid user session & token exist
+    if (!token || !user) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+        setConnected(false);
+      }
+      return;
+    }
+
     // Connect to Course Service which handles courses, homeworks, exams
     const isLocalhost = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
     const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
@@ -52,7 +65,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       newSocket.disconnect();
     };
-  }, []);
+  }, [user]);
 
   return (
     <SocketContext.Provider value={{ socket, connected }}>

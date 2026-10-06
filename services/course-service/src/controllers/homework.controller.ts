@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '../../../../packages/database/src/index.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import { checkUserEnrollment } from '../utils/enrollment.js';
-import { io } from '../index.js';
+import { io } from '../socket.js';
 import { sanitizeQuestionsForStudent, linkQuestionAssetsToAssessment } from './assessment.controller.js';
 
 export const getAllHomeworks = async (req: AuthRequest, res: Response) => {
@@ -341,7 +341,10 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
     }
 
     // Load homework and correct answers from database
-    const homework = await db.homework.findUnique({ where: { id: homeworkId } });
+    const homework = await db.homework.findUnique({
+      where: { id: homeworkId },
+      include: { course: { select: { id: true, teacherId: true } } }
+    });
     if (!homework) return res.status(404).json({ message: 'Homework not found' });
 
     const isEnrolled = await checkUserEnrollment(req.user, homework.courseId);
@@ -416,7 +419,13 @@ export const submitHomework = async (req: AuthRequest, res: Response) => {
       }
     });
     
-    io.to(`course:${homework.courseId}`).emit('homework_submitted', submission);
+    // Emit exclusively to the course teacher and admin rooms (prevent leaking peer answers to other students)
+    if (homework.course?.teacherId) {
+      io.to(`teacher:${homework.course.teacherId}`).emit('homework_submitted', submission);
+    }
+    io.to('admin').emit('homework_submitted', submission);
+    io.to('teachers').emit('homework_submitted', submission);
+    
     res.status(201).json({ ...submission, score: calculatedGrade });
   } catch (error: any) {
     res.status(500).json({ message: 'Error submitting homework', error: error.message });
