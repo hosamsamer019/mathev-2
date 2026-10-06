@@ -14,4 +14,3 @@
 
 ## 🔑 Default Credentials
 See [CREDENTIALS.md](./CREDENTIALS.md) for a full list of test accounts.
-Default password: `123456`
