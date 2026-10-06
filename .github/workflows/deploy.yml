@@ -52,7 +52,9 @@ jobs:
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: npm install --include=dev
+        run: |
+          npm install --include=dev
+          npm install --prefix apps/frontend --include=dev
 
       - name: Build Shared Packages & Database Client
         env:
