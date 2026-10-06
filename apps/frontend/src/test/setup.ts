@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 
-// Polyfill window.matchMedia for JSDOM
+// Polyfill window.matchMedia and browser APIs for JSDOM in tests
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -19,16 +19,16 @@ if (typeof window !== 'undefined') {
   window.scrollTo = () => {};
 }
 
-// Polyfill ResizeObserver
-if (typeof global !== 'undefined') {
-  global.ResizeObserver = class ResizeObserver {
+if (typeof globalThis !== 'undefined') {
+  // @ts-ignore
+  globalThis.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   };
 
-  // Polyfill IntersectionObserver
-  global.IntersectionObserver = class IntersectionObserver {
+  // @ts-ignore
+  globalThis.IntersectionObserver = class IntersectionObserver {
     readonly root: Element | null = null;
     readonly rootMargin: string = '';
     readonly thresholds: ReadonlyArray<number> = [];
@@ -36,5 +36,5 @@ if (typeof global !== 'undefined') {
     unobserve() {}
     disconnect() {}
     takeRecords() { return []; }
-  } as any;
+  };
 }
