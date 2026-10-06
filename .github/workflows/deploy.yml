@@ -86,6 +86,9 @@ jobs:
             echo "[5/6] Starting services with zero-downtime rolling update..."
             docker compose -f docker-compose.production.yml --env-file .env.production up -d --remove-orphans
             
+            echo "Reloading Nginx upstream resolution..."
+            docker compose -f docker-compose.production.yml exec -T nginx nginx -s reload || docker restart alsaden-nginx
+            
             if [ "${{ github.event.inputs.run_database_migrations }}" = "true" ]; then
               echo "Running Prisma migrations..."
               docker compose -f docker-compose.production.yml --env-file .env.production run --rm prisma-migrate
