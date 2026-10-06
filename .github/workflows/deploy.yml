@@ -1,12 +1,17 @@
-name: Production VPS Deployment (Manual Dispatch)
+name: Production Deployment Pipeline
 
 # ==============================================================================
-# MANUAL DEPLOYMENT WORKFLOW ONLY
-# This workflow is strictly restricted to manual workflow_dispatch execution.
-# Automatic deployment on push is intentionally disabled.
+# SAFE AUTOMATIC & CONTROLLED MANUAL DEPLOYMENT PIPELINE
+# - Triggers automatically on push to 'main' AFTER CI validation passes.
+# - Triggers manually via workflow_dispatch for targeted deployments & rollbacks.
+# - Protected by concurrency group 'production-deployment'.
+# - Pull requests run CI only and cannot access deployment secrets or VPS.
 # ==============================================================================
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       deployment_environment:
@@ -28,9 +33,57 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
 jobs:
+  ci-validation:
+    name: Lint, Typecheck & Tests Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm install --include=dev
+
+      - name: Build Shared Packages & Database Client
+        run: |
+          npm run build --prefix packages/shared
+          npm run build --prefix packages/database
+
+      - name: Validate Prisma Schema
+        run: npx prisma validate --schema=packages/database/prisma/schema.prisma
+
+      - name: Frontend Typecheck
+        run: npx tsc --noEmit --project apps/frontend/tsconfig.json
+
+      - name: Frontend Build
+        run: npm run build --prefix apps/frontend
+
+      - name: Frontend Unit & UI Tests
+        run: npm test --prefix apps/frontend
+
+      - name: Backend Services Typecheck
+        run: |
+          npx tsc --noEmit --project services/auth-service/tsconfig.json
+          npx tsc --noEmit --project services/user-service/tsconfig.json
+          npx tsc --noEmit --project services/course-service/tsconfig.json
+          npx tsc --noEmit --project services/ai-service/tsconfig.json
+          npx tsc --noEmit --project services/analytics-service/tsconfig.json
+          npx tsc --noEmit --project services/video-worker/tsconfig.json
+
   deploy-to-vps:
     name: Deploy to Production VPS
+    needs: ci-validation
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -59,11 +112,11 @@ jobs:
             cd "$DEPLOY_DIR"
             git config --global --add safe.directory "$DEPLOY_DIR"
             
-            echo "[1/6] Fetching latest canonical repository state..."
+            echo "[1/7] Fetching latest canonical repository state..."
             git fetch origin main
             
             TARGET_COMMIT="${{ github.event.inputs.target_commit_sha || github.sha }}"
-            echo "[2/6] Checking out target commit: $TARGET_COMMIT"
+            echo "[2/7] Checking out target commit: $TARGET_COMMIT"
             git checkout "$TARGET_COMMIT"
             
             DEPLOYED_SHA=$(git rev-parse HEAD)
@@ -74,16 +127,16 @@ jobs:
               exit 1
             fi
             
-            echo "[3/6] Verifying production environment configuration..."
+            echo "[3/7] Verifying production environment configuration..."
             if [ ! -f .env.production ]; then
               echo "ERROR: .env.production not found on VPS! Aborting deployment."
               exit 1
             fi
             
-            echo "[4/6] Building production containers safely..."
+            echo "[4/7] Building production containers safely..."
             docker compose -f docker-compose.production.yml --env-file .env.production build
             
-            echo "[5/6] Starting services with zero-downtime rolling update..."
+            echo "[5/7] Starting services with zero-downtime rolling update..."
             docker compose -f docker-compose.production.yml --env-file .env.production up -d --remove-orphans
             
             echo "Reloading Nginx upstream resolution..."
@@ -96,13 +149,35 @@ jobs:
               echo "Skipping database migrations (run_database_migrations = false)."
             fi
             
-            echo "[6/6] Waiting for services to become healthy..."
+            echo "[6/7] Waiting for services to become healthy..."
             sleep 15
             docker compose -f docker-compose.production.yml ps
             
-            echo "Checking Nginx ingress health..."
+            echo "[7/7] Checking Nginx ingress & PostgreSQL health..."
             curl -f -s http://localhost/health || curl -f -s http://127.0.0.1/health || exit 1
+            docker exec alsaden-postgres pg_isready -U alsaden_app_user -d math_platform || exit 1
             
             echo "================================================================"
             echo "  DEPLOYMENT SUCCESSFUL — DEPLOYED SHA: $DEPLOYED_SHA"
             echo "================================================================"
+
+  post-deploy-smoke-verification:
+    name: Production Smoke Verification
+    needs: deploy-to-vps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Public HTTPS & Ingress
+        run: |
+          echo "Verifying Public HTTPS (https://al-saden.net)..."
+          curl -f -s -I https://al-saden.net/ | grep -E "HTTP/.* 200" || exit 1
+          
+          echo "Verifying API Health (https://al-saden.net/api/health)..."
+          curl -f -s -I https://al-saden.net/api/health | grep -E "HTTP/.* 200" || exit 1
+          
+          echo "Verifying SEO Robots (https://al-saden.net/robots.txt)..."
+          curl -f -s https://al-saden.net/robots.txt | grep -E "Sitemap:" || exit 1
+          
+          echo "Verifying Sitemap (https://al-saden.net/sitemap.xml)..."
+          curl -f -s https://al-saden.net/sitemap.xml | grep -E "<urlset" || exit 1
+          
+          echo "Production Smoke Tests Passed Successfully!"
