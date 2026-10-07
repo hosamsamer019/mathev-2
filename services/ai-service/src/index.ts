@@ -41,6 +41,12 @@ for (const envPath of candidateEnvPaths) {
 // Normalize OpenRouter API key across aliases
 const resolvedOpenRouterKey = (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim())
   || (process.env.OPENROUTER_KEY && process.env.OPENROUTER_KEY.trim())
+  || (process.env.OPEN_ROUTER_KEY && process.env.OPEN_ROUTER_KEY.trim())
+  || (process.env.OPEN_ROUTER_API_KEY && process.env.OPEN_ROUTER_API_KEY.trim())
+  || (process.env.OPENROUTER_TOKEN && process.env.OPENROUTER_TOKEN.trim())
+  || (process.env.OPENROUTER_API_TOKEN && process.env.OPENROUTER_API_TOKEN.trim())
+  || (process.env.OPEN_ROUTER_TOKEN && process.env.OPEN_ROUTER_TOKEN.trim())
+  || (process.env.AI_API_KEY && process.env.AI_API_KEY.trim())
   || '';
 
 if (resolvedOpenRouterKey) {
