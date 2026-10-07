@@ -66,6 +66,25 @@ const corsOptions = createCorsOptions();
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Health check endpoints
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'OK',
+    service: 'AI Service',
+    openRouterConfigured: Boolean(process.env.OPENROUTER_API_KEY),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/ai/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'OK',
+    service: 'AI Service',
+    openRouterConfigured: Boolean(process.env.OPENROUTER_API_KEY),
+    timestamp: new Date().toISOString()
+  });
+});
+
 const solveSchema = z.object({
   problem: z.string().min(1).max(1000),
   level: z.string().optional()

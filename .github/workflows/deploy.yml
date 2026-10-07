@@ -164,9 +164,17 @@ jobs:
             sleep 15
             docker compose -f docker-compose.production.yml ps
             
-            echo "[7/7] Checking Nginx ingress & PostgreSQL health..."
+            echo "[7/7] Checking Nginx ingress, PostgreSQL, & AI Service runtime health..."
             curl -f -s http://localhost/health || curl -f -s http://127.0.0.1/health || exit 1
             docker exec alsaden-postgres pg_isready || exit 1
+            docker exec alsaden-ai-service node -e "
+              const key = (process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY || '').trim();
+              if (!key) {
+                console.error('ERROR: OPENROUTER_API_KEY is not configured in ai-service runtime!');
+                process.exit(1);
+              }
+              console.log('Production runtime verification: OPENROUTER_API_KEY present in ai-service runtime: YES');
+            " || exit 1
             
             echo "================================================================"
             echo "  DEPLOYMENT SUCCESSFUL — DEPLOYED SHA: $DEPLOYED_SHA"
@@ -182,8 +190,13 @@ jobs:
           echo "Verifying Public HTTPS (https://al-saden.net)..."
           curl -f -s -I https://al-saden.net/ | grep -E "HTTP/.* 200" || exit 1
           
-          echo "Verifying API Health (https://al-saden.net/api/health)..."
-          curl -f -s -I https://al-saden.net/api/health | grep -E "HTTP/.* 200" || exit 1
+          echo "Verifying AI Service Health (https://al-saden.net/api/ai/health)..."
+          AI_HEALTH=$(curl -f -s https://al-saden.net/api/ai/health)
+          echo "AI Health response received: OK"
+          echo "$AI_HEALTH" | grep -E "\"openRouterConfigured\":true" || {
+            echo "ERROR: OpenRouter is not configured according to AI health endpoint!"
+            exit 1
+          }
           
           echo "Verifying SEO Robots (https://al-saden.net/robots.txt)..."
           curl -f -s https://al-saden.net/robots.txt | grep -E "Sitemap:" || exit 1
