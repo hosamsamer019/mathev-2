@@ -9,29 +9,65 @@ export default function CourseDetailsPage() {
   const { courseId } = useParams();
   const [course, setCourse] = useState<any>({ title: 'جاري التحميل...', description: '' });
   const [lessons, setLessons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalLessons: 0,
+    completedLessons: 0,
+    completionPercentage: 0
+  });
 
   useEffect(() => {
     if (!courseId) return;
+    setLoading(true);
     courseService.getCourseDetails(courseId)
       .then((res) => {
-        if (res.data) {
-          setCourse(res.data);
-          if (res.data.lessons && res.data.lessons.length > 0) {
-            const mappedLessons = res.data.lessons.map((l: any) => ({
-              id: l.id,
-              title: l.title,
-              duration: l.duration || 'غير محدد',
-              completed: false, // Could be determined by progress tracking later
-              locked: false
-            }));
+        const data = res.data?.data ? res.data.data : res.data;
+        if (data) {
+          setCourse(data);
+          const rawLessons = Array.isArray(data.lessons) ? data.lessons : [];
+          if (rawLessons.length > 0) {
+            const mappedLessons = rawLessons.map((l: any) => {
+              const prog = Array.isArray(l.progress) ? l.progress[0] : (l.progress || null);
+              const isCompleted = !!(
+                l.completed ||
+                prog?.watched ||
+                prog?.status === 'COMPLETED' ||
+                (prog?.progress && prog.progress >= 90)
+              );
+              return {
+                id: l.id,
+                title: l.title,
+                duration: l.duration || 'غير محدد',
+                completed: isCompleted,
+                locked: false
+              };
+            });
             setLessons(mappedLessons);
+
+            const total = typeof data.totalLessons === 'number' ? data.totalLessons : mappedLessons.length;
+            const completed = typeof data.completedLessons === 'number'
+              ? data.completedLessons
+              : mappedLessons.filter((l: any) => l.completed).length;
+            const pct = typeof data.completionPercentage === 'number'
+              ? data.completionPercentage
+              : (total > 0 ? Math.min(100, Math.max(0, Math.round((completed / total) * 100))) : 0);
+
+            setStats({
+              totalLessons: total,
+              completedLessons: completed,
+              completionPercentage: isNaN(pct) ? 0 : Math.min(100, Math.max(0, pct))
+            });
           } else {
             setLessons([]);
+            setStats({ totalLessons: 0, completedLessons: 0, completionPercentage: 0 });
           }
         }
       })
       .catch((err) => {
         console.error('Failed to load course details:', err);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   }, [courseId]);
 
@@ -51,15 +87,21 @@ export default function CourseDetailsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
-          <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">24</div>
+          <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+            {loading ? '-' : stats.totalLessons}
+          </div>
           <div className="text-gray-600 dark:text-gray-400">إجمالي الدروس</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
-          <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">16</div>
+          <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
+            {loading ? '-' : stats.completedLessons}
+          </div>
           <div className="text-gray-600 dark:text-gray-400">الدروس المكتملة</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-100 dark:border-gray-700">
-          <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">65%</div>
+          <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
+            {loading ? '-' : `${stats.completionPercentage}%`}
+          </div>
           <div className="text-gray-600 dark:text-gray-400">نسبة الإنجاز</div>
         </div>
       </div>

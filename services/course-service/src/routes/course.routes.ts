@@ -4,6 +4,7 @@ import {
   getAvailableCourses,
   enrollCourse,
   getCourseDetails,
+  getStudentCourseStats,
   createCourse,
   updateCourse,
   createLesson,
@@ -28,6 +29,7 @@ const router = Router();
 
 router.get('/', verifyToken, getCourses);
 router.get('/available', verifyToken, getAvailableCourses);
+router.get('/student/stats', verifyToken, getStudentCourseStats);
 router.post('/:id/enroll', verifyToken, enrollCourse);
 router.get('/lessons', verifyToken, getLessons);
 router.get('/lessons/:id', verifyToken, getLessonDetails);

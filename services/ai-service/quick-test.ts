@@ -3,7 +3,9 @@
  * Run: npx tsx services/ai-service/quick-test.ts
  */
 import dotenv from 'dotenv';
+import path from 'path';
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), 'services/ai-service/.env') });
 
 import { GeneratorService } from './src/services/generator.service.js';
 import { ValidatorService } from './src/services/validator.service.js';

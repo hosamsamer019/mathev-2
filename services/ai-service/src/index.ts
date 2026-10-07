@@ -12,8 +12,22 @@ import { aiRateLimiter } from './middlewares/rateLimiter.js';
 import { logger, globalErrorHandler, validateEnv, createCorsOptions, configureTrustProxy } from '@shared/utils';
 import { db } from '../../../packages/database/src/index.js';
 
+import path from 'path';
+
+// Robust multi-path env loading
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), 'services/ai-service/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.production') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
 validateEnv();
+
+if (process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY) {
+  logger.info('[AI-Service] OpenRouter API configuration loaded successfully');
+} else {
+  logger.warn('[AI-Service] OpenRouter API key not detected in environment');
+}
 
 const app = express();
 configureTrustProxy(app);

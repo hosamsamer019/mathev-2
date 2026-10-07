@@ -57,6 +57,9 @@ export const courseService = {
   getCourseDetails: (id: string) =>
     courseApi.get(`/${id}`),
 
+  getStudentCourseStats: () =>
+    courseApi.get<{ totalLessons: number; completedLessons: number; completionPercentage: number; enrolledCoursesCount: number }>('/student/stats'),
+
   createCourse: (data: CreateCourseData) =>
     courseApi.post('/', data),
 

@@ -1,6 +1,8 @@
 import { SolverService } from './src/services/solver.service.js';
 import dotenv from 'dotenv';
+import path from 'path';
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), 'services/ai-service/.env') });
 
 async function runTests() {
   console.log('Testing SolverService with test problems...\n');

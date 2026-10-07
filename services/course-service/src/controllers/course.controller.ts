@@ -68,10 +68,13 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
 
     let whereClause: any = {};
     const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+    const isStudent = requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT';
+
     if (requesterRole === 'TEACHER') {
-      whereClause = { teacherId: req.user?.userId };
-    } else if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
-      whereClause = { enrollments: { some: { studentId: req.user?.userId } } };
+      whereClause = { teacherId: requesterId };
+    } else if (isStudent) {
+      whereClause = { enrollments: { some: { studentId: requesterId } } };
     }
     
     const courses = await db.course.findMany({
@@ -79,7 +82,14 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
       skip,
       take: limit,
       include: {
-        lessons: { include: { quizzes: true } },
+        lessons: {
+          include: {
+            quizzes: false,
+            progress: isStudent && requesterId ? {
+              where: { studentId: requesterId }
+            } : false
+          }
+        },
         teacher: { select: { id: true, name: true, email: true } },
         _count: {
           select: { enrollments: true, lessons: true, exams: true, homeworks: true }
@@ -88,10 +98,37 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
     
+    const enrichedCourses = courses.map((c: any) => {
+      const courseTotalLessons = c.lessons?.length || c._count?.lessons || 0;
+      let courseCompletedLessons = 0;
+      if (c.lessons && Array.isArray(c.lessons)) {
+        for (const l of c.lessons) {
+          const prog = l.progress?.[0];
+          if (prog?.watched || prog?.status === 'COMPLETED' || (prog?.progress && prog.progress >= 90)) {
+            courseCompletedLessons++;
+          }
+        }
+      }
+      const progressPct = courseTotalLessons > 0
+        ? Math.min(100, Math.max(0, Math.round((courseCompletedLessons / courseTotalLessons) * 100)))
+        : 0;
+
+      return {
+        ...c,
+        lessonsCount: courseTotalLessons,
+        completedCount: courseCompletedLessons,
+        progress: progressPct,
+        completed: courseCompletedLessons,
+        totalLessons: courseTotalLessons,
+        completedLessons: courseCompletedLessons,
+        completionPercentage: progressPct
+      };
+    });
+
     const total = await db.course.count({ where: whereClause });
     
     res.json({
-      data: courses,
+      data: enrichedCourses,
       total,
       page,
       limit,
@@ -504,19 +541,31 @@ export const getLessonDetails = async (req: AuthRequest, res: Response) => {
 export const getCourseDetails = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    const requesterId = req.user?.userId;
+    const isStudent = requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT';
+
     const course = await db.course.findUnique({
       where: { id },
       include: {
-        lessons: { include: { quizzes: true } }
+        lessons: {
+          include: {
+            quizzes: true,
+            progress: isStudent && requesterId ? {
+              where: { studentId: requesterId }
+            } : true
+          }
+        },
+        teacher: { select: { id: true, name: true, email: true } },
+        _count: {
+          select: { lessons: true, enrollments: true, exams: true, homeworks: true }
+        }
       }
     });
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     // Auth check (Admins and course owner teachers can view without enrollment)
-    const requesterRole = (req.user?.role || '').toUpperCase();
-    const requesterId = req.user?.userId;
-
-    if (requesterRole === 'ONLINE_STUDENT' || requesterRole === 'CENTER_STUDENT') {
+    if (isStudent) {
       const student = await db.user.findUnique({ where: { id: requesterId } });
       if (student?.country && student.educationLevel && student.gradeLevel && course.country && course.educationLevel && course.gradeLevel) {
         if (student.country !== course.country || student.educationLevel !== course.educationLevel || student.gradeLevel !== course.gradeLevel) {
@@ -529,16 +578,99 @@ export const getCourseDetails = async (req: AuthRequest, res: Response) => {
       if (!isEnrolled) return res.status(403).json({ message: 'Not enrolled in this course' });
     }
 
-    if (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER') {
-      course.lessons = course.lessons.map((lesson: any) => ({
-        ...lesson,
-        quizzes: sanitizeQuizzesForStudent(lesson.quizzes)
-      }));
-    }
+    const totalLessons = course.lessons?.length || 0;
+    let completedLessons = 0;
 
-    res.json(course);
+    const mappedLessons = (course.lessons || []).map((lesson: any) => {
+      const studentProgress = Array.isArray(lesson.progress) ? lesson.progress[0] : (lesson.progress || null);
+      const isCompleted = !!(
+        studentProgress?.watched ||
+        studentProgress?.status === 'COMPLETED' ||
+        (studentProgress?.progress && studentProgress.progress >= 90)
+      );
+      if (isCompleted) {
+        completedLessons++;
+      }
+      return {
+        ...lesson,
+        completed: isCompleted,
+        progress: studentProgress || null,
+        quizzes: (requesterRole !== 'ADMIN' && requesterRole !== 'TEACHER')
+          ? sanitizeQuizzesForStudent(lesson.quizzes)
+          : lesson.quizzes
+      };
+    });
+
+    const completionPercentage = totalLessons > 0
+      ? Math.min(100, Math.max(0, Math.round((completedLessons / totalLessons) * 100)))
+      : 0;
+
+    res.json({
+      ...course,
+      lessons: mappedLessons,
+      totalLessons,
+      completedLessons,
+      completionPercentage,
+      stats: {
+        totalLessons,
+        completedLessons,
+        completionPercentage
+      }
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching course details', error: error.message });
+  }
+};
+
+export const getStudentCourseStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const enrollments = await db.courseEnrollment.findMany({
+      where: { studentId },
+      include: {
+        course: {
+          include: {
+            lessons: {
+              include: {
+                progress: {
+                  where: { studentId }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    let totalLessons = 0;
+    let completedLessons = 0;
+
+    for (const enrollment of enrollments) {
+      if (enrollment.course?.lessons) {
+        for (const lesson of enrollment.course.lessons) {
+          totalLessons++;
+          const p = lesson.progress?.[0];
+          if (p?.watched || p?.status === 'COMPLETED' || (p?.progress && p.progress >= 90)) {
+            completedLessons++;
+          }
+        }
+      }
+    }
+
+    const completionPercentage = totalLessons > 0
+      ? Math.min(100, Math.max(0, Math.round((completedLessons / totalLessons) * 100)))
+      : 0;
+
+    res.json({
+      totalLessons,
+      completedLessons,
+      completionPercentage,
+      enrolledCoursesCount: enrollments.length
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching student course stats', error: error.message });
   }
 };
 

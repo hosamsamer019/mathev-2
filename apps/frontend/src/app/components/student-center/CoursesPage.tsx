@@ -24,9 +24,9 @@ export default function CoursesPage() {
             id: c.id,
             title: c.title,
             category: c.category,
-            progress: 0,
-            lessons: c._count?.lessons || 0,
-            completed: 0,
+            progress: typeof c.progress === 'number' ? Math.min(100, Math.max(0, c.progress)) : 0,
+            lessons: c.lessonsCount ?? c.totalLessons ?? c._count?.lessons ?? (Array.isArray(c.lessons) ? c.lessons.length : 0),
+            completed: c.completedCount ?? c.completedLessons ?? c.completed ?? 0,
             thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=400&h=250&fit=crop',
             locked: false
           }));

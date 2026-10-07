@@ -66,8 +66,9 @@ export class OpenRouterClient {
   private maxRetries: number;
 
   constructor(options?: { timeoutMs?: number; maxRetries?: number }) {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey || apiKey === '') {
+    const rawApiKey = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY || '';
+    const apiKey = rawApiKey.replace(/^["']|["']$/g, '').trim();
+    if (!apiKey) {
       throw new Error('OPENROUTER_API_KEY is not configured');
     }
 

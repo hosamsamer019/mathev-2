@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Home, Video, FileText, ClipboardCheck, MessageCircle, User, Brain, Target, BookOpen, BarChart3 } from 'lucide-react';
+import { Home, FileText, ClipboardCheck, MessageCircle, User, Brain, Target, BookOpen, BarChart3 } from 'lucide-react';
 import SharedLayout, { MenuItem } from '../shared/SharedLayout';
 import HomeworkPage from '../student-shared/HomeworkPage';
 import ExamsPage from '../student-shared/ExamsPage';
@@ -15,14 +15,12 @@ import { homeworkService } from '../../services/homework.service';
 import StudentHomePage from './StudentHomePage';
 import CoursesPage from './CoursesPage';
 import CourseDetailsPage from './CourseDetailsPage';
-import VideosPage from './VideosPage';
 import VideoPlayerPage from './VideoPlayerPage';
 import ResultsPage from './ResultsPage';
 
 const menuItems: MenuItem[] = [
   { path: '/student/center/home', icon: Home, label: 'الرئيسية' },
   { path: '/student/center/courses', icon: BookOpen, label: 'دوراتي' },
-  { path: '/student/center/videos', icon: Video, label: 'الدروس والفيديوهات' },
   { path: '/student/center/homework', icon: FileText, label: 'الواجبات', badge: 1 },
   { path: '/student/center/exams', icon: ClipboardCheck, label: 'الامتحانات' },
   { path: '/student/center/results', icon: BarChart3, label: 'نتائجي' },
@@ -72,7 +70,6 @@ export default function StudentCenterDashboard() {
         <Route path="/home" element={<StudentHomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
-        <Route path="/videos" element={<VideosPage />} />
         <Route path="/videos/:videoId" element={<VideoPlayerPage />} />
         <Route path="/homework" element={<HomeworkPage />} />
         <Route path="/exams" element={<ExamsPage />} />
