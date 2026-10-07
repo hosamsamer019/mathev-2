@@ -12,18 +12,46 @@ import { aiRateLimiter } from './middlewares/rateLimiter.js';
 import { logger, globalErrorHandler, validateEnv, createCorsOptions, configureTrustProxy } from '@shared/utils';
 import { db } from '../../../packages/database/src/index.js';
 
+import fs from 'fs';
 import path from 'path';
 
-// Robust multi-path env loading
-dotenv.config();
-dotenv.config({ path: path.resolve(process.cwd(), 'services/ai-service/.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env.production') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// Discover and load environment files safely without overriding container runtime env
+const candidateEnvPaths = [
+  path.resolve(process.cwd(), '.env.production'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), 'services/ai-service/.env'),
+  path.resolve(process.cwd(), '../.env.production'),
+  path.resolve(process.cwd(), '../.env'),
+  path.resolve(process.cwd(), '../../.env.production'),
+  path.resolve(process.cwd(), '../../.env'),
+  '/app/.env.production',
+  '/app/.env'
+];
+
+for (const envPath of candidateEnvPaths) {
+  try {
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+    }
+  } catch {
+    // Ignore file read errors
+  }
+}
+
+// Normalize OpenRouter API key across aliases
+const resolvedOpenRouterKey = (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim())
+  || (process.env.OPENROUTER_KEY && process.env.OPENROUTER_KEY.trim())
+  || '';
+
+if (resolvedOpenRouterKey) {
+  const sanitizedKey = resolvedOpenRouterKey.replace(/^["']|["']$/g, '').trim();
+  process.env.OPENROUTER_API_KEY = sanitizedKey;
+  process.env.OPENROUTER_KEY = sanitizedKey;
+}
 
 validateEnv();
 
-if (process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY) {
+if (process.env.OPENROUTER_API_KEY) {
   logger.info('[AI-Service] OpenRouter API configuration loaded successfully');
 } else {
   logger.warn('[AI-Service] OpenRouter API key not detected in environment');
@@ -171,10 +199,11 @@ app.post('/api/ai/chat', aiRateLimiter, verifyToken, async (req: AuthRequest, re
     if (error instanceof z.ZodError) {
       if (!res.headersSent) return res.status(400).json({ errors: error.errors });
     }
+    logger.error('[AI Chat] Request failed:', { error: error.message });
     if (!res.headersSent) {
-      res.status(500).json({ message: 'Chat error', error: error.message });
+      res.status(500).json({ message: 'حدث خطأ أثناء معالجة المحادثة الذكية' });
     } else {
-      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: 'عذراً، خدمة المساعد الذكي غير متاحة حالياً. يرجى المحاولة لاحقاً.' })}\n\n`);
       res.end();
     }
   }
