@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test:auth": "node --experimental-strip-types --loader ./test_loader.mjs ./test_attendance_authorization.ts"
   },
   "dependencies": {
     "@shared/utils": "file:../../packages/shared",

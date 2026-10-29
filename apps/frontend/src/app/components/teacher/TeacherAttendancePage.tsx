@@ -65,6 +65,20 @@ export default function TeacherAttendancePage() {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
   const [originalMap, setOriginalMap] = useState<Record<string, AttendanceStatus>>({});
 
+  // Saved database attendance record IDs: Map studentId -> AttendanceRecordId (UUID)
+  const [attendanceRecordIdMap, setAttendanceRecordIdMap] = useState<Record<string, string>>({});
+
+  // Undo Confirmation Dialog State
+  const [undoTarget, setUndoTarget] = useState<{
+    studentId: string;
+    studentName: string;
+    studentGrade: string;
+    recordId: string;
+    date: string;
+    status: AttendanceStatus;
+  } | null>(null);
+  const [undoing, setUndoing] = useState<boolean>(false);
+
   // UI Filter States
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [loadingAttendance, setLoadingAttendance] = useState<boolean>(false);
@@ -72,6 +86,7 @@ export default function TeacherAttendancePage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedGradeLevel, setSelectedGradeLevel] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PRESENT' | 'LATE' | 'ABSENT' | 'UNSET'>('ALL');
+  const [loadError, setLoadError] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string; details?: string } | null>(null);
 
   // Styling helpers
@@ -89,21 +104,79 @@ export default function TeacherAttendancePage() {
     try {
       setLoadingData(true);
       setFeedback(null);
+      setLoadError(false);
 
-      // Fetch teacher's courses
-      const courseRes = await courseService.getCourses({ limit: 100 });
-      const courseList: CourseItem[] = Array.isArray(courseRes.data?.data)
-        ? courseRes.data.data
-        : Array.isArray(courseRes.data)
-        ? courseRes.data
+      // Fetch teacher's courses with pagination support (max limit: 100 per page)
+      const courseLimit = 100;
+      const firstCourseRes = await courseService.getCourses({ page: 1, limit: courseLimit });
+      const firstCourseBody = firstCourseRes?.data;
+      let accumulatedCourses: CourseItem[] = Array.isArray(firstCourseBody?.data)
+        ? [...firstCourseBody.data]
+        : Array.isArray(firstCourseBody)
+        ? [...firstCourseBody]
         : [];
-      setCourses(courseList);
-      setSelectedCourseIds(courseList.map(c => c.id));
 
-      // Fetch all students
-      const usersRes = await userService.getUsers({ limit: 1000 });
-      const userList = Array.isArray(usersRes.data) ? usersRes.data : [];
-      const studentList: StudentItem[] = userList
+      const totalCoursePages = typeof firstCourseBody?.totalPages === 'number'
+        ? firstCourseBody.totalPages
+        : (firstCourseBody?.total && typeof firstCourseBody.total === 'number')
+        ? Math.ceil(firstCourseBody.total / courseLimit)
+        : 1;
+
+      if (totalCoursePages > 1) {
+        for (let cp = 2; cp <= totalCoursePages; cp++) {
+          const nextCourseRes = await courseService.getCourses({ page: cp, limit: courseLimit });
+          const nextCourseBody = nextCourseRes?.data;
+          const nextCourseList = Array.isArray(nextCourseBody?.data)
+            ? nextCourseBody.data
+            : Array.isArray(nextCourseBody)
+            ? nextCourseBody
+            : [];
+          accumulatedCourses.push(...nextCourseList);
+        }
+      }
+
+      // Deduplicate courses by stable course id
+      const seenCourseIds = new Set<string>();
+      const deduplicatedCourses: CourseItem[] = [];
+      for (const c of accumulatedCourses) {
+        if (c && c.id && !seenCourseIds.has(c.id)) {
+          seenCourseIds.add(c.id);
+          deduplicatedCourses.push(c);
+        }
+      }
+
+      setCourses(deduplicatedCourses);
+      setSelectedCourseIds(deduplicatedCourses.map(c => c.id));
+
+      // Fetch all students through paginated requests (max limit: 100 per page)
+      const pageSize = 100;
+      const firstPageRes = await userService.getUsers({ role: 'STUDENT', page: 1, limit: pageSize });
+      let accumulatedUsers: any[] = Array.isArray(firstPageRes.data) ? [...firstPageRes.data] : [];
+      const totalPages = firstPageRes.totalPages || 1;
+
+      if (totalPages > 1) {
+        // Fetch remaining pages bounded by totalPages
+        for (let p = 2; p <= totalPages; p++) {
+          const nextRes = await userService.getUsers({ role: 'STUDENT', page: p, limit: pageSize });
+          if (Array.isArray(nextRes.data)) {
+            accumulatedUsers.push(...nextRes.data);
+          } else {
+            throw new Error(`فشل في استرجاع الصفحة ${p} من سجل الطلاب`);
+          }
+        }
+      }
+
+      // Deduplicate by student id
+      const seenIds = new Set<string>();
+      const deduplicatedUsers: any[] = [];
+      for (const u of accumulatedUsers) {
+        if (u && u.id && !seenIds.has(u.id)) {
+          seenIds.add(u.id);
+          deduplicatedUsers.push(u);
+        }
+      }
+
+      const studentList: StudentItem[] = deduplicatedUsers
         .filter((u: any) => u.role === 'ONLINE_STUDENT' || u.role === 'CENTER_STUDENT')
         .map((u: any) => {
           const rawGrade = u.gradeLevel || u.academicLevel || u.grade || '';
@@ -122,11 +195,13 @@ export default function TeacherAttendancePage() {
         });
 
       setAllStudents(studentList);
+      setLoadError(false);
     } catch (err: any) {
       console.error('[TeacherAttendance] Error loading courses/students:', err.response?.status, err.response?.data || err.message);
+      setLoadError(true);
       setFeedback({
         type: 'error',
-        message: 'فشل في تحميل بيانات الطلاب والمجموعات. يرجى المحاولة مرة أخرى.',
+        message: 'فشل في تحديث بيانات الطلاب والمجموعات. البيانات المعروضة حالياً قديمة (Stale Data) وتم تعطيل إجراءات الحفظ لمنع تعارض البيانات.',
         details: err.response?.data?.message || err.message
       });
     } finally {
@@ -147,13 +222,18 @@ export default function TeacherAttendancePage() {
       const res = await userService.getAttendanceByDate(dateStr);
       const records = res?.data || [];
       const newMap: Record<string, AttendanceStatus> = {};
+      const newRecordIdMap: Record<string, string> = {};
       for (const rec of records) {
         if (rec.studentId && rec.status) {
           newMap[rec.studentId] = rec.status as AttendanceStatus;
+          if (rec.id) {
+            newRecordIdMap[rec.studentId] = rec.id;
+          }
         }
       }
       setAttendanceMap(newMap);
       setOriginalMap(newMap);
+      setAttendanceRecordIdMap(newRecordIdMap);
     } catch (err: any) {
       console.error('[TeacherAttendance] Error fetching date attendance:', err.response?.status, err.response?.data || err.message);
       // Keep existing map if fetch fails
@@ -289,6 +369,7 @@ export default function TeacherAttendancePage() {
 
   // 6. Bulk Action Handlers
   const handleBulkSetStatus = (status: AttendanceStatus) => {
+    if (loadError) return;
     setAttendanceMap(prev => {
       const next = { ...prev };
       for (const s of visibleStudents) {
@@ -299,10 +380,12 @@ export default function TeacherAttendancePage() {
   };
 
   const handleResetToSaved = () => {
+    if (loadError) return;
     setAttendanceMap({ ...originalMap });
   };
 
   const handleSingleStatusChange = (studentId: string, status: AttendanceStatus) => {
+    if (loadError) return;
     setAttendanceMap(prev => ({
       ...prev,
       [studentId]: status
@@ -330,6 +413,14 @@ export default function TeacherAttendancePage() {
 
   // 8. Bulk Save Handler
   const handleSaveAttendance = async () => {
+    if (loadError) {
+      setFeedback({
+        type: 'error',
+        message: 'لا يمكن حفظ الحضور لأن سجل الطلاب غير محدث. يرجى إعادة المحاولة أولاً.'
+      });
+      return;
+    }
+
     // Build payload of students with selected status from all selected groups (activeRoster)
     const recordsToSave: Array<{ studentId: string; status: AttendanceStatus }> = [];
 
@@ -362,6 +453,23 @@ export default function TeacherAttendancePage() {
 
       if (res && res.success) {
         setOriginalMap({ ...attendanceMap });
+        const savedRecords = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.records)
+          ? res.records
+          : [];
+
+        if (savedRecords.length > 0) {
+          setAttendanceRecordIdMap(prev => {
+            const next = { ...prev };
+            for (const r of savedRecords) {
+              if (r && typeof r === 'object' && r.studentId && r.id) {
+                next[r.studentId] = r.id;
+              }
+            }
+            return next;
+          });
+        }
         setFeedback({
           type: 'success',
           message: 'تم حفظ الحضور بنجاح!',
@@ -389,6 +497,52 @@ export default function TeacherAttendancePage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // 9. Attendance Undo Handler (Reverts persisted record and deletes from DB)
+  const handleConfirmUndo = async () => {
+    if (!undoTarget || undoing) return;
+
+    try {
+      setUndoing(true);
+      await userService.deleteAttendance(undoTarget.recordId);
+
+      // Remove record from local maps
+      setAttendanceMap(prev => {
+        const next = { ...prev };
+        delete next[undoTarget.studentId];
+        return next;
+      });
+
+      setOriginalMap(prev => {
+        const next = { ...prev };
+        delete next[undoTarget.studentId];
+        return next;
+      });
+
+      setAttendanceRecordIdMap(prev => {
+        const next = { ...prev };
+        delete next[undoTarget.studentId];
+        return next;
+      });
+
+      setFeedback({
+        type: 'success',
+        message: `تم التراجع عن تسجيل حضور الطالب (${undoTarget.studentName}) بنجاح وعاد إلى حالة غير مسجل.`
+      });
+
+      setUndoTarget(null);
+    } catch (err: any) {
+      console.error('[TeacherAttendance] Error deleting attendance record:', err);
+      const errMsg = err.response?.data?.message || err.message;
+      setFeedback({
+        type: 'error',
+        message: 'فشل التراجع عن تسجيل الحضور. يرجى المحاولة مرة أخرى.',
+        details: errMsg
+      });
+    } finally {
+      setUndoing(false);
     }
   };
 
@@ -423,7 +577,7 @@ export default function TeacherAttendancePage() {
 
           <button
             onClick={handleSaveAttendance}
-            disabled={saving || loadingAttendance || activeRoster.length === 0}
+            disabled={saving || loadingAttendance || loadingData || loadError || activeRoster.length === 0}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold rounded-xl shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
@@ -648,7 +802,8 @@ export default function TeacherAttendancePage() {
             <span className={`text-xs font-bold ${textSecondary} ml-1`}>تحديد سريع للقائمة المعروضة:</span>
             <button
               onClick={() => handleBulkSetStatus('PRESENT')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300 hover:bg-green-200 transition-colors border border-green-200 dark:border-green-800/60"
+              disabled={loadError || loadingData || loadingAttendance}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300 hover:bg-green-200 transition-colors border border-green-200 dark:border-green-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CheckCircle className="w-3.5 h-3.5" />
               حاضر للكل
@@ -656,7 +811,8 @@ export default function TeacherAttendancePage() {
 
             <button
               onClick={() => handleBulkSetStatus('LATE')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-200 transition-colors border border-amber-200 dark:border-amber-800/60"
+              disabled={loadError || loadingData || loadingAttendance}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-200 transition-colors border border-amber-200 dark:border-amber-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Clock className="w-3.5 h-3.5" />
               متأخر للكل
@@ -664,7 +820,8 @@ export default function TeacherAttendancePage() {
 
             <button
               onClick={() => handleBulkSetStatus('ABSENT')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 hover:bg-red-200 transition-colors border border-red-200 dark:border-red-800/60"
+              disabled={loadError || loadingData || loadingAttendance}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 hover:bg-red-200 transition-colors border border-red-200 dark:border-red-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <XCircle className="w-3.5 h-3.5" />
               غائب للكل
@@ -673,13 +830,40 @@ export default function TeacherAttendancePage() {
 
           <button
             onClick={handleResetToSaved}
-            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            disabled={loadError || loadingData || loadingAttendance}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             استعادة السجل المحفوظ
           </button>
         </div>
       </div>
+
+      {/* Stale Roster Warning & Retry Action */}
+      {loadError && (
+        <div className="p-4 rounded-2xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-6 h-6 text-red-600 shrink-0" />
+            <div>
+              <p className="text-sm font-bold">
+                تنبيه: تعذر تحديث قائمة الطلاب والمجموعات
+              </p>
+              <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
+                السجل المعروض غير محدث (Stale Data). تم تعطيل إجراءات تحديد وحفظ الحضور لحماية السجلات من التعارض.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={fetchCoursesAndStudents}
+            disabled={loadingData}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-red-600/20 disabled:opacity-50 whitespace-nowrap cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
+            إعادة تحميل السجل (Retry)
+          </button>
+        </div>
+      )}
 
       {/* Student Attendance Sheet */}
       {loadingData || loadingAttendance ? (
@@ -746,45 +930,90 @@ export default function TeacherAttendancePage() {
                         {student.gradeLevel || 'غير محدد'}
                       </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-750 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
-                          <button
-                            type="button"
-                            onClick={() => handleSingleStatusChange(student.id, 'PRESENT')}
-                            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                              currentStatus === 'PRESENT'
-                                ? 'bg-green-600 text-white shadow-sm'
-                                : 'text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400'
-                            }`}
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            حاضر
-                          </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="flex-1 flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-750 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+                            <button
+                              type="button"
+                              onClick={() => handleSingleStatusChange(student.id, 'PRESENT')}
+                              disabled={loadError || saving || loadingData || undoing}
+                              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                currentStatus === 'PRESENT'
+                                  ? 'bg-green-600 text-white shadow-sm'
+                                  : 'text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400'
+                              }`}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              حاضر
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleSingleStatusChange(student.id, 'LATE')}
-                            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                              currentStatus === 'LATE'
-                                ? 'bg-amber-500 text-white shadow-sm'
-                                : 'text-gray-600 dark:text-gray-400 hover:text-amber-500 dark:hover:text-amber-400'
-                            }`}
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                            متأخر
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSingleStatusChange(student.id, 'LATE')}
+                              disabled={loadError || saving || loadingData || undoing}
+                              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                currentStatus === 'LATE'
+                                  ? 'bg-amber-500 text-white shadow-sm'
+                                  : 'text-gray-600 dark:text-gray-400 hover:text-amber-500 dark:hover:text-amber-400'
+                              }`}
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              متأخر
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleSingleStatusChange(student.id, 'ABSENT')}
-                            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                              currentStatus === 'ABSENT'
-                                ? 'bg-red-600 text-white shadow-sm'
-                                : 'text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400'
-                            }`}
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            غائب
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSingleStatusChange(student.id, 'ABSENT')}
+                              disabled={loadError || saving || loadingData || undoing}
+                              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                currentStatus === 'ABSENT'
+                                  ? 'bg-red-600 text-white shadow-sm'
+                                  : 'text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400'
+                              }`}
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              غائب
+                            </button>
+                          </div>
+
+                          {/* Undo Action for Saved Database Record */}
+                          {originalMap[student.id] && attendanceRecordIdMap[student.id] && (
+                            <button
+                              type="button"
+                              onClick={() => setUndoTarget({
+                                studentId: student.id,
+                                studentName: student.name,
+                                studentGrade: student.gradeLevel || '',
+                                recordId: attendanceRecordIdMap[student.id],
+                                date: selectedDate,
+                                status: originalMap[student.id]
+                              })}
+                              disabled={loadError || saving || loadingData || undoing}
+                              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 transition-all flex items-center gap-1 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="التراجع عن تسجيل الحضور وحذف السجل من قاعدة البيانات"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              التراجع
+                            </button>
+                          )}
+
+                          {/* Local Reset for Unsaved Changes */}
+                          {attendanceMap[student.id] && !originalMap[student.id] && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAttendanceMap(prev => {
+                                  const next = { ...prev };
+                                  delete next[student.id];
+                                  return next;
+                                });
+                              }}
+                              disabled={loadError || saving || loadingData || undoing}
+                              className="px-2 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all"
+                              title="إلغاء التحديد غير المحفوظ"
+                            >
+                              إلغاء
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -828,7 +1057,8 @@ export default function TeacherAttendancePage() {
                     <button
                       type="button"
                       onClick={() => handleSingleStatusChange(student.id, 'PRESENT')}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                      disabled={loadError || saving || loadingData || undoing}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed ${
                         currentStatus === 'PRESENT'
                           ? 'bg-green-600 text-white shadow-sm'
                           : 'text-gray-600 dark:text-gray-400'
@@ -841,7 +1071,8 @@ export default function TeacherAttendancePage() {
                     <button
                       type="button"
                       onClick={() => handleSingleStatusChange(student.id, 'LATE')}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                      disabled={loadError || saving || loadingData || undoing}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed ${
                         currentStatus === 'LATE'
                           ? 'bg-amber-500 text-white shadow-sm'
                           : 'text-gray-600 dark:text-gray-400'
@@ -854,7 +1085,8 @@ export default function TeacherAttendancePage() {
                     <button
                       type="button"
                       onClick={() => handleSingleStatusChange(student.id, 'ABSENT')}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                      disabled={loadError || saving || loadingData || undoing}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed ${
                         currentStatus === 'ABSENT'
                           ? 'bg-red-600 text-white shadow-sm'
                           : 'text-gray-600 dark:text-gray-400'
@@ -864,6 +1096,28 @@ export default function TeacherAttendancePage() {
                       غائب
                     </button>
                   </div>
+
+                  {/* Mobile Actions: Saved Record Undo & Unsaved Reset */}
+                  {originalMap[student.id] && attendanceRecordIdMap[student.id] && (
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setUndoTarget({
+                          studentId: student.id,
+                          studentName: student.name,
+                          studentGrade: student.gradeLevel || '',
+                          recordId: attendanceRecordIdMap[student.id],
+                          date: selectedDate,
+                          status: originalMap[student.id]
+                        })}
+                        disabled={loadError || saving || loadingData || undoing}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        التراجع عن تسجيل الحضور
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -888,7 +1142,7 @@ export default function TeacherAttendancePage() {
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={handleSaveAttendance}
-              disabled={saving || loadingAttendance}
+              disabled={saving || loadingAttendance || loadingData || loadError}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-l from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
@@ -903,6 +1157,83 @@ export default function TeacherAttendancePage() {
                 </>
               )}
             </button>
+          </div>
+        </div>
+      )}
+      {/* Confirmation Modal Dialog for Undoing Attendance */}
+      {undoTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`w-full max-w-md p-6 rounded-2xl border ${cardBg} shadow-2xl space-y-4`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className={`text-lg font-bold ${textPrimary}`}>تأكيد التراجع عن تسجيل الحضور</h3>
+                <p className={`text-xs ${textSecondary}`}>إلغاء السجل المسجل للطالب وحذفه من قاعدة البيانات</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-gray-50 dark:bg-gray-750/50 rounded-xl border border-gray-100 dark:border-gray-700/60 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className={textSecondary}>اسم الطالب:</span>
+                <span className={`font-bold ${textPrimary}`}>{undoTarget.studentName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className={textSecondary}>الصف / المرحلة:</span>
+                <span className={`font-medium ${textPrimary}`}>{undoTarget.studentGrade || 'غير محدد'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className={textSecondary}>تاريخ الحضور:</span>
+                <span className={`font-medium ${textPrimary}`}>{undoTarget.date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className={textSecondary}>الحالة المسجلة حالياً:</span>
+                <span className={`font-bold ${
+                  undoTarget.status === 'PRESENT' ? 'text-green-600' :
+                  undoTarget.status === 'LATE' ? 'text-amber-500' : 'text-red-600'
+                }`}>
+                  {undoTarget.status === 'PRESENT' ? 'حاضر' :
+                   undoTarget.status === 'LATE' ? 'متأخر' : 'غائب'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+              <strong>تنبيه:</strong> سيتم حذف هذا السجل نهائياً من قاعدة البيانات، وسيعود الطالب إلى حالة <strong>"غير مسجل"</strong> لليوم المحدد، ولن يتم اعتباره غائباً.
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!undoing) setUndoTarget(null);
+                }}
+                disabled={undoing}
+                className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all disabled:opacity-50"
+              >
+                إلغاء
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmUndo}
+                disabled={undoing}
+                className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-md shadow-red-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {undoing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    جاري التراجع...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    تأكيد التراجع وحذف السجل
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
-import { Response } from 'express';
+import type { Response } from 'express';
 import { db } from '../../../../packages/database/src/index.js';
-import { AuthRequest } from '../middlewares/auth.middleware.js';
+import type { AuthRequest } from '../middlewares/auth.middleware.js';
 import { z } from 'zod';
 
 const markAttendanceSchema = z.object({
@@ -55,18 +55,40 @@ function normalizeDateRange(dateInput?: string | Date): { dayStart: Date; dayEnd
 
 /**
  * Helper to verify teacher/admin authorization for a student.
- * In the current single-teacher deployment, any authenticated TEACHER or ADMIN
- * is authorized to record/manage attendance for any registered student.
+ * - ADMIN: May manage attendance platform-wide for valid student roles (ONLINE_STUDENT, CENTER_STUDENT).
+ * - TEACHER: May manage attendance only for valid student roles enrolled in a course taught by this teacher.
+ * - Non-student roles (ADMIN, TEACHER, PARENT) are strictly forbidden as attendance targets.
  */
 async function verifyTeacherOrAdminAccess(requesterId: string, requesterRole: string, studentId: string): Promise<boolean> {
   const upperRole = requesterRole.toUpperCase();
-  if (upperRole === 'ADMIN' || upperRole === 'TEACHER') {
-    // Verify target student exists in the database
-    const studentExists = await db.user.findUnique({
-      where: { id: studentId },
-      select: { id: true, role: true }
+
+  if (upperRole === 'ADMIN') {
+    const student = await db.user.findFirst({
+      where: {
+        id: studentId,
+        role: { in: ['ONLINE_STUDENT', 'CENTER_STUDENT'] }
+      },
+      select: { id: true }
     });
-    return !!studentExists;
+    return !!student;
+  }
+
+  if (upperRole === 'TEACHER') {
+    const student = await db.user.findFirst({
+      where: {
+        id: studentId,
+        role: { in: ['ONLINE_STUDENT', 'CENTER_STUDENT'] },
+        enrollments: {
+          some: {
+            course: {
+              teacherId: requesterId
+            }
+          }
+        }
+      },
+      select: { id: true }
+    });
+    return !!student;
   }
 
   return false;
@@ -393,12 +415,27 @@ export const getAttendanceByDate = async (req: AuthRequest, res: Response) => {
 
     const { dayStart, dayEnd } = normalizeDateRange(dateQuery);
 
+    let studentWhere: any = {
+      role: { in: ['ONLINE_STUDENT', 'CENTER_STUDENT'] }
+    };
+
+    if (requesterRole === 'TEACHER') {
+      studentWhere.enrollments = {
+        some: {
+          course: {
+            teacherId: requesterId
+          }
+        }
+      };
+    }
+
     const records = await db.attendance.findMany({
       where: {
         date: {
           gte: dayStart,
           lte: dayEnd
-        }
+        },
+        student: studentWhere
       },
       include: {
         student: {
@@ -457,10 +494,19 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
       return true;
     });
 
+    // Validate authorization for every target student before executing mutations (atomic reject-on-unauthorized)
     for (const item of uniqueRecords) {
       const isAuthorized = await verifyTeacherOrAdminAccess(requesterId, requesterRole, item.studentId);
-      if (!isAuthorized) continue;
+      if (!isAuthorized) {
+        return res.status(403).json({
+          success: false,
+          message: 'Forbidden: One or more target students are unauthorized or invalid',
+          count: 0
+        });
+      }
+    }
 
+    for (const item of uniqueRecords) {
       if (item.status === 'PRESENT') presentCount++;
       else if (item.status === 'LATE') lateCount++;
       else if (item.status === 'ABSENT') absentCount++;
@@ -514,14 +560,6 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
       results.push(record);
     }
 
-    if (results.length === 0 && validatedData.records.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'لم يتم حفظ أي سجلات: معرفات الطلاب غير صالحة أو غير موجودة.',
-        count: 0
-      });
-    }
-
     res.json({
       success: true,
       count: results.length,
@@ -531,7 +569,8 @@ export const bulkMarkAttendance = async (req: AuthRequest, res: Response) => {
         late: lateCount,
         absent: absentCount
       },
-      data: results
+      data: results,
+      records: results
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
